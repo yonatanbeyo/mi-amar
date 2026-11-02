@@ -1771,6 +1771,26 @@ ${samples}
     render();
   }
   start();
+
+  // where visitors come from: one count per visit (tab session), anonymous. No names, no IPs, nothing from the chat.
+  (() => {
+    try { if (sessionStorage.getItem("miamar_seen")) return; sessionStorage.setItem("miamar_seen", "1"); } catch { return; }
+    const q = new URLSearchParams(location.search), ua = navigator.userAgent || "", ref = document.referrer || "";
+    const tag = (q.get("ref") || q.get("utm_source") || "").toLowerCase().replace(/[^a-z]/g, "").slice(0, 12);
+    const src = tag ? tag
+      : /Instagram/i.test(ua) ? "instagram"
+      : /musical_ly|TikTok|Bytedance/i.test(ua) ? "tiktok"
+      : /FBAN|FBAV|FB_IAB/i.test(ua) ? "facebook"
+      : q.get("c") ? "qr"
+      : /google\./i.test(ref) ? "google"
+      : /(t\.co|twitter|x\.com)/i.test(ref) ? "x"
+      : /whatsapp/i.test(ref) ? "whatsapp"
+      : ref && !ref.includes(location.host) ? "other" : "direct";
+    const dev = OS === "ios" ? "ios" : OS === "android" ? "android" : "desktop";
+    const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || "");
+    const geo = /Jerusalem|Tel_Aviv|Hebron|Gaza/.test(tz) ? "il" : /^America\//.test(tz) ? "am" : /^Europe\//.test(tz) ? "eu" : tz ? "other" : "unknown";
+    ["visit", "src_" + src, "dev_" + dev, "geo_" + geo].forEach((k) => NET.bump(k));
+  })();
 })();
 </script>
 </body>

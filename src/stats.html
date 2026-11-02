@@ -30,6 +30,12 @@ h1 span { color: var(--yellow); }
 .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .85rem; color: var(--dim); }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-inline-end: 6px; vertical-align: middle; }
 .err { color: var(--pink); }
+.rows { display: grid; gap: 8px; }
+.row { display: grid; grid-template-columns: 7.5rem minmax(0,1fr) 3rem; gap: 10px; align-items: center; font-size: .9rem; }
+.row .track { height: 12px; border-radius: 99px; background: rgba(255,255,255,.06); overflow: hidden; }
+.row .track i { display: block; height: 100%; border-radius: 99px; background: var(--sky); }
+.row b { font-variant-numeric: tabular-nums; text-align: left; }
+.cards .card:first-child { grid-column: 1 / -1; }
 button { font: inherit; background: transparent; color: var(--text); border: 2px solid var(--line); border-radius: 12px; padding: 8px 14px; cursor: pointer; justify-self: start; }
 </style>
 </head>
@@ -43,8 +49,11 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
     <div class="legend"><span><i style="background:var(--pink)"></i>משחקים שהתחילו</span><span>המספר מעל: שחקנים שהצטרפו</span></div>
     <div class="bars" id="bars"></div>
   </section>
+  <section class="chart"><b>מאיפה הגיעו</b><div class="rows" id="src"></div></section>
+  <section class="chart"><b>מכשירים</b><div class="rows" id="dev"></div></section>
+  <section class="chart"><b>מדינות (לפי אזור הזמן בטלפון)</b><div class="rows" id="geo"></div></section>
   <button id="again">רענון</button>
-  <p class="dim">הנתונים נספרים מרגע שהמונה הופעל. לא נשמר כאן שום דבר מהצ'אטים, רק מספרים.</p>
+  <p class="dim">הנתונים נספרים מרגע שהמונה הופעל. לא נשמר כאן שום דבר מהצ'אטים ושום פרט מזהה, רק מספרים. טיפ: בביו של טיקטוק שימו mi-amar.netlify.app/?ref=tiktok ובאינסטגרם ?ref=instagram, כדי לראות בדיוק מאיפה כל אחד הגיע.</p>
 </main>
 <script src="config.js"></script>
 <script src="app.js"></script>
@@ -53,7 +62,7 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
   const net = window.Chat.createNet(window.MIAMAR_FIREBASE);
   const n = (x) => Number(x || 0).toLocaleString("he-IL");
   const key = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  const LABELS = [["started", "משחקים שהתחילו", "כל המצבים"], ["players", "שחקנים שהצטרפו מטלפון", ""], ["finished", "משחקים שהגיעו עד הסוף", ""], ["games", "לובים שנפתחו", "מצב טלפונים"]];
+  const LABELS = [["visit", "כניסות לאתר", ""], ["started", "משחקים שהתחילו", "כל המצבים"], ["players", "שחקנים שהצטרפו מטלפון", ""], ["finished", "משחקים שהגיעו עד הסוף", ""], ["games", "לובים שנפתחו", "מצב טלפונים"]];
   async function load() {
     const s = await net.readStats();
     if (!s) { document.getElementById("upd").innerHTML = '<span class="err">לא הצלחתי לקרוא את הנתונים.</span>'; return; }
@@ -66,7 +75,15 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
     const list = [];
     for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); const o = days[key(d)] || {}; list.push({ d, g: started(o), p: o.players || 0 }); }
     const max = Math.max(1, ...list.map((x) => x.g));
-    document.getElementById("bars").innerHTML = list.map((x) => `<div class="bar" title="${x.d.toLocaleDateString("he-IL")}"><u>${x.p ? n(x.p) : ""}</u><i style="height:${(x.g / max) * 120}px"></i><em>${x.d.getDate()}/${x.d.getMonth() + 1}</em></div>`).join("");
+    document.getElementById("bars").innerHTML = list.map((x) => `<div class="bar" title="${x.d.toLocaleDateString("he-IL")}"><u>${x.p ? n(x.p) : ""}</u><i style="height:${(x.g / max) * 120}px"></i><em>${x.d.getDate()}</em></div>`).join("");
+    const NAMES = { src_tiktok: "טיקטוק", src_instagram: "אינסטגרם", src_whatsapp: "וואטסאפ", src_facebook: "פייסבוק", src_google: "גוגל", src_x: "X / טוויטר", src_qr: "QR / קישור משחק", src_direct: "ישירות", src_other: "אתרים אחרים",
+      dev_ios: "אייפון", dev_android: "אנדרואיד", dev_desktop: "מחשב", geo_il: "ישראל", geo_am: "אמריקה", geo_eu: "אירופה", geo_other: "אחר", geo_unknown: "לא ידוע" };
+    const rows = (prefix, el) => {
+      const items = Object.entries(t).filter(([k]) => k.startsWith(prefix)).sort((a, b) => b[1] - a[1]);
+      const max = Math.max(1, ...items.map((x) => x[1]));
+      document.getElementById(el).innerHTML = items.length ? items.map(([k, v]) => `<div class="row"><span>${NAMES[k] || k.slice(prefix.length)}</span><span class="track"><i style="width:${(v / max) * 100}%"></i></span><b>${n(v)}</b></div>`).join("") : '<p class="dim">עוד אין נתונים</p>';
+    };
+    rows("src_", "src"); rows("dev_", "dev"); rows("geo_", "geo");
     document.getElementById("upd").textContent = "עודכן עכשיו · " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
   }
   document.getElementById("again").onclick = load;
