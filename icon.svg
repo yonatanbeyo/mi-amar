@@ -1,1 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#7b5cff"/><rect x="88" y="104" width="336" height="250" rx="64" fill="#5a3fd6" transform="translate(0 16)"/><path d="M152 104h208c35 0 64 29 64 64v122c0 35-29 64-64 64H232l-86 64v-64h6c-35 0-64-29-64-64V168c0-35 29-64 64-64z" fill="#fff"/><text x="256" y="300" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="200" fill="#ff5fa2">?</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -8 148 148"><rect x="-14" y="-8" width="148" height="148" rx="32" fill="#ffa928"/><style>[data-m]{display:none}[data-m~="idle"]{display:inline}</style>
+    <ellipse cx="60" cy="122" rx="34" ry="5" fill="#1b1530" opacity=".08"/>
+    <g class="bd">
+      <path d="M38 14H82A30 30 0 0 1 112 44V62A30 30 0 0 1 82 92H80L94 112L64 92H38A30 30 0 0 1 8 62V44A30 30 0 0 1 38 14Z" fill="#5a3fd6"/>
+      <path d="M38 8H82A30 30 0 0 1 112 38V56A30 30 0 0 1 82 86H80L94 106L64 86H38A30 30 0 0 1 8 56V38A30 30 0 0 1 38 8Z" fill="#7b5cff"/>
+      <ellipse cx="32" cy="22" rx="11" ry="6" fill="#fff" opacity=".28" transform="rotate(-24 32 22)"/>
+      <g data-m="idle think shock sweat"><g class="ey"><ellipse cx="44" cy="44" rx="12" ry="14" fill="#fff"/><ellipse cx="76" cy="44" rx="12" ry="14" fill="#fff"/></g>
+        <g class="pu"><circle cx="45" cy="46" r="6.5" fill="#1b1530"/><circle cx="77" cy="46" r="6.5" fill="#1b1530"/><circle cx="47.5" cy="43" r="2.2" fill="#fff"/><circle cx="79.5" cy="43" r="2.2" fill="#fff"/></g></g>
+      <g data-m="laugh party" fill="none" stroke="#1b1530" stroke-width="5" stroke-linecap="round"><path d="M34 47Q44 35 54 47"/><path d="M66 47Q76 35 86 47"/></g>
+      <ellipse cx="30" cy="62" rx="7" ry="4" fill="#ff5fa2" opacity=".6"/><ellipse cx="90" cy="62" rx="7" ry="4" fill="#ff5fa2" opacity=".6"/>
+      <path data-m="idle" d="M50 64Q60 74 70 64" fill="none" stroke="#1b1530" stroke-width="5" stroke-linecap="round"/>
+      <path data-m="think" d="M54 69H67" fill="none" stroke="#1b1530" stroke-width="5" stroke-linecap="round"/>
+      <g data-m="shock"><ellipse cx="60" cy="70" rx="8" ry="10" fill="#1b1530"/><ellipse cx="60" cy="75" rx="5" ry="3.5" fill="#ff5fa2"/></g>
+      <g data-m="laugh party"><path d="M42 60H78Q76 83 60 83Q44 83 42 60Z" fill="#1b1530"/><path d="M51 76Q60 69 69 76Q67 83 60 83Q53 83 51 76Z" fill="#ff5fa2"/></g>
+      <path data-m="sweat" d="M47 69Q52 64 57 69Q62 74 67 69Q71 65 74 68" fill="none" stroke="#1b1530" stroke-width="4.5" stroke-linecap="round"/>
+      <path data-m="sweat" class="drop" d="M106 18Q113 29 106 33Q99 29 106 18Z" fill="#5fb4ff"/>
+      <g data-m="think" class="dots" fill="#b8b0d8"><circle cx="104" cy="4" r="3.5"/><circle cx="113" cy="-6" r="4.5"/><circle cx="124" cy="-17" r="5.5"/></g>
+      <g data-m="party"><path d="M43 14L60-17L77 14Z" fill="#ffa928"/><path d="M50 2L70 2M55-7L66-7" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><circle cx="60" cy="-18" r="6" fill="#ff5fa2"/></g>
+    </g></svg>

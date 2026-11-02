@@ -549,6 +549,97 @@ input[type=text] { background: var(--soft); color: var(--ink); border: 0; border
 }
 @media (prefers-reduced-motion: reduce) { .btn, .opt { transition: none; } }
 </style>
+<style id="v5">
+/* ===== v5: alive =====
+   Bubbi, the chat bubble with eyes, reacts to the game. A sticker logo, a drifting doodle wallpaper,
+   glossy candy tiles and cards with a real bottom edge. */
+:root { --ink2: #1b1530; }
+#app { position: relative; z-index: 1; }
+.doodles { position: fixed; top: -260px; left: -260px; right: 0; bottom: 0; z-index: 0; pointer-events: none; opacity: .09; background-repeat: repeat; background-size: 260px 260px; animation: drift 60s linear infinite; will-change: transform; }
+@keyframes drift { to { transform: translate(260px, 260px); } }
+
+/* --- Bubbi --- */
+.buddy { display: inline-block; width: var(--bs, 96px); aspect-ratio: 140 / 150; flex: none; vertical-align: middle; }
+.buddy svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.buddy [data-m] { display: none; }
+.buddy.m-idle [data-m~="idle"], .buddy.m-think [data-m~="think"], .buddy.m-shock [data-m~="shock"], .buddy.m-laugh [data-m~="laugh"], .buddy.m-sweat [data-m~="sweat"], .buddy.m-party [data-m~="party"] { display: inline; }
+.buddy .bd { animation: bob 2.6s ease-in-out infinite alternate; }
+@keyframes bob { to { transform: translateY(-5px); } }
+.buddy .ey { transform-box: fill-box; transform-origin: center; animation: blink 4.4s infinite; }
+@keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.12); } }
+.buddy .pu { transform-box: fill-box; transform-origin: center; transition: transform .25s ease-out; }
+.buddy.m-think .pu { transform: translate(-4px, -5px); }
+.buddy.m-sweat .pu { transform: translate(5px, 1px); }
+.buddy.m-shock .ey { animation: none; transform: scale(1.18); }
+.buddy.m-shock .pu { transform: scale(.62); }
+.buddy.m-laugh .bd, .buddy.m-party .bd { animation: giggle .34s ease-in-out infinite alternate; transform-origin: 50% 90%; transform-box: view-box; }
+@keyframes giggle { from { transform: rotate(-3deg) translateY(0); } to { transform: rotate(3deg) translateY(-3px); } }
+.buddy.m-sweat .bd { animation: jitter .12s linear infinite alternate; }
+@keyframes jitter { to { transform: translateX(1.5px); } }
+.buddy .drop { animation: drip 1.3s ease-in infinite; }
+@keyframes drip { from { transform: translateY(0); opacity: 1; } to { transform: translateY(16px); opacity: 0; } }
+.buddy .dots circle { animation: dot 1.2s ease-in-out infinite; }
+.buddy .dots circle:nth-child(2) { animation-delay: .15s; } .buddy .dots circle:nth-child(3) { animation-delay: .3s; }
+@keyframes dot { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+
+/* --- sticker logo --- */
+#title { text-align: center; font-size: clamp(3.6rem, 17vw, 6.4rem); line-height: .9; color: #fff; transform: rotate(-4deg); margin: 10px 0 18px; letter-spacing: -.01em;
+  text-shadow: -4px 0 0 var(--ink2), 4px 0 0 var(--ink2), 0 -4px 0 var(--ink2), 0 4px 0 var(--ink2), -3px -3px 0 var(--ink2), 3px -3px 0 var(--ink2), -3px 3px 0 var(--ink2), 3px 3px 0 var(--ink2),
+  -3px 7px 0 var(--ink2), 3px 7px 0 var(--ink2), 0 9px 0 var(--ink2), -3px 10px 0 var(--ink2), 3px 10px 0 var(--ink2), 0 12px 0 var(--ink2); }
+#title .t1, #title .q { display: block; }
+#title .t1 { color: #fff; }
+#title .q { color: var(--orange); transform: rotate(2deg) translateX(-.08em); text-shadow: inherit; }
+.hero { text-align: center; justify-items: center; }
+.hero .lead { margin-inline: auto; text-align: center; }
+.top .brand { visibility: hidden; }
+
+/* --- home scene: Bubbi surrounded by anonymous messages --- */
+.scene { position: relative; height: 270px; width: 100%; max-width: 460px; margin: 4px auto 0; }
+.scene .buddy { position: absolute; left: 50%; bottom: 6px; translate: -50% 0; --bs: 150px; }
+.sb { position: absolute; background: var(--card); color: var(--ink); border-radius: 20px 6px 20px 20px; padding: 8px 14px 10px; font-weight: 700; font-size: 1rem; text-align: start; white-space: nowrap; box-shadow: 0 5px 0 var(--c), 0 12px 24px rgba(91,60,200,.12); animation: sfloat 3.2s ease-in-out infinite alternate; }
+.sb small { display: block; color: var(--c); font-size: .75rem; font-weight: 800; letter-spacing: .2em; }
+.sb1 { --c: var(--purple); right: 0; top: 4px; rotate: 3deg; }
+.sb2 { --c: var(--pink); left: 0; top: 66px; rotate: -4deg; animation-delay: -1.1s; border-radius: 6px 20px 20px 20px; }
+.sb3 { --c: var(--teal); right: 4px; top: 150px; rotate: -2deg; animation-delay: -2s; }
+@keyframes sfloat { to { transform: translateY(-7px); } }
+
+/* --- depth: candy gloss and real bottom edges --- */
+.opts .opt, .pad .opt { background-image: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0) 55%) !important; }
+.opts.revealed .opt:not(.win) { background-image: none !important; }
+.opt { box-shadow: inset 0 2px 0 rgba(255,255,255,.35), 0 6px 0 var(--d); }
+.bubble, .ctx, .panel, .award, .joinbox, .board, .how, .mode button { box-shadow: 0 5px 0 var(--line), 0 14px 30px rgba(91,60,200,.10) !important; }
+.bubble { position: relative; z-index: 3; }
+.bubble .sender { transform-origin: 100% 50%; }
+.bubble .sender.spin { filter: blur(.4px); }
+
+/* --- Bubbi peeks over the message card --- */
+.qwrap { position: relative; margin-top: 34px; }
+.qwrap .peek { position: absolute; top: -52px; inset-inline-end: 22px; --bs: 74px; z-index: 2; }
+.rcard .buddy { --bs: 104px; display: block; margin: 0 auto 4px; }
+.lobby-buddy { --bs: 92px; margin: 0 auto -6px; display: block; }
+.end-buddy { --bs: 110px; display: block; margin: 0 auto -8px; }
+.banner .buddy, .intro .buddy { --bs: 120px; display: block; margin: 0 auto 8px; }
+.wipe .buddy { --bs: 90px; display: block; margin: 0 auto 6px; }
+
+/* sticker type for the big moments: white letters, ink outline, colour from the person */
+.stamp, .big-num, .banner, .wipe b, .intro h3 { --o: var(--ink2);
+  text-shadow: -3px 0 0 var(--o), 3px 0 0 var(--o), 0 -3px 0 var(--o), 0 3px 0 var(--o), -2px -2px 0 var(--o), 2px -2px 0 var(--o), -2px 2px 0 var(--o), 2px 2px 0 var(--o), 0 6px 0 var(--o), -2px 7px 0 var(--o), 2px 7px 0 var(--o) !important; }
+.stamp { color: var(--sc, var(--orange)) !important; transform: rotate(-3deg); margin: 10px 0 4px; }
+.stamp small { text-shadow: none !important; display: block; margin-top: 6px; }
+.big-num { color: var(--orange) !important; }
+.banner { color: #fff !important; } .banner small { text-shadow: none !important; color: var(--sub); }
+.intro h3 { color: #fff !important; transform: rotate(-2deg); }
+.wipe b { color: #fff; }
+
+@media (min-width: 1100px) {
+  .qwrap .peek { --bs: 96px; top: -68px; }
+  .scene { height: 300px; } .scene .buddy { --bs: 170px; } .sb { font-size: 1.15rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .doodles, .buddy .bd, .buddy .ey, .buddy .drop, .buddy .dots circle, .sb { animation: none; }
+  .buddy .pu { transition: none; }
+}
+</style>
 </head>
 <body>
 <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -621,7 +712,7 @@ input[type=text] { background: var(--soft); color: var(--ink); border: 0; border
   function confetti(count = 120, ox, oy, spread = 1) {
     if (RM) return;
     const w = fx.width = innerWidth * devicePixelRatio, h = fx.height = innerHeight * devicePixelRatio;
-    const cols = ["#00a884", "#06cf9c", "#53bdeb", "#e9edef", "#ffd279", "#ff8a8c"];
+    const cols = ["#7b5cff", "#ff5fa2", "#ffa928", "#19c4a0", "#5fb4ff", "#ffffff"];
     const X = ox != null ? ox * devicePixelRatio : w / 2, Y = oy != null ? oy * devicePixelRatio : h * .45;
     for (let i = 0; i < count; i++) parts.push({ x: X + (ox != null ? 0 : (Math.random() - .5) * w * .3), y: Y, vx: (Math.random() - .5) * 26 * spread * devicePixelRatio, vy: (-Math.random() * 22 * spread - 8 * spread) * devicePixelRatio, r: (4 + Math.random() * 6) * devicePixelRatio, c: rnd(cols), a: Math.random() * 6, va: (Math.random() - .5) * .4, life: 1 });
     if (!fxRun) { fxRun = true; requestAnimationFrame(stepFx); }
@@ -695,6 +786,45 @@ input[type=text] { background: var(--soft); color: var(--ink); border: 0; border
   const PAL = ["#7b5cff", "#ff4f96", "#f08c00", "#0fb38f", "#2f8cff", "#e5484d", "#c04fe0", "#4caf2a"];
   const colorOf = (name) => { let h = 0; for (const ch of String(name)) h = (h * 31 + ch.codePointAt(0)) >>> 0; return PAL[h % PAL.length]; };
   const avatar = (name, cls = "") => `<span class="av ${cls}" style="--c:${colorOf(name)}" data-av="${esc(name)}" title="${esc(name)}">${esc([...String(name).trim()][0] || "?")}</span>`;
+  // ---------- Bubbi: the chat bubble with eyes that reacts to the game ----------
+  const BUDDY_SVG = `<svg viewBox="-10 -22 140 150" aria-hidden="true">
+    <ellipse cx="60" cy="122" rx="34" ry="5" fill="#1b1530" opacity=".08"/>
+    <g class="bd">
+      <path d="M38 14H82A30 30 0 0 1 112 44V62A30 30 0 0 1 82 92H80L94 112L64 92H38A30 30 0 0 1 8 62V44A30 30 0 0 1 38 14Z" fill="#5a3fd6"/>
+      <path d="M38 8H82A30 30 0 0 1 112 38V56A30 30 0 0 1 82 86H80L94 106L64 86H38A30 30 0 0 1 8 56V38A30 30 0 0 1 38 8Z" fill="#7b5cff"/>
+      <ellipse cx="32" cy="22" rx="11" ry="6" fill="#fff" opacity=".28" transform="rotate(-24 32 22)"/>
+      <g data-m="idle think shock sweat"><g class="ey"><ellipse cx="44" cy="44" rx="12" ry="14" fill="#fff"/><ellipse cx="76" cy="44" rx="12" ry="14" fill="#fff"/></g>
+        <g class="pu"><circle cx="45" cy="46" r="6.5" fill="#1b1530"/><circle cx="77" cy="46" r="6.5" fill="#1b1530"/><circle cx="47.5" cy="43" r="2.2" fill="#fff"/><circle cx="79.5" cy="43" r="2.2" fill="#fff"/></g></g>
+      <g data-m="laugh party" fill="none" stroke="#1b1530" stroke-width="5" stroke-linecap="round"><path d="M34 47Q44 35 54 47"/><path d="M66 47Q76 35 86 47"/></g>
+      <ellipse cx="30" cy="62" rx="7" ry="4" fill="#ff5fa2" opacity=".6"/><ellipse cx="90" cy="62" rx="7" ry="4" fill="#ff5fa2" opacity=".6"/>
+      <path data-m="idle" d="M50 64Q60 74 70 64" fill="none" stroke="#1b1530" stroke-width="5" stroke-linecap="round"/>
+      <path data-m="think" d="M54 69H67" fill="none" stroke="#1b1530" stroke-width="5" stroke-linecap="round"/>
+      <g data-m="shock"><ellipse cx="60" cy="70" rx="8" ry="10" fill="#1b1530"/><ellipse cx="60" cy="75" rx="5" ry="3.5" fill="#ff5fa2"/></g>
+      <g data-m="laugh party"><path d="M42 60H78Q76 83 60 83Q44 83 42 60Z" fill="#1b1530"/><path d="M51 76Q60 69 69 76Q67 83 60 83Q53 83 51 76Z" fill="#ff5fa2"/></g>
+      <path data-m="sweat" d="M47 69Q52 64 57 69Q62 74 67 69Q71 65 74 68" fill="none" stroke="#1b1530" stroke-width="4.5" stroke-linecap="round"/>
+      <path data-m="sweat" class="drop" d="M106 18Q113 29 106 33Q99 29 106 18Z" fill="#5fb4ff"/>
+      <g data-m="think" class="dots" fill="#b8b0d8"><circle cx="104" cy="4" r="3.5"/><circle cx="113" cy="-6" r="4.5"/><circle cx="124" cy="-17" r="5.5"/></g>
+      <g data-m="party"><path d="M43 14L60-17L77 14Z" fill="#ffa928"/><path d="M50 2L70 2M55-7L66-7" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><circle cx="60" cy="-18" r="6" fill="#ff5fa2"/></g>
+    </g></svg>`;
+  const buddy = (m = "idle", cls = "", id = "") => `<span class="buddy m-${m} ${cls}" ${id ? `id="${id}"` : ""} aria-hidden="true">${BUDDY_SVG}</span>`;
+  function mood(el, m) {
+    if (!el || el.classList.contains("m-" + m)) return;
+    el.className = el.className.replace(/\bm-\w+/, "m-" + m);
+    anim(el, [{ transform: "translateY(0) scale(1)" }, { transform: "translateY(-16px) scale(1.06,.94)", offset: .35 }, { transform: "translateY(0) scale(.96,1.04)", offset: .7 }, { transform: "none" }], { duration: 420, easing: "ease-out" });
+  }
+  (function doodles() {
+    const s = `<svg xmlns="http://www.w3.org/2000/svg" width="260" height="260" fill="none" stroke="#7b5cff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M30 20h50a14 14 0 0 1 14 14v18a14 14 0 0 1-14 14H52l-14 12v-12h-8a14 14 0 0 1-14-14V34a14 14 0 0 1 14-14z"/>
+      <text x="168" y="74" font-family="Arial Black,Arial" font-weight="900" font-size="58" fill="#7b5cff" stroke="none">?</text>
+      <path d="M200 182c-8-10-24-4-20 9 3 9 20 20 20 20s17-11 20-20c4-13-12-19-20-9z"/>
+      <path d="M58 150l7 15 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2z"/>
+      <circle cx="140" cy="140" r="20"/><path d="M130 136q4-5 8 0M144 136q4-5 8 0M130 146q10 10 20 0"/>
+      <path d="M214 112h22a8 8 0 0 1 8 8v8a8 8 0 0 1-8 8h-6l-6 6v-6h-10a8 8 0 0 1-8-8v-8a8 8 0 0 1 8-8z"/>
+      <path d="M110 222l8-8 8 8 8-8"/></svg>`;
+    const d = document.createElement("div"); d.className = "doodles"; d.setAttribute("aria-hidden", "true");
+    d.style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(s)}")`;
+    document.body.prepend(d);
+  })();
   const SHAPES = ["▲", "◆", "●", "■"];
 
   // ---------- example chat ----------
@@ -1105,10 +1235,11 @@ ${samples}
       <section class="hero">
         <h1 id="title"><span class="t1">מי אמר</span> <span class="q">את זה?</span></h1>
         <p class="lead">מעלים את הצ'אט של הקבוצה, כולם סורקים QR, וכל אחד מנחש מהטלפון שלו <b>מי כתב כל הודעה</b>.</p>
-        <div class="stage3d" aria-hidden="true">
-          <div class="fb fb1">אני כבר בדרך<span>???</span></div>
-          <div class="fb fb2">מי לקח לי את המטען<span>???</span></div>
-          <div class="fb fb3">חחחחח מת<span>???</span></div>
+        <div class="scene" aria-hidden="true">
+          <div class="sb sb1"><small>???</small>אני כבר בדרך</div>
+          <div class="sb sb2"><small>???</small>מי לקח לי את המטען</div>
+          <div class="sb sb3"><small>???</small>חחחחח מת</div>
+          ${buddy("think", "", "hb")}
         </div>
       </section>
       <div id="join-slot" style="display:grid;gap:10px"></div>
@@ -1302,7 +1433,7 @@ ${samples}
     return new Promise((done) => {
       const [title, rule] = INTRO[type] || [KIND_TITLE[type], ""];
       overlay.hidden = false;
-      overlay.innerHTML = `<div class="intro"><span class="tag">סוג שאלה חדש</span><h3>${title}</h3><p>${rule}</p><span class="tap">הקישו כדי להמשיך</span></div>`;
+      overlay.innerHTML = `<div class="intro">${buddy("think")}<span class="tag">סוג שאלה חדש</span><h3>${title}</h3><p>${rule}</p><span class="tap">הקישו כדי להמשיך</span></div>`;
       const card = overlay.firstElementChild;
       SFX.whoosh(); buzz(15);
       anim(card, [{ opacity: 0, transform: "translateY(16px) scale(.97)" }, { opacity: 1, transform: "none" }], { duration: 280, easing: EASE.out });
@@ -1331,7 +1462,7 @@ ${samples}
       ${S.players.length > 1 ? `<div class="strip" id="strip">${stripHtml()}</div>` : ""}
       <div class="timer" id="timer" aria-hidden="true" ${S.revealed ? "hidden" : ""}><i id="bar"></i></div>
       <div class="kind">${kindTitle}${last ? `<span class="x2">שאלת הגמר · ניקוד כפול</span>` : ""}</div>
-      <div class="bubble" id="bubble">${S.revealed ? "" : `<span class="typing" aria-label="מקליד"><i></i><i></i><i></i></span>`}</div>
+      <div class="qwrap">${buddy(S.revealed ? S.bmood || "laugh" : "think", "peek", "pb")}<div class="bubble" id="bubble">${S.revealed ? "" : `<span class="typing" aria-label="מקליד"><i></i><i></i><i></i></span>`}</div></div>
       <div class="opts ${S.revealed ? "revealed" : ""}" id="opts" ${S.revealed ? "" : "hidden"}>${q.options.map((o, i) => {
         const v = S.multi && S.revealed ? (S.votes?.[i] || []) : null;
         return `<button class="opt ${q.long ? "long" : ""} ${S.revealed && o === q.answer ? "win" : ""} ${v && v.length ? "has-votes" : ""}" data-o="${esc(o)}">${v ? `<i class="votes" data-k="${v.length / Math.max(1, S.players.length)}"></i>${v.length ? `<span class="vc">${v.length}</span>` : ""}` : ""}${!q.long && !["finish","when","number"].includes(q.type) ? `<i class="ini" aria-hidden="true">${esc([...String(o).trim()][0] || "?")}</i>` : ""}<span>${esc(o)}</span></button>`;
@@ -1392,7 +1523,7 @@ ${samples}
         bar.style.transform = `scaleX(${left})`;
         const sec = Math.ceil(left * T);
         if (sec <= 5 && sec < lastSec && sec > 0) {
-          SFX.tick(); tbox.classList.add("hurry"); if (sec <= 3) document.body.classList.add("hurry");
+          SFX.tick(); tbox.classList.add("hurry"); if (sec <= 3) { document.body.classList.add("hurry"); mood(document.getElementById("pb"), "sweat"); }
           // a giant ghost number counts the last seconds down behind everything
           let tn = document.querySelector(".tnum"); if (!tn) { tn = document.createElement("div"); tn.className = "tnum"; tn.setAttribute("aria-hidden", "true"); document.body.append(tn); }
           tn.textContent = sec; anim(tn, [{ transform: "scale(1.5)", opacity: 0 }, { transform: "scale(1)", opacity: .16 }], { duration: 300, easing: EASE.out });
@@ -1411,8 +1542,20 @@ ${samples}
       if (S.multi) { S.asking = false; S.revealing = true; tally(q); }
       const opts = document.getElementById("opts");
       // anticipation: the board tenses before the answer lands
-      if (timeUp) { SFX.drum(); later(show, 650); } else { SFX.drum(); anim(opts, [{ transform: "scale(1)" }, { transform: "scale(.96)" }, { transform: "scale(1.01)" }], { duration: 300, easing: EASE.out }); later(show, RM ? 0 : 300); }
-      function show() { S.revealing = false; S.revealed = true; if (!S.multi) S.correct = []; S.justRevealed = true; render(); }
+      SFX.drum(); mood(document.getElementById("pb"), "shock");
+      if (!timeUp) anim(opts, [{ transform: "scale(1)" }, { transform: "scale(.96)" }, { transform: "scale(1.01)" }], { duration: 300, easing: EASE.out });
+      const snd = document.querySelector("#bubble .sender.hidden-name");
+      const names = [...new Set([...(q.options || []), ...(S.game.pool || []), ...S.players])].filter((x) => x && x !== q.author && x.length < 20);
+      if (snd && !RM && names.length) {
+        // the hidden name spins like a slot machine and slows down onto whoever really wrote it
+        snd.classList.remove("hidden-name"); snd.classList.add("spin");
+        let t = timeUp ? 250 : 80;
+        for (let i = 0; i < 12; i++) { const nm = names[i % names.length]; t += 38 + i * i * 1.3; later(() => { snd.textContent = nm; snd.style.color = colorOf(nm); SFX.tick(); }, t); }
+        t += 200;
+        later(() => { snd.classList.remove("spin"); snd.textContent = q.author; snd.style.color = colorOf(q.author); SFX.slam(); buzz(30); anim(snd, [{ transform: "scale(2.2) rotate(-6deg)" }, { transform: "scale(1)" }], { duration: 380, easing: EASE.pop }); }, t);
+        later(show, t + 520);
+      } else later(show, RM ? 0 : timeUp ? 650 : 300);
+      function show() { S.revealing = false; S.revealed = true; if (!S.multi) S.correct = []; S.bmood = S.multi && !(S.correct || []).length ? "shock" : "laugh"; S.justRevealed = true; render(); }
     }
   }
 
@@ -1497,7 +1640,7 @@ ${samples}
     const stampText = q.type === "number" || q.type === "when" ? q.answer : who;
     const sub = q.type === "finish" ? "כתב את זה" : q.type === "ai" ? "Claude חיקה אותו" : "";
     const last = S.idx + 1 >= S.game.questions.length;
-    return `<div class="stamp">${esc(stampText)}${q.type === "number" || q.type === "when" ? "" : "!"}${sub ? `<small>${sub}</small>` : ""}</div>${ctx}
+    return `<div class="stamp" style="--sc:${q.type === "number" || q.type === "when" ? "var(--orange)" : colorOf(stampText)}">${esc(stampText)}${q.type === "number" || q.type === "when" ? "" : "!"}${sub ? `<small>${sub}</small>` : ""}</div>${ctx}
       ${S.multi ? multiResults(q) : S.players.length ? `<section class="panel"><b>מי ניחש נכון?</b><div class="chips" id="scorers">${S.players.map((p) => `<button class="chip" aria-pressed="false" data-p="${esc(p)}">${esc(p)}${S.streaks[p] >= 2 ? `<span class="streak">🔥${S.streaks[p]}</span>` : ""}</button>`).join("")}</div></section>` : ""}
       <button class="btn big" id="next" style="width:100%">${last ? "לתוצאות" : "השאלה הבאה"}</button>`;
   }
@@ -1522,9 +1665,9 @@ ${samples}
           if (S.streaks[p] === 3 || S.streaks[p] === 5 || S.streaks[p] === 8) hot.push(p);
         } else S.streaks[p] = 0;
       });
-      if (S.players.length >= 2 && S.correct.length === S.players.length) await banner(`כולם ידעו! 🧠<small>הקבוצה הזאת מכירה את עצמה יותר מדי</small>`, "streak", 800);
-      if (S.players.length && !S.correct.length) await banner(`אף אחד לא ידע 🙈<small>${esc(S.game.questions[S.idx].author || "")} עבד על כולכם</small>`, "sad", 900);
-      for (const p of hot.slice(0, 2)) await banner(`🔥 ${esc(p)} ${S.streaks[p] >= 5 ? "בלתי ניתן לעצירה" : "על הגל"}!<small>${S.streaks[p]} תשובות נכונות ברצף · בונוס +50</small>`, "streak", 900);
+      if (S.players.length >= 2 && S.correct.length === S.players.length) await banner(`${buddy("laugh")}כולם ידעו!<small>הקבוצה הזאת מכירה את עצמה יותר מדי</small>`, "streak", 800);
+      if (S.players.length && !S.correct.length) await banner(`${buddy("shock")}אף אחד לא ידע<small>${esc(S.game.questions[S.idx].author || "")} עבד על כולכם</small>`, "sad", 900);
+      for (const p of hot.slice(0, 2)) await banner(`${buddy("party")}🔥 ${esc(p)} ${S.streaks[p] >= 5 ? "בלתי ניתן לעצירה" : "על הגל"}!<small>${S.streaks[p]} תשובות נכונות ברצף · בונוס +50</small>`, "streak", 900);
       S.idx++; S.revealed = false;
       if (last) { await leave(); S.enter = true; S.screen = "end"; render(); }
       else if (S.players.length > 1 && S.idx % 5 === 0) { await leave(); S.enter = true; S.screen = "mid"; render(); }
@@ -1542,7 +1685,7 @@ ${samples}
     const prevOrder = S.prevOrder || rows.map((r) => r[0]);
     const prev = S.midScores || Object.fromEntries(rows.map(([p]) => [p, 0]));
     app.innerHTML = `<div class="top"><span class="counter">${S.idx}/${S.game.questions.length}</span>${muteBtn()}</div>
-      <h2>${rows[0] && rows[0][1] > 0 ? `${esc(rows[0][0])} מוביל/ה` : "תמונת מצב"}</h2>${boardHtml(rows)}
+      ${buddy("laugh", "end-buddy")}<h2>${rows[0] && rows[0][1] > 0 ? `${esc(rows[0][0])} מוביל/ה` : "תמונת מצב"}</h2>${boardHtml(rows)}
       <button class="btn big" id="cont" style="width:100%">ממשיכים</button>`;
     bindMute(); SFX.reveal();
     // rows start in their old rank and slide to the new one; points count up
@@ -1574,10 +1717,19 @@ ${samples}
     const D = "'Rubik', sans-serif", B = "'Rubik', sans-serif";
     x.fillStyle = "#f4f1ff"; x.fillRect(0, 0, W, H);
     // a few candy tiles peeking from the corners, like the answer buttons
-    [["#7b5cff", -60, 70, -10], ["#ff5fa2", W - 150, 40, 12], ["#ffa928", -50, H - 330, 8], ["#19c4a0", W - 140, H - 380, -12]].forEach(([col, tx, ty, rot]) => {
+    [["#ff5fa2", W - 150, 40, 12], ["#ffa928", -50, H - 330, 8], ["#19c4a0", W - 140, H - 380, -12]].forEach(([col, tx, ty, rot]) => {
       x.save(); x.translate(tx + 100, ty + 100); x.rotate(rot * Math.PI / 180); x.fillStyle = col; rr(x, -100, -100, 200, 200, 44); x.fill(); x.restore(); });
-    x.fillStyle = "#1b1530"; x.font = `800 150px ${D}`; x.fillText("מי אמר", W / 2, 290); x.fillText("את זה?", W / 2, 450);
-    x.fillStyle = "#8a80b0"; x.font = `40px ${B}`; x.fillText(`שיחקנו על ${n(g.total)} הודעות מהקבוצה`, W / 2, 570);
+    try { // Bubbi in a party hat, top corner
+      const im = new Image(); im.src = "data:image/svg+xml," + encodeURIComponent(BUDDY_SVG.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" width="280" height="300" ').replace("<ellipse", '<style>[data-m]{display:none}[data-m~="party"]{display:inline}</style><ellipse'));
+      await im.decode(); x.drawImage(im, 30, 40, 240, 257);
+    } catch {}
+    // sticker logo: ink outline + extrusion, white and orange fill
+    x.save(); x.translate(W / 2, 370); x.rotate(-4 * Math.PI / 180); x.font = `800 160px ${D}`; x.lineJoin = "round";
+    [["מי אמר", -80, "#fff"], ["את זה?", 80, "#ffa928"]].forEach(([s, y, fill]) => {
+      x.fillStyle = "#1b1530"; x.strokeStyle = "#1b1530"; x.lineWidth = 22; x.strokeText(s, 0, y + 16); x.fillText(s, 0, y + 16);
+      x.strokeText(s, 0, y); x.fillStyle = fill; x.fillText(s, 0, y); });
+    x.restore();
+    x.fillStyle = "#8a80b0"; x.font = `40px ${B}`; x.fillText(`שיחקנו על ${n(g.total)} הודעות מהקבוצה`, W / 2, 600);
     // podium
     const top = rows.slice(0, 3), base = 1130, cols = [[W / 2, 360, "#7b5cff", "#5a3fd6", "1"], [W / 2 + 320, 270, "#ff5fa2", "#d63f80", "2"], [W / 2 - 320, 210, "#ffa928", "#d68512", "3"]];
     top.forEach(([name, pts], i) => {
@@ -1631,7 +1783,7 @@ ${samples}
     const podium = top3.length >= 2 ? `<div class="podium">${[top3[1], top3[0], top3[2]].map((r, k) => r ? `<div class="step ${["p2", "p1", "p3"][k]}">${k === 1 ? `<span class="crown" id="crown">👑</span>` : ""}<span class="medal">${["2", "1", "3"][k]}</span><b>${esc(r[0])}</b><span class="small" data-score="${r[1]}">0</span></div>` : "<div></div>").join("")}</div>` : "";
     app.innerHTML = `
       <div class="top"><span></span>${muteBtn()}</div>
-      <h2>${rows.length && rows[0][1] > 0 ? `${esc(rows[0][0])} מכיר/ה את הקבוצה הכי טוב` : "המשחק נגמר"}</h2>
+      ${buddy("party", "end-buddy")}<h2>${rows.length && rows[0][1] > 0 ? `${esc(rows[0][0])} מכיר/ה את הקבוצה הכי טוב` : "המשחק נגמר"}</h2>
       ${podium}
       ${rows.length > 3 ? boardHtml(rows.slice(3), 3) : ""}
       ${g.bestQuote ? `<div class="bubble small-b pop">${esc(g.bestQuote.text)}<span class="meta">הציטוט של הערב · ${esc(g.bestQuote.author)} · ${g.bestQuote.laughs} צחוקים אחריו</span></div>` : ""}
@@ -1833,7 +1985,7 @@ ${samples}
   function lobby() {
     app.innerHTML = `
       <div class="top"><button class="btn alt" id="back">חזרה</button>${muteBtn()}</div>
-      <div style="display:grid;gap:8px;text-align:center"><span class="dim"><span class="live-dot"></span>המשחק פתוח להצטרפות</span><h2>כולם לטלפונים</h2></div>
+      <div style="display:grid;gap:8px;text-align:center">${buddy("party", "lobby-buddy")}<span class="dim"><span class="live-dot"></span>המשחק פתוח להצטרפות</span><h2>כולם לטלפונים</h2></div>
       <section class="panel qr-card">
         <div class="qr" aria-label="קוד QR להצטרפות">${C.qr(joinURL(S.code))}</div>
         <div class="qr-side">
@@ -1934,13 +2086,13 @@ ${samples}
         <div class="chips" id="rpool">${poolChips()}</div>
         <div class="row"><input type="text" id="rn" maxlength="20" placeholder="השם שלך" autocomplete="nickname" value="${esc(store.get("rname", myName) || "")}"><button class="btn" id="rgo">נכנסים</button></div>`;
     } else if (!d) {
-      body = `<div class="rcard miss"><div class="rbig">מתחבר…<small>מחכה למסך הראשי <span class="typing"><i></i><i></i><i></i></span></small></div></div>`;
+      body = `<div class="rcard miss">${buddy("think")}<div class="rbig">מתחבר…<small>מחכה למסך הראשי <span class="typing"><i></i><i></i><i></i></span></small></div></div>`;
     } else if (d.ph === "lobby") {
-      body = `<div class="rcard ok"><div class="rbig">אתה בפנים 🎉<small>מחכים שהמשחק יתחיל. תסתכלו על המסך הגדול.</small></div></div>
+      body = `<div class="rcard ok">${buddy("party")}<div class="rbig">אתה בפנים<small>מחכים שהמשחק יתחיל. תסתכלו על המסך הגדול.</small></div></div>
         <div class="lobby-players" id="rnames">${namesHtml(d)}</div>`;
     } else if (d.ph === "wait") {
       body = `<div class="top"><span class="counter">${(d.idx | 0) + 1}/${d.total | 0}</span></div><div class="kind">${esc(d.title || "")}</div>
-        <div class="rcard miss"><div class="rbig" style="font-size:3rem">מסתכלים על המסך<small>השאלה עולה <span class="typing"><i></i><i></i><i></i></span></small></div></div>`;
+        <div class="rcard miss">${buddy("think")}<div class="rbig" style="font-size:3rem">מסתכלים על המסך<small>השאלה עולה <span class="typing"><i></i><i></i><i></i></span></small></div></div>`;
     } else if (d.ph === "ask") {
       const mine = S.pick && S.pick.k === R.askKey ? S.pick.c : null;
       body = `<div class="top"><span class="counter">${(d.idx | 0) + 1}/${d.total | 0}</span><span class="dim small" id="rdone">${d.done | 0}/${(d.names || []).length} ענו</span></div>
@@ -1953,12 +2105,12 @@ ${samples}
       const r = (d.res || {})[S.rname], ans = (d.opts || [])[d.ans];
       const cls = !r || r[2] ? "miss" : r[0] ? "ok" : "no";
       const big = cls === "ok" ? `צדקת!<small>+${n(r[1])} נקודות</small>` : cls === "no" ? `לא הפעם<small>התשובה: ${esc(ans || "")}</small>` : `פספסת<small>התשובה: ${esc(ans || "")}</small>`;
-      body = `<div class="top"><span class="counter">${(d.idx | 0) + 1}/${d.total | 0}</span></div><div class="rcard ${cls}" id="rres"><div class="rbig">${big}</div></div>${rankLine(d)}`;
+      body = `<div class="top"><span class="counter">${(d.idx | 0) + 1}/${d.total | 0}</span></div><div class="rcard ${cls}" id="rres">${buddy(cls === "ok" ? "laugh" : cls === "no" ? "shock" : "sweat")}<div class="rbig">${big}</div></div>${rankLine(d)}`;
     } else if (d.ph === "mid") {
       body = `<h2>תמונת מצב</h2>${rankLine(d)}${boardHtml((d.sc || []).slice(0, 8))}<p class="waiting">ממשיכים מהמסך הגדול</p>`;
     } else if (d.ph === "end") {
       const r = myRank(d), won = r && r.pos === 1 && r.pts > 0;
-      body = `<div class="rcard ${won ? "ok" : "miss"}" id="rres"><div class="rbig">${won ? "ניצחת! 👑" : r && r.pts > 0 ? `מקום ${r.pos}` : r ? "המשחק נגמר" : "המשחק נגמר"}<small>${r ? `${n(r.pts)} נקודות` : ""}</small></div></div>${boardHtml((d.sc || []).slice(0, 12))}`;
+      body = `<div class="rcard ${won ? "ok" : "miss"}" id="rres">${buddy(won ? "party" : "laugh")}<div class="rbig">${won ? "ניצחת! 👑" : r && r.pts > 0 ? `מקום ${r.pos}` : r ? "המשחק נגמר" : "המשחק נגמר"}<small>${r ? `${n(r.pts)} נקודות` : ""}</small></div></div>${boardHtml((d.sc || []).slice(0, 12))}`;
     }
     app.innerHTML = top + body;
     bindMute(); remoteNotice();
