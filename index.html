@@ -791,8 +791,8 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
   const store = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
   const LAUGH = /(חחח|פח{2,}|לח{2,}|xaxa|haha|lol|lmao|😂|🤣|💀|😭|אני מת|אנימת|מתתי|בכיתי|קורע|הרגת אותי)/i;
   // how a group says "WTF": the reactions that mean something crazy was just said
-  const WTF = /(ו+א+ט+פ+ק|ו+ט+פ+ק|wtf|what the f|מה אני שומע|אין מצב|משוגע|מטורף|ווילד|\bwild\b|מה הקשר|מז ?תומרת|סעמק|פאק|fuck|דאם|damn|איכס|לא מכבד|מה אחי|אחי מה|^מה{2,}|^מה\s*[?!]{2,}|לא נכון|אתה חולה|את חולה|אתה דפוק|פסיכי|🤯|😳|😱|🫢|🫣|אגדה|תמחק|צילמתי מסך|אצלם מסך|צלמתי מסך|סקרין|screenshot|אתה רציני|רציני\?|אשכרה\?|מה לעזאזל|מה נסגר|וואי וואי|יא ?אללה)/i;
-  const WTF_HARD = /(ו+א+ט+פ+ק|wtf|what the f|מה אני שומע|תמחק את|צילמתי מסך|אצלם מסך|סקרין|screenshot|לא מכבד|מה לעזאזל|🤯)/i;
+  const WTF = /(מה פספסתי|רגע רגע|מה קורה פה|מה קרה פה|הייתי בשוק|ו+א+ט+פ+ק|ו+ט+פ+ק|wtf|what the f|מה אני שומע|אין מצב|משוגע|מטורף|ווילד|\bwild\b|מה הקשר|מז ?תומרת|סעמק|פאק|fuck|דאם|damn|איכס|לא מכבד|מה אחי|אחי מה|^מה{2,}|^מה\s*[?!]{2,}|לא נכון|אתה חולה|את חולה|אתה דפוק|פסיכי|🤯|😳|😱|🫢|🫣|אגדה|תמחק|צילמתי מסך|אצלם מסך|צלמתי מסך|סקרין|screenshot|אתה רציני|רציני\?|אשכרה\?|מה לעזאזל|מה נסגר|וואי וואי|יא ?אללה)/i;
+  const WTF_HARD = /(מה פספסתי|רגע רגע|מה קורה פה|מה קרה פה|ו+א+ט+פ+ק|wtf|what the f|מה אני שומע|תמחק את|צילמתי מסך|אצלם מסך|סקרין|screenshot|לא מכבד|מה לעזאזל|🤯)/i;
   const TIMER = 15;
   const UA = navigator.userAgent || "";
   const OS = /iPhone|iPad|iPod/.test(UA) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) ? "ios" : /Android/i.test(UA) ? "android" : "desktop";
@@ -1194,7 +1194,9 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
   // ---------- question building ----------
   // ethnic slurs never go on the big screen (or into someone's TikTok)
   const SLUR = /(כוש(י|ית|ים|יות)\b|ערבוש|פרענק|צ'?חצ'?ח|ניגר|nigg|faggot|סרטן)/i; // + illness curses: someone in the room may really be going through it
-  const clean = (t) => !SLUR.test(t) && !/https?:|www\.|@\S+\.|@\u2068?\+?\d|\d{7,}|\d{2,3}-\d{6,}|<[^>]*(נערכה|edited)[^>]*>/i.test(t);
+  // someone telling friends about a diagnosis is not a party-screen question: the game can't tell a joke from a real disclosure
+  const HEALTH = /(אובחנ|מאובחנ|אבחון|אבחנה|תו נכה|על הרצף|פסיכיאטר|פסיכולוג|דיכאון|חרדות|התקף חרדה|הפרעת|adhd|כדורים נגד|ניתוח|אשפוז)/i;
+  const clean = (t) => !SLUR.test(t) && !HEALTH.test(t) && !/https?:|www\.|@\S+\.|@\u2068?\+?\d|\d{7,}|\d{2,3}-\d{6,}|<[^>]*(נערכה|edited)[^>]*>/i.test(t);
   // ---- style model: how typical is a message of a person, compared with everyone else ----
   // Questions are fun when the room CAN get them: "that is so him". Messages anyone could have written are dropped.
   const STOP = new Set("את של על זה זו לא כן אני אתה את הוא היא אנחנו אתם הם מה מי יש אין גם רק עם כל אבל אז או אם כי היה הייתה לי לך לו לה שלי שלך שלו שלה עוד כבר פה שם איך למה מתי איפה הזה הזאת זאת אחד אחת יותר הכי כמו בסדר ok the a to is it i you and of in".split(" "));
@@ -1252,13 +1254,14 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
       let score = Math.min(words, 12), laughs = 0;
       // the ten messages after it (within 20 minutes) tell us what the room thought of it
       const crowd = new Set(), reacts = []; let shock = 0, power = 0;
-      const wtfBy = new Set(); let wtfScore = 0;
-      for (let k = 1; k <= 12; k++) {
+      const wtfBy = new Set(); let wtfScore = 0, otherK = 0;
+      for (let k = 1; k <= 14; k++) {
         const nx = messages[i + k]; if (!nx) break;
         if (m.ts && nx.ts && nx.ts - m.ts > 20 * 60000) break;
         if (nx.author === m.author || !nx.text) continue;
-        // a WTF only counts if it lands right away: one of the next few messages, within 4 minutes, short, not tagging someone else
-        const wtf = k <= 5 && (!m.ts || !nx.ts || nx.ts - m.ts < 4 * 60000) && nx.text.length < 45 && !nx.text.includes("@") && !wtfBy.has(nx.author) && WTF.test(nx.text);
+        otherK++;
+        // a WTF only counts if it lands right away: one of the next few replies by others, within 4 minutes, short, not tagging someone else
+        const wtf = otherK <= 6 && (!m.ts || !nx.ts || nx.ts - m.ts < 4 * 60000) && nx.text.length < 45 && !nx.text.includes("@") && !wtfBy.has(nx.author) && WTF.test(nx.text);
         if (wtf) { wtfBy.add(nx.author); wtfScore += WTF_HARD.test(nx.text) ? 3 : 1; }
         const funny = LAUGH.test(nx.text), wow = wtf || SHOCK.test(nx.text);
         if (funny) { laughs++; crowd.add(nx.author); power += Math.min(3, ((nx.text.match(/ח{3,}/) || [""])[0].length) / 5) + (nx.text.match(/[😂🤣💀]/gu) || []).length * .5; }
