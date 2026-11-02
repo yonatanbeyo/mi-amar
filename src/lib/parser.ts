@@ -24,7 +24,7 @@ const MEDIA_RE =
 const DELETED_RE =
   /^(this message was deleted|you deleted this message|ההודעה נמחקה|ההודעה הזו נמחקה|מחקת את ההודעה הזו|הודעה זו נמחקה)\.?$/i;
 // newer exports: "סטיקר הושמט", "סרטון הווידאו הושמט", "כרטיס איש קשר הושמט"; a caption can come before it
-const MEDIA_TAIL_RE = /(?:^|\s)(התמונה הושמטה|סטיקר הושמט|המדבקה הושמטה|השמע הושמט|GIF הושמט|ה-gif הושמט|סרטון הווידאו הושמט|הווידאו הושמט|הסרטון הושמט|מסמך הושמט|המסמך הושמט|כרטיס איש קשר הושמט|image omitted|sticker omitted|audio omitted|video omitted|GIF omitted|document omitted|Contact card omitted)$/i;
+const MEDIA_TAIL_RE = /(?:^|\s)(הערת הווידאו לא נכללה בשיתוף|הודעה קולית לא נכללה בשיתוף|.{0,12}לא נכלל(?:ה)? בשיתוף|התמונה הושמטה|סטיקר הושמט|המדבקה הושמטה|השמע הושמט|GIF הושמט|ה-gif הושמט|סרטון הווידאו הושמט|הווידאו הושמט|הסרטון הושמט|מסמך הושמט|המסמך הושמט|כרטיס איש קשר הושמט|image omitted|sticker omitted|audio omitted|video omitted|GIF omitted|document omitted|Contact card omitted)$/i;
 const MEDIA_KIND: [RegExp, string][] = [[/תמונה|image/i, "image"], [/סטיקר|מדבקה|sticker/i, "sticker"], [/שמע|audio/i, "audio"], [/gif/i, "gif"], [/וידאו|סרטון|video/i, "video"], [/מסמך|document/i, "doc"], [/קשר|contact/i, "contact"]];
 // event-ish lines that are not anyone talking
 const NOISE_RE = /^(סקר:|poll:|שיחת וידאו שלא נענתה|שיחה קולית שלא נענתה|missed (voice|video) call|מיקום:|location:|הודעה הוצמדה על ידי|הצמדְ?ת הודעה|קוד האבטחה עם|ההודעה נמחקה על ידי|להצטרפות לקבוצה שלי|open this link to join)/i;

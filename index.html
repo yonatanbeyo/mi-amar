@@ -1179,7 +1179,7 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
     stat: "מי בקבוצה הכי…",
     number: "כמה פעמים?",
   };
-  const KIND_TITLE = { era: "מתי זה היה?", moment: "הרגע של הקבוצה", word: "של מי המילה?", when: "מתי זה נשלח?", quote: "מי אמר את זה?", finish: "איך זה נגמר?", reply: "מי ענה על זה?", phrase: "של מי הביטוי?", stat: "מי בקבוצה…", number: "כמה פעמים?", ai: "מי היה כותב את זה?" };
+  const KIND_TITLE = { legend: "מי אמר את זה ראשון?", day: "היום הכי משוגע", era: "מתי זה היה?", moment: "הרגע של הקבוצה", word: "של מי המילה?", when: "מתי זה נשלח?", quote: "מי אמר את זה?", finish: "איך זה נגמר?", reply: "מי ענה על זה?", phrase: "של מי הביטוי?", stat: "מי בקבוצה…", number: "כמה פעמים?", ai: "מי היה כותב את זה?" };
 
   let S = { screen: "home" };
   let msgs = [];
@@ -1461,6 +1461,83 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
     });
   }
 
+
+  // ---------- the group's stories, found without AI ----------
+  const normLine = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/(\p{L})\1{2,}/gu, "$1$1").replace(/\s+/g, " ").trim();
+  const dayKey = (ts) => { const d = new Date(ts); return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`; };
+  // lines that became memes: the same sentence written again later, by other people, on other days
+  function legendQs(pool, k) {
+    const seen = new Map();
+    for (const m of msgs) {
+      if (!m.text || m.media || !m.ts) continue;
+      const w = m.text.split(/\s+/).length; if (w < 3 || w > 12 || !clean(m.text) || m.text.includes("@") || LAUGH.test(m.text)) continue;
+      const key = normLine(m.text); if (key.length < 8) continue;
+      let e = seen.get(key); if (!e) seen.set(key, (e = { first: m, n: 0, who: new Set(), days: new Set() }));
+      e.n++; e.who.add(m.author); e.days.add(dayKey(m.ts));
+    }
+    const list = [];
+    for (const [key, e] of seen) {
+      if (e.n < 3 || e.who.size < 2 || e.days.size < 2 || !pool.includes(e.first.author)) continue;
+      if (tokens(key).every((w) => STOP.has(w) || COMMON.has(w))) continue;
+      // a real in-joke owns at least one of its words: that word mostly shows up inside this exact line
+      if (STYLE && !tokens(key).some((w) => !STOP.has(w) && (STYLE.all[w] || 0) <= e.n * 3)) continue;
+      list.push({ type: "legend", msg: true, text: e.first.text, answer: e.first.author, author: e.first.author, ts: e.first.ts, hook: `המשפט הזה חזר בקבוצה ${n(e.n)} פעמים. מי התחיל אותו?`,
+        reveal: `${e.first.author} כתב/ה את זה ראשון/ה ב-${dayKey(e.first.ts)}. מאז ${e.who.size} אנשים חזרו על זה`, options: smartOptions(e.first.author, pool, e.first.text), score: e.n * e.who.size * e.days.size });
+    }
+    return sample(list.sort((a, b) => b.score - a.score).slice(0, 40), k);
+  }
+  // inside words: a rare word that several people keep using on many different days. who started it?
+  function insideQs(pool, k) {
+    if (!STYLE) return [];
+    const totalTok = Object.values(STYLE.all).reduce((x, y) => x + y, 0), names = new Set(pool.flatMap((p) => tokens(p)));
+    const cand = new Set(Object.entries(STYLE.all).filter(([w, c]) => c >= 8 && c / totalTok < .00025 && w.length >= 3 && !STOP.has(w) && !COMMON.has(w) && !LAUGH.test(w) && !names.has(w) && !/^\d+$/.test(w) && !/\p{Extended_Pictographic}/u.test(w)).map(([w]) => w));
+    const info = new Map();
+    for (const m of msgs) { if (!m.text || !m.ts) continue; for (const w of new Set(tokens(m.text))) { if (!cand.has(w)) continue; let e = info.get(w); if (!e) info.set(w, (e = { first: m, who: new Set(), days: new Set(), n: 0, early: 0 })); e.n++; if (m.ts - e.first.ts < 30 * 864e5) e.early++; e.who.add(m.author); e.days.add(dayKey(m.ts)); } }
+    const list = [];
+    let t0 = Infinity, t1 = -Infinity; for (const m of msgs) if (m.ts) { if (m.ts < t0) t0 = m.ts; if (m.ts > t1) t1 = m.ts; }
+    // a word born inside the group: nobody used it in the first stretch of the chat
+    for (const [w, e] of info) if (e.who.size >= 3 && e.days.size >= 5 && e.first.ts > t0 + (t1 - t0) * .12 && e.early >= e.n * .3 && pool.includes(e.first.author) && clean(e.first.text))
+      list.push({ type: "legend", text: `"${w}"`, answer: e.first.author, author: e.first.author, ts: e.first.ts, hook: `${e.who.size} אנשים כתבו את זה ${n(e.n)} פעמים. מי היה הראשון?`, title: "מי התחיל את זה?",
+        reveal: `הפעם הראשונה: ${e.first.author}, ${dayKey(e.first.ts)}: "${e.first.text.slice(0, 90)}"`, options: optionsFor(e.first.author, pool), score: e.days.size * e.who.size });
+    return sample(list.sort((a, b) => b.score - a.score).slice(0, 30), k);
+  }
+  // the craziest days: what were they about, and who lit the fuse
+  function dayQs(pool, k) {
+    const per = new Map();
+    for (let i = 0; i < msgs.length; i++) { const m = msgs[i]; if (!m.ts) continue; const d = dayKey(m.ts); let e = per.get(d); if (!e) per.set(d, (e = { d, n: 0, idx: [] })); e.n++; e.idx.push(i); }
+    const counts = [...per.values()].map((e) => e.n).sort((a, b) => a - b), median = counts[Math.floor(counts.length / 2)] || 1;
+    const big = [...per.values()].filter((e) => e.n >= Math.max(120, median * 4)).sort((a, b) => b.n - a.n).slice(0, 8);
+    if (big.length < 2 || !STYLE) return [];
+    const totalTok = Object.values(STYLE.all).reduce((x, y) => x + y, 0), names = new Set(msgs.slice(0, 0).map(() => "")); pool.flatMap((p) => tokens(p)).forEach((w) => names.add(w));
+    for (const e of big) {
+      const c = {}; let tot = 0;
+      for (const i of e.idx) { const m = msgs[i]; if (!m.text) continue; for (const w of new Set(tokens(m.text))) { c[w] = (c[w] || 0) + 1; tot++; } }
+      e.topics = Object.entries(c).filter(([w, v]) => v >= 4 && w.length >= 3 && !STOP.has(w) && !COMMON.has(w) && !LAUGH.test(w) && !names.has(w) && !/^\d+$/.test(w) && !SLUR.test(w))
+        .map(([w, v]) => [w, Math.log((v + .5) / tot) - Math.log(((STYLE.all[w] || 0) + .5) / totalTok)]).sort((a, b) => b[1] - a[1])
+        .reduce((acc, [w]) => { const root = w.replace(/^[והבלשמכ]/, "").replace(/(ים|ות|ה|ת)$/, ""); if (acc.length < 3 && !acc.some((x) => x.replace(/^[והבלשמכ]/, "").replace(/(ים|ות|ה|ת)$/, "") === root)) acc.push(w); return acc; }, []);
+      // the spark: the first message after the quietest gap before the busiest hour of that day
+      const hours = {}; for (const i of e.idx) { const h = new Date(msgs[i].ts).getHours(); hours[h] = (hours[h] || 0) + 1; }
+      const peak = +Object.entries(hours).sort((a, b) => b[1] - a[1])[0][0];
+      let s = e.idx.find((i) => new Date(msgs[i].ts).getHours() >= peak) ?? e.idx[0];
+      while (s > 0 && msgs[s - 1].ts && msgs[s].ts - msgs[s - 1].ts < 30 * 6e4 && dayKey(msgs[s - 1].ts) === e.d) s--;
+      e.spark = msgs[s];
+    }
+    const good = big.filter((e) => e.topics.length >= 2);
+    const qs = [];
+    for (const e of sample(good.map((x) => ({ ...x, score: x.n })), k)) {
+      const others = shuffle(good.filter((o) => o.d !== e.d)).slice(0, 3);
+      if (others.length >= 3) qs.push({ type: "day", text: `על מה הקבוצה השתגעה ב-${e.d}? (${n(e.n)} הודעות ביום אחד)`, answer: e.topics.join(" · "), stamp: "זה היה הנושא!", long: true,
+        options: shuffle([e, ...others].map((o) => o.topics.join(" · "))), reveal: e.spark && e.spark.text && clean(e.spark.text) ? `הכל התחיל ככה: ${e.spark.author}: "${e.spark.text.slice(0, 100)}"` : `${n(e.n)} הודעות באותו יום` });
+      if (e.spark && pool.includes(e.spark.author) && e.spark.text && clean(e.spark.text))
+        qs.push({ type: "day", text: `מי הדליק את הבלגן של ${e.d}? (${n(e.n)} הודעות באותו יום)`, answer: e.spark.author, author: e.spark.author, options: optionsFor(e.spark.author, pool), reveal: `ההודעה שהתחילה הכל: "${e.spark.text.slice(0, 110)}"` });
+    }
+    return shuffle(qs).slice(0, k);
+  }
+  // where it all began
+  function firstQs(pool) {
+    const f = msgs.find((m) => m.text && m.ts && !m.media && pool.includes(m.author) && clean(m.text));
+    return f ? [{ type: "legend", text: "מי שלח את ההודעה הראשונה בקבוצה?", answer: f.author, author: f.author, title: "איך הכל התחיל", options: optionsFor(f.author, pool), reveal: `${dayKey(f.ts)}: "${f.text.slice(0, 100)}". ומשם הכל התדרדר` }] : [];
+  }
   const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
   function eraQs(cands, k) {
     const ts = msgs.filter((m) => m.ts).map((m) => m.ts); if (ts.length < 50) return [];
@@ -1565,13 +1642,14 @@ ${samples}
     const per = {}, balanced = [];
     for (const q of quoteSrc) { per[q.author] = (per[q.author] || 0) + 1; if (per[q.author] <= Math.max(3, Math.ceil(total / pool.length) + 1)) balanced.push(q); }
 
-    const want = { finish: kinds.finish ? Math.round(total * .07) : 0, reply: kinds.reply ? Math.round(total * .07) : 0, phrase: kinds.phrase ? Math.round(total * .05) : 0, stat: kinds.stat ? Math.max(1, Math.round(total * .22)) : 0, moment: kinds.quote ? Math.round(total * .2) : 0, number: kinds.number ? Math.max(1, Math.round(total * .08)) : 0, word: kinds.word ? Math.round(total * .05) : 0, when: kinds.when ? Math.max(1, Math.round(total * .05)) : 0, era: kinds.when ? Math.round(total * .05) : 0, ai: imposters.length };
+    const want = { finish: kinds.finish ? Math.round(total * .07) : 0, reply: kinds.reply ? Math.round(total * .07) : 0, phrase: kinds.phrase ? Math.round(total * .05) : 0, stat: kinds.stat ? Math.max(1, Math.round(total * .16)) : 0, moment: kinds.quote ? Math.round(total * .16) : 0, legend: kinds.quote ? Math.max(1, Math.round(total * .1)) : 0, day: kinds.stat ? Math.round(total * .08) : 0, number: kinds.number ? Math.max(1, Math.round(total * .08)) : 0, word: kinds.word ? Math.round(total * .05) : 0, when: kinds.when ? Math.max(1, Math.round(total * .05)) : 0, era: kinds.when ? Math.round(total * .05) : 0, ai: imposters.length };
     const used = new Set();
     S.seenQ = S.seenQ && S.seenFor === name ? S.seenQ : new Set(); S.seenFor = name;
     const take = (arr, k, again = false) => { const src = again ? arr : arr.filter((q) => !S.seenQ.has((q.full || q.text).replace(/…$/, "")));
       return src.filter((q) => { const key = (q.full || q.text).replace(/…$/, ""); if (used.has(key)) return false; used.add(key); return true; }).slice(0, k); };
     let extras = [
       ...take(momentQs(cands, pool, want.moment), want.moment),
+      ...take(shuffle([...legendQs(pool, want.legend * 2), ...insideQs(pool, want.legend), ...firstQs(pool)]), want.legend), ...take(dayQs(pool, want.day * 2), want.day),
       ...take(finishQs(cands, pool, want.finish * 2), want.finish), ...take(replyQs(pool, want.reply * 2), want.reply),
       ...take(phraseQs(stats, pool, want.phrase), want.phrase), ...take(sample(statQs(stats, pool), want.stat * 2, () => 1), want.stat),
       ...take(numberQs(stats), want.number), ...take(wordQs(pool, want.word), want.word), ...take(whenQs(cands, want.when * 2), want.when), ...take(eraQs(cands, want.era * 2), want.era), ...imposters,
@@ -1824,6 +1902,8 @@ ${samples}
     word: ["של מי המילה?", "מילה אחת שמישהו פה פשוט לא מפסיק לכתוב."],
     when: ["מתי זה נשלח?", "הודעה אמיתית. באיזו שעה ביום מישהו כתב אותה?"],
     era: ["מתי זה היה?", "הודעה אמיתית מהקבוצה. באיזו תקופה היא נשלחה?"],
+    legend: ["האגדות של הקבוצה", "משפטים ומילים שהפכו לבדיחה פנימית. מי התחיל אותם?"],
+    day: ["היום הכי משוגע", "הימים שבהם הקבוצה התפוצצה מהודעות. על מה, ומי התחיל?"],
     ai: ["המתחזה", "Claude כתב הודעה מזויפת בסגנון של מישהו מכם. את מי הוא מחקה?"],
   };
   function introCard(type) {
@@ -1849,7 +1929,7 @@ ${samples}
   function play() {
     const g = S.game, q = g.questions[S.idx];
     const last = S.idx === g.questions.length - 1;
-    const kindTitle = q.type === "stat" ? "מי בקבוצה…" : KIND_TITLE[q.type];
+    const kindTitle = q.title || (q.type === "stat" ? "מי בקבוצה…" : KIND_TITLE[q.type]);
     const body = q.type === "reply"
       ? `<div class="ctx" style="margin-bottom:10px;font-size:1rem"><b>${esc(q.by)}:</b> ${esc(q.text)}</div>${S.revealed ? esc(q.replyText) : "<span class='dim' style='font-size:1rem;color:#6b5f8f'>מי ענה על זה, ומה?</span>"}`
       : q.type === "finish" ? esc(S.revealed ? q.full : q.text)
@@ -1869,7 +1949,7 @@ ${samples}
     bindMute();
     const bubble = document.getElementById("bubble");
     const fillBubble = () => {
-      const named = ["quote", "moment", "finish", "ai", "when", "era"].includes(q.type);
+      const named = ["quote", "moment", "finish", "ai", "when", "era"].includes(q.type) || q.msg;
       const sender = !named ? "" : (S.revealed || q.type === "when" || q.type === "era") ? `<span class="sender" style="color:${colorOf(q.author)}">${esc(q.type === "ai" ? q.answer : q.author)}</span>` : `<span class="sender hidden-name">???</span>`;
       bubble.innerHTML = `${sender}${q.type === "ai" ? `<span class="ai-tag">נכתב על ידי Claude</span><br>` : ""}${body}<span class="meta">${S.revealed && q.ts ? fmtDate(q.ts) : q.type === "ai" ? "הודעה מזויפת בסגנון של מישהו מכם" : q.type === "moment" ? (S.revealed ? `${q.author} · ${fmtDate(q.ts)}` : q.hook) : q.type === "word" ? "מי כותב את זה הכי הרבה?" : q.type === "when" ? (S.revealed ? `${q.author} · ${fmtDate(q.ts)}` : "באיזו שעה זה נשלח?") : q.type === "stat" || q.type === "number" ? "לפי הצ'אט שלכם" : q.hook || "הודעה מהקבוצה"}</span>`;
       bubble.classList.remove("pop"); void bubble.offsetWidth; bubble.classList.add("pop");
@@ -2052,10 +2132,10 @@ ${samples}
     } else if (q.type === "reply") {
       ctx = `<div class="context"><div class="ctx"><b>${esc(q.by)}:</b> ${esc(q.text)}</div><div class="ctx" style="border-color:var(--yellow)"><b>${esc(who)}:</b> ${esc(q.replyText)}</div></div>`;
     } else if (q.reveal) ctx = `<p class="dim" style="text-align:center">${esc(q.reveal)}</p>`;
-    const stampText = q.type === "number" || q.type === "when" || q.type === "era" ? q.answer : who;
+    const stampText = q.stamp || (q.type === "number" || q.type === "when" || q.type === "era" ? q.answer : who);
     const sub = q.type === "finish" ? "כתב את זה" : q.type === "ai" ? "Claude חיקה אותו" : "";
     const last = S.idx + 1 >= S.game.questions.length;
-    return `<div class="stamp" style="--sc:${q.type === "number" || q.type === "when" || q.type === "era" ? "var(--orange)" : colorOf(stampText)}">${esc(stampText)}${q.type === "number" || q.type === "when" || q.type === "era" ? "" : "!"}${sub ? `<small>${sub}</small>` : ""}</div>${ctx}
+    return `<div class="stamp" style="--sc:${q.stamp || q.type === "number" || q.type === "when" || q.type === "era" ? "var(--orange)" : colorOf(stampText)}">${esc(stampText)}${q.stamp || q.type === "number" || q.type === "when" || q.type === "era" ? "" : "!"}${sub ? `<small>${sub}</small>` : ""}</div>${ctx}
       ${S.multi ? multiResults(q) : S.players.length ? `<section class="panel"><b>מי ניחש נכון?</b><div class="chips" id="scorers">${S.players.map((p) => `<button class="chip" aria-pressed="false" data-p="${esc(p)}">${esc(p)}${S.streaks[p] >= 2 ? `<span class="streak">🔥${S.streaks[p]}</span>` : ""}</button>`).join("")}</div></section>` : ""}
       <button class="btn big" id="next" style="width:100%">${last ? "לתוצאות" : "השאלה הבאה"}</button>`;
   }
@@ -2292,7 +2372,7 @@ ${samples}
     if (S.screen === "lobby") return { ...base, ph: "lobby", pool: g.pool.slice(0, 12) };
     if (S.screen === "play") {
       const q = g.questions[S.idx]; if (!q) return null;
-      const qb = { ...base, idx: S.idx, kind: q.type, title: S.idx + 1 === g.questions.length ? "שאלת הגמר · ניקוד כפול" : KIND_TITLE[q.type], text: String(qText(q)).slice(0, 300), opts: q.options.map((o) => String(o).slice(0, 80)) };
+      const qb = { ...base, idx: S.idx, kind: q.type, title: S.idx + 1 === g.questions.length ? "שאלת הגמר · ניקוד כפול" : q.title || KIND_TITLE[q.type], text: String(qText(q)).slice(0, 300), opts: q.options.map((o) => String(o).slice(0, 80)) };
       if (S.revealed) return { ...qb, ph: "reveal", ans: q.options.indexOf(q.answer), res: S.res || {} };
       if (S.asking) return { ...qb, ph: "ask", left: Math.max(0, S.deadline - Date.now()), done: Object.keys(S.answers || {}).length };
       return { ...qb, ph: "wait" };
