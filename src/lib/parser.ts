@@ -107,8 +107,8 @@ export function departedMembers(input: string): string[] {
     if (marked && idx > 0) rest = rest.slice(idx + 2).trim();       // iOS: "Group: ‎X left"
     else if (idx > 0 && idx <= 80) continue;                         // a normal "Name: text" message
     let r: RegExpExecArray | null;
-    if ((r = /^(.+?)\s+(?:left|יצא\/ה|יצאה|יצא|עזב\/ה|עזבה|עזב)$/i.exec(rest))) names(r[1]).forEach((n) => state.set(n, "out"));
-    else if ((r = /^(.+?)\s+(?:removed|הסיר\/ה\s+את|הסירה\s+את|הסיר\s+את)\s+(.+)$/i.exec(rest))) names(r[2]).forEach((n) => state.set(n, "out"));
+    if ((r = /^(.+?)\s+(?:left|יצא\/ה|יצאה|יצא|עזב\/ה|עזבה|עזב)(?:\s+(?:the group|מהקבוצה|את הקבוצה).*)?$/i.exec(rest))) names(r[1]).forEach((n) => state.set(n, "out"));
+    else if ((r = /^(.+?)\s+(?:removed|הסיר\/ה\s+את|הסירה\s+את|הסיר\s+את|הוציא\/ה\s+את|הוציאה\s+את|הוציא\s+את)\s+(.+?)(?:\s+(?:from the group|מהקבוצה))?$/i.exec(rest))) names(r[2]).forEach((n) => state.set(n, "out"));
     else if ((r = /^(.+?)\s+(?:was removed|הוסר\/ה|הוסרה|הוסר)\b/i.exec(rest))) names(r[1]).forEach((n) => state.set(n, "out"));
     else if ((r = /^(.+?)\s+(?:added|הוסיף\/ה\s+את|הוסיפה\s+את|הוסיף\s+את)\s+(.+)$/i.exec(rest))) names(r[2]).forEach((n) => state.set(n, "in"));
     else if ((r = /^(.+?)\s+(?:joined|הצטרף\/ה|הצטרפה|הצטרף)\b/i.exec(rest))) names(r[1]).forEach((n) => state.set(n, "in"));
