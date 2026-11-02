@@ -2171,7 +2171,7 @@ ${samples}
     x.fillStyle = "#7b5cff"; rr(x, 190, H - 174, 700, 100, 50); x.fill();
     x.fillStyle = "#fff"; x.font = `800 46px ${B}`; x.fillText("mi-amar.pages.dev", W / 2, H - 108);
     c.toBlob(async (blob) => {
-      if (!blob || S.screen !== "end") return;
+      if (!blob || (S.screen !== "end" && S.screen !== "remote")) return;
       const box = document.getElementById("story"); if (!box) return;
       const img = document.getElementById("story-img"); img.src = URL.createObjectURL(blob);
       box.hidden = false; anim(box, [{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "none" }], { duration: 260, easing: EASE.out });
@@ -2298,7 +2298,7 @@ ${samples}
       return { ...qb, ph: "wait" };
     }
     if (S.screen === "mid") return { ...base, ph: "mid", idx: S.idx };
-    if (S.screen === "end") return { ...base, ph: "end" };
+    if (S.screen === "end") return { ...base, ph: "end", tm: g.total, bq: g.bestQuote ? { text: String(g.bestQuote.text).slice(0, 160), author: g.bestQuote.author, laughs: g.bestQuote.laughs } : null, aw: (g.awards || []).slice(0, 4).map(([k, v, d]) => [k, String(v).slice(0, 40), String(d).slice(0, 40)]) };
     return null;
   }
   function hostEmit() {
@@ -2546,7 +2546,15 @@ ${samples}
       body = `<h2>תמונת מצב</h2>${rankLine(d)}${boardHtml((d.sc || []).slice(0, 8))}<p class="waiting">ממשיכים מהמסך הגדול</p>`;
     } else if (d.ph === "end") {
       const r = myRank(d), won = r && r.pos === 1 && r.pts > 0;
-      body = `<div class="rcard ${won ? "ok" : "miss"}" id="rres">${buddy(won ? "party" : "laugh")}<div class="rbig">${won ? "ניצחת! 👑" : r && r.pts > 0 ? `מקום ${r.pos}` : r ? "המשחק נגמר" : "המשחק נגמר"}<small>${r ? `${n(r.pts)} נקודות` : ""}</small></div></div>${boardHtml((d.sc || []).slice(0, 12))}`;
+      const rows = d.sc || [], top3 = rows.slice(0, 3);
+      const podium = top3.length >= 2 ? `<div class="podium">${[top3[1], top3[0], top3[2]].map((r, k) => r ? `<div class="step ${["p2", "p1", "p3"][k]}">${k === 1 ? `<span class="crown">👑</span>` : ""}<span class="medal">${["2", "1", "3"][k]}</span><b>${esc(r[0])}</b><span class="small">${n(r[1])}</span></div>` : "<div></div>").join("")}</div>` : "";
+      body = `<div class="rcard ${won ? "ok" : "miss"}" id="rres">${buddy(won ? "party" : "laugh")}<div class="rbig">${won ? "ניצחת! 👑" : r && r.pts > 0 ? `מקום ${r.pos}` : "המשחק נגמר"}<small>${r ? `${n(r.pts)} נקודות` : ""}</small></div></div>
+        ${rows[0] && rows[0][1] > 0 ? `<h2>${esc(rows[0][0])} מכיר/ה את הקבוצה הכי טוב</h2>` : ""}
+        ${podium}${rows.length > 3 ? boardHtml(rows.slice(3, 12), 3) : ""}
+        ${d.bq ? `<div class="bubble small-b">${esc(d.bq.text)}<span class="meta">הציטוט של הערב · ${esc(d.bq.author)}${d.bq.laughs ? ` · ${d.bq.laughs} צחוקים אחריו` : ""}</span></div>` : ""}
+        ${(d.aw || []).length ? `<h2 style="font-size:2rem">פרסי הקבוצה</h2><div class="awards">${d.aw.map(([k, v, x]) => `<div class="award"><span class="dim small">${esc(k)}</span><b>${esc(v)}</b><span class="small">${esc(x)}</span></div>`).join("")}</div>` : ""}
+        <section class="panel story" id="story" hidden><b>תמונה לסטורי</b><img id="story-img" alt="תמונת סיכום של המשחק: הפודיום והציטוט של הערב"><div class="row" style="justify-content:center"><button class="btn" id="save-story" hidden>לשמור את התמונה</button></div><p class="note" id="story-note" aria-live="polite" style="text-align:center"></p></section>`;
+      later(() => buildStory(rows, { total: d.tm || 0, bestQuote: d.bq }), 400);
     }
     app.innerHTML = top + body;
     bindMute(); remoteNotice();
