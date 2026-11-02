@@ -958,10 +958,10 @@ ${samples}
       try {
         S.game = await buildGame(S.chatText, S.chatName, status);
         if (S.wantMulti && canMulti()) { openLobby(); return; }
-        S.multi = false;
+        S.multi = false; NET.bump("single");
         S.scores = Object.fromEntries(S.players.map((p) => [p, 0]));
         S.streaks = Object.fromEntries(S.players.map((p) => [p, 0]));
-        S.idx = 0; S.revealed = false; S.screen = "play"; S.enter = true; S.prevOrder = S.players.slice(); S.midScores = null;
+        S.idx = 0; S.revealed = false; S.screen = "play"; S.enter = true; S.prevOrder = S.players.slice(); S.midScores = null; S.endCounted = false;
         S.seenKinds = {};
         keepAwake(true);
         await countdown();
@@ -1336,6 +1336,7 @@ ${samples}
   }
 
   function end() {
+    if (!S.endCounted) { S.endCounted = true; NET.bump("finished"); }
     const rows = Object.entries(S.scores || {}).sort((a, b) => b[1] - a[1]);
     const g = S.game;
     const shareText = `שיחקנו "מי אמר את זה?" על ${n(g.total)} הודעות מהקבוצה.\n` + rows.map(([p, s], i) => `${["🥇", "🥈", "🥉"][i] || `${i + 1}.`} ${p} - ${s}`).join("\n") + (g.bestQuote ? `\n\nהציטוט של הערב: "${g.bestQuote.text}" (${g.bestQuote.author})` : "");
@@ -1411,6 +1412,7 @@ ${samples}
     for (let i = 0; i < 6 && !r; i++) { code = newCode(); try { r = await NET.host(code); } catch (e) { console.error(e); break; } }
     if (!r) { S.err = "לא הצלחתי לפתוח משחק. בודקים את האינטרנט ומנסים שוב, או משחקים על מסך אחד."; S.screen = "setup"; S.enter = true; render(); return; }
     S.multi = true; S.ep = Math.floor(Math.random() * 1e9); S.code = code;
+    NET.bump("games");
     S.players = []; S.scores = {}; S.streaks = {}; S.answers = {}; S.asking = false; S.revealed = false;
     attachHost(r);
     S.screen = "lobby"; S.enter = true; render();
@@ -1569,9 +1571,9 @@ ${samples}
     document.getElementById("back").onclick = () => { SFX.tap(); stopHosting(); S.screen = S.chatText ? "setup" : "home"; render(); };
     document.getElementById("go").onclick = async (ev) => {
       if (!S.players.length) return; ev.currentTarget.disabled = true; audio(); SFX.tap();
-      S.idx = 0; S.revealed = false; S.asking = false; S.prevOrder = S.players.slice(); S.midScores = null; S.seenKinds = {};
+      S.idx = 0; S.revealed = false; S.asking = false; S.prevOrder = S.players.slice(); S.midScores = null; S.seenKinds = {}; S.endCounted = false;
       keepAwake(true);
-      S.screen = "play"; hostEmit();
+      S.screen = "play"; hostEmit(); NET.bump("started");
       await countdown(); S.enter = true; render();
     };
   }
@@ -1629,6 +1631,7 @@ ${samples}
   }
   function pickName(name) {
     name = cleanName(name); if (!name) return;
+    if (!S.rname) NET.bump("players");
     S.rname = name; store.set("rname", name);
     if (room) room.presence({ p: { c: S.rc, n: name } }).catch(() => {});
     SFX.go(); buzz([20, 30, 20]);

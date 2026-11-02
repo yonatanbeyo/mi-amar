@@ -4,15 +4,41 @@
       "$code": {
         ".read": "$code.matches(/^[A-Z0-9]{4}$/)",
         ".write": "auth != null && data.child('host').val() === auth.uid && !newData.exists()",
-        "host": { ".write": "auth != null && $code.matches(/^[A-Z0-9]{4}$/) && (!data.exists() || data.val() === auth.uid) && newData.val() === auth.uid" },
-        "t":    { ".write": "auth != null && root.child('games/' + $code + '/host').val() === auth.uid" },
-        "st":   { ".write": "auth != null && root.child('games/' + $code + '/host').val() === auth.uid",
-                  ".validate": "newData.isString() && newData.val().length < 6000" },
-        "p": {
-          "$uid": { ".write": "auth != null && auth.uid === $uid && root.child('games/' + $code + '/host').exists()",
-                    ".validate": "newData.isString() && newData.val().length < 400" }
+        "host": {
+          ".write": "auth != null && $code.matches(/^[A-Z0-9]{4}$/) && (!data.exists() || data.val() === auth.uid) && newData.val() === auth.uid"
         },
-        "$other": { ".validate": false }
+        "t": {
+          ".write": "auth != null && root.child('games/' + $code + '/host').val() === auth.uid"
+        },
+        "st": {
+          ".write": "auth != null && root.child('games/' + $code + '/host').val() === auth.uid",
+          ".validate": "newData.isString() && newData.val().length < 6000"
+        },
+        "p": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('games/' + $code + '/host').exists()",
+            ".validate": "newData.isString() && newData.val().length < 400"
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "stats": {
+      ".read": true,
+      "total": {
+        "$key": {
+          ".write": "auth != null && newData.isNumber() && newData.val() === (data.exists() ? data.val() : 0) + 1"
+        }
+      },
+      "days": {
+        "$day": {
+          ".validate": "$day.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)",
+          "$key": {
+            ".write": "auth != null && newData.isNumber() && newData.val() === (data.exists() ? data.val() : 0) + 1"
+          }
+        }
       }
     }
   }

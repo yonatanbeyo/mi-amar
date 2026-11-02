@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>מי אמר את זה? · נתונים</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+@font-face { font-family: "Karantina"; font-weight: 700; src: url(fonts/karantina-hebrew-700-normal.woff2) format("woff2"); }
+@font-face { font-family: "Varela Round"; src: url(fonts/varela-round-hebrew-400-normal.woff2) format("woff2"); }
+:root { --bg: #17112e; --card: rgba(255,255,255,.06); --line: #3a2f66; --text: #f4efff; --dim: #b4a9d6; --yellow: #ffd23f; --pink: #ff3d7f; --mint: #3fe0b0; --sky: #5fb4ff; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: "Varela Round", system-ui, sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 18px; }
+h1 { font-family: Karantina, sans-serif; font-size: 3.4rem; line-height: .9; margin: 0; }
+h1 span { color: var(--yellow); }
+.dim { color: var(--dim); font-size: .9rem; }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; display: grid; gap: 2px; }
+.card b { font-family: Karantina, sans-serif; font-size: 3rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.card span { color: var(--dim); font-size: .85rem; }
+.card small { color: var(--mint); font-size: .8rem; }
+.chart { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: grid; gap: 10px; }
+.bars { display: grid; grid-template-columns: repeat(14, minmax(0,1fr)); gap: 4px; align-items: end; height: 160px; }
+.bar { display: grid; gap: 4px; align-content: end; justify-items: center; height: 100%; }
+.bar i { display: block; width: 100%; border-radius: 6px 6px 2px 2px; background: var(--pink); min-height: 2px; }
+.bar em { font-style: normal; font-size: .7rem; color: var(--dim); font-variant-numeric: tabular-nums; }
+.bar u { text-decoration: none; font-size: .75rem; font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .85rem; color: var(--dim); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-inline-end: 6px; vertical-align: middle; }
+.err { color: var(--pink); }
+button { font: inherit; background: transparent; color: var(--text); border: 2px solid var(--line); border-radius: 12px; padding: 8px 14px; cursor: pointer; justify-self: start; }
+</style>
+</head>
+<body>
+<main>
+  <h1>מי אמר <span>את זה?</span> · נתונים</h1>
+  <p class="dim" id="upd">טוען…</p>
+  <div class="cards" id="cards"></div>
+  <section class="chart">
+    <b>משחקים ושחקנים ב-14 הימים האחרונים</b>
+    <div class="legend"><span><i style="background:var(--pink)"></i>משחקים שהתחילו</span><span>המספר מעל: שחקנים שהצטרפו</span></div>
+    <div class="bars" id="bars"></div>
+  </section>
+  <button id="again">רענון</button>
+  <p class="dim">הנתונים נספרים מרגע שהמונה הופעל. לא נשמר כאן שום דבר מהצ'אטים, רק מספרים.</p>
+</main>
+<script src="config.js"></script>
+<script src="app.js"></script>
+<script>
+(() => {
+  const net = window.Chat.createNet(window.MIAMAR_FIREBASE);
+  const n = (x) => Number(x || 0).toLocaleString("he-IL");
+  const key = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const LABELS = [["started", "משחקים שהתחילו", "כל המצבים"], ["players", "שחקנים שהצטרפו מטלפון", ""], ["finished", "משחקים שהגיעו עד הסוף", ""], ["games", "לובים שנפתחו", "מצב טלפונים"]];
+  async function load() {
+    const s = await net.readStats();
+    if (!s) { document.getElementById("upd").innerHTML = '<span class="err">לא הצלחתי לקרוא את הנתונים.</span>'; return; }
+    const t = s.total || {}, days = s.days || {}, td = days[key(new Date())] || {};
+    const started = (o) => (o.started || 0) + (o.single || 0);
+    document.getElementById("cards").innerHTML = LABELS.map(([k, label, note]) => {
+      const total = k === "started" ? started(t) : t[k], today = k === "started" ? started(td) : td[k];
+      return `<div class="card"><b>${n(total)}</b><span>${label}${note ? ` · ${note}` : ""}</span><small>היום: ${n(today)}</small></div>`;
+    }).join("");
+    const list = [];
+    for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); const o = days[key(d)] || {}; list.push({ d, g: started(o), p: o.players || 0 }); }
+    const max = Math.max(1, ...list.map((x) => x.g));
+    document.getElementById("bars").innerHTML = list.map((x) => `<div class="bar" title="${x.d.toLocaleDateString("he-IL")}"><u>${x.p ? n(x.p) : ""}</u><i style="height:${(x.g / max) * 120}px"></i><em>${x.d.getDate()}/${x.d.getMonth() + 1}</em></div>`).join("");
+    document.getElementById("upd").textContent = "עודכן עכשיו · " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+  }
+  document.getElementById("again").onclick = load;
+  load();
+})();
+</script>
+</body>
+</html>
