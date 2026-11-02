@@ -49,6 +49,7 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
     <div class="legend"><span><i style="background:var(--pink)"></i>משחקים שהתחילו</span><span>המספר מעל: שחקנים שהצטרפו</span></div>
     <div class="bars" id="bars"></div>
   </section>
+  <section class="chart"><b>איזה שאלות אהבו (👍 מתוך כל הדירוגים)</b><div class="rows" id="rates"></div></section>
   <section class="chart"><b>מאיפה הגיעו</b><div class="rows" id="src"></div></section>
   <section class="chart"><b>מכשירים</b><div class="rows" id="dev"></div></section>
   <section class="chart"><b>מדינות (לפי אזור הזמן בטלפון)</b><div class="rows" id="geo"></div></section>
@@ -84,6 +85,11 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
       document.getElementById(el).innerHTML = items.length ? items.map(([k, v]) => `<div class="row"><span>${NAMES[k] || k.slice(prefix.length)}</span><span class="track"><i style="width:${(v / max) * 100}%"></i></span><b>${n(v)}</b></div>`).join("") : '<p class="dim">עוד אין נתונים</p>';
     };
     rows("src_", "src"); rows("dev_", "dev"); rows("geo_", "geo");
+    // 👍/👎 per question kind, best first
+    { const KN = { wtf: "רגע של WTF", story: "הסיפור של הקבוצה", legend: "מי אמר את זה ראשון", inside: "מי התחיל את המילה", first: "ההודעה הראשונה", day_topic: "על מה השתגעו ביום", day_who: "מי הדליק את הבלגן", moment: "הרגע של הקבוצה", quote: "מי אמר את זה", finish: "איך זה נגמר", phrase: "של מי הביטוי", word: "של מי המילה", stat: "מי בקבוצה…", number: "כמה פעמים", when: "באיזו שעה", era: "באיזו תקופה", ai: "המתחזה" };
+      const r = {}; for (const [k, v] of Object.entries(s.total || {})) { const m = /^r_(.+)_(up|down)$/.exec(k); if (m) { (r[m[1]] ||= { up: 0, down: 0 })[m[2]] = v; } }
+      const list = Object.entries(r).map(([k, x]) => [k, x.up, x.up + x.down]).sort((a, b) => b[1] / b[2] - a[1] / a[2]);
+      document.getElementById("rates").innerHTML = list.length ? list.map(([k, up, all]) => `<div class="row"><span>${KN[k] || k}</span><span class="track"><i style="width:${(up / all) * 100}%"></i></span><b>${Math.round((up / all) * 100)}% · ${n(all)}</b></div>`).join("") : '<p class="dim">עוד אין דירוגים. הם מופיעים אחרי שמשחקים ולוחצים 👍/👎 בסוף שאלה</p>'; }
     document.getElementById("upd").textContent = "עודכן עכשיו · " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
   }
   document.getElementById("again").onclick = load;

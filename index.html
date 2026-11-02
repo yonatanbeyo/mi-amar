@@ -650,6 +650,8 @@ input[type=text] { background: var(--soft); color: var(--ink); border: 0; border
 .musicmenu button[aria-checked="true"]::after { content: " ♪"; }
 
 .bubble, .opt > span { white-space: pre-line; }
+.rate { display: flex; align-items: center; justify-content: center; gap: 10px; color: rgba(255,255,255,.9); font-weight: 600; }
+.rate .chip { font-size: 1.3rem; padding: 4px 14px; }
 #overlay[data-loading] { background: var(--stage) !important; }
 .loadcard h3 { font-size: clamp(1.8rem, 7vw, 2.6rem) !important; }
 .ld-bar { width: min(320px, 80vw); margin: 14px auto 0; }
@@ -2248,10 +2250,18 @@ ${samples}
     const last = S.idx + 1 >= S.game.questions.length;
     return `<div class="stamp" style="--sc:${q.stamp || q.type === "number" || q.type === "when" || q.type === "era" ? "var(--orange)" : colorOf(stampText)}">${esc(stampText)}${q.stamp || q.type === "number" || q.type === "when" || q.type === "era" ? "" : "!"}${sub ? `<small>${sub}</small>` : ""}</div>${ctx}
       ${S.multi ? multiResults(q) : S.players.length ? `<section class="panel"><b>מי ניחש נכון?</b><div class="chips" id="scorers">${S.players.map((p) => `<button class="chip" aria-pressed="false" data-p="${esc(p)}">${esc(p)}${S.streaks[p] >= 2 ? `<span class="streak">🔥${S.streaks[p]}</span>` : ""}</button>`).join("")}</div></section>` : ""}
+      <div class="rate" id="rate"><span>איך הייתה השאלה?</span><button class="chip" data-r="up" aria-label="שאלה טובה">👍</button><button class="chip" data-r="down" aria-label="שאלה משעממת">👎</button></div>
       <button class="btn big" id="next" style="width:100%">${last ? "לתוצאות" : "השאלה הבאה"}</button>`;
   }
 
+  // which kind of question this was, for the 👍/👎 counts on the stats page (no message text is ever sent)
+  const rateKey = (q) => q.title === "רגע של WTF 🤯" ? "wtf" : q.type === "legend" ? (q.msg ? "legend" : q.title === "מי התחיל את זה?" ? "inside" : "first") : q.type === "day" ? (q.author ? "day_who" : "day_topic") : q.type;
   function bindReveal(q) {
+    const rate = document.getElementById("rate");
+    if (rate) rate.querySelectorAll("button").forEach((b) => (b.onclick = () => {
+      NET.bump(`r_${rateKey(q)}_${b.dataset.r}`.slice(0, 24)); SFX.point(); buzz(15);
+      rate.innerHTML = `<span>${b.dataset.r === "up" ? "נרשם. עוד כאלה 🔥" : "נרשם. פחות כאלה בפעם הבאה"}</span>`;
+    }));
     app.querySelectorAll("#scorers .chip").forEach((b) => (b.onclick = () => {
       const p = b.dataset.p; const on = !S.correct.includes(p);
       S.correct = on ? [...S.correct, p] : S.correct.filter((x) => x !== p);
