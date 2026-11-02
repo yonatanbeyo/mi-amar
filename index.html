@@ -789,7 +789,10 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
   const fmtDate = (ts) => ts ? new Date(ts).toLocaleDateString("he-IL", { day: "numeric", month: "long", year: "numeric" }) : "";
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const store = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
-  const LAUGH = /(חחח|xaxa|haha|lol|😂|🤣|💀)/i;
+  const LAUGH = /(חחח|פח{2,}|לח{2,}|xaxa|haha|lol|lmao|😂|🤣|💀|😭|אני מת|אנימת|מתתי|בכיתי|קורע|הרגת אותי)/i;
+  // how a group says "WTF": the reactions that mean something crazy was just said
+  const WTF = /(ו+א+ט+פ+ק|ו+ט+פ+ק|wtf|what the f|מה אני שומע|אין מצב|משוגע|מטורף|ווילד|\bwild\b|מה הקשר|מז ?תומרת|סעמק|פאק|fuck|דאם|damn|איכס|לא מכבד|מה אחי|אחי מה|^מה{2,}|^מה\s*[?!]{2,}|לא נכון|אתה חולה|את חולה|אתה דפוק|פסיכי|🤯|😳|😱|🫢|🫣|אגדה|תמחק|צילמתי מסך|אצלם מסך|צלמתי מסך|סקרין|screenshot|אתה רציני|רציני\?|אשכרה\?|מה לעזאזל|מה נסגר|וואי וואי|יא ?אללה)/i;
+  const WTF_HARD = /(ו+א+ט+פ+ק|wtf|what the f|מה אני שומע|תמחק את|צילמתי מסך|אצלם מסך|סקרין|screenshot|לא מכבד|מה לעזאזל|🤯)/i;
   const TIMER = 15;
   const UA = navigator.userAgent || "";
   const OS = /iPhone|iPad|iPod/.test(UA) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) ? "ios" : /Android/i.test(UA) ? "android" : "desktop";
@@ -1190,7 +1193,7 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
 
   // ---------- question building ----------
   // ethnic slurs never go on the big screen (or into someone's TikTok)
-  const SLUR = /(כוש(י|ית|ים|יות)\b|ערבוש|פרענק|צ'?חצ'?ח|ניגר|nigg|faggot)/i;
+  const SLUR = /(כוש(י|ית|ים|יות)\b|ערבוש|פרענק|צ'?חצ'?ח|ניגר|nigg|faggot|סרטן)/i; // + illness curses: someone in the room may really be going through it
   const clean = (t) => !SLUR.test(t) && !/https?:|www\.|@\S+\.|@\u2068?\+?\d|\d{7,}|\d{2,3}-\d{6,}|<[^>]*(נערכה|edited)[^>]*>/i.test(t);
   // ---- style model: how typical is a message of a person, compared with everyone else ----
   // Questions are fun when the room CAN get them: "that is so him". Messages anyone could have written are dropped.
@@ -1249,17 +1252,21 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
       let score = Math.min(words, 12), laughs = 0;
       // the ten messages after it (within 20 minutes) tell us what the room thought of it
       const crowd = new Set(), reacts = []; let shock = 0, power = 0;
-      for (let k = 1; k <= 10; k++) {
+      const wtfBy = new Set(); let wtfScore = 0;
+      for (let k = 1; k <= 12; k++) {
         const nx = messages[i + k]; if (!nx) break;
         if (m.ts && nx.ts && nx.ts - m.ts > 20 * 60000) break;
         if (nx.author === m.author || !nx.text) continue;
-        const funny = LAUGH.test(nx.text), wow = SHOCK.test(nx.text);
+        // a WTF only counts if it lands right away: one of the next few messages, within 4 minutes, short, not tagging someone else
+        const wtf = k <= 5 && (!m.ts || !nx.ts || nx.ts - m.ts < 4 * 60000) && nx.text.length < 45 && !nx.text.includes("@") && !wtfBy.has(nx.author) && WTF.test(nx.text);
+        if (wtf) { wtfBy.add(nx.author); wtfScore += WTF_HARD.test(nx.text) ? 3 : 1; }
+        const funny = LAUGH.test(nx.text), wow = wtf || SHOCK.test(nx.text);
         if (funny) { laughs++; crowd.add(nx.author); power += Math.min(3, ((nx.text.match(/ח{3,}/) || [""])[0].length) / 5) + (nx.text.match(/[😂🤣💀]/gu) || []).length * .5; }
         if (wow) shock++;
-        if ((funny || wow) && reacts.length < 3 && nx.text.length < 60) reacts.push({ a: nx.author, t: nx.text });
+        if ((funny || wtf) && k <= 6 && reacts.length < 4 && nx.text.length < 45 && !nx.text.includes("@") && clean(nx.text)) reacts.push({ a: nx.author, t: nx.text, w: wtf });
       }
       if (big && !crowd.size && !shock && !SPICY.test(t) && !CONFESS.test(t) && Math.random() > .05) return;
-      score += crowd.size * 12 + laughs * 3 + Math.min(8, power * 2) + shock * 6;
+      score += crowd.size * 12 + laughs * 3 + Math.min(8, power * 2) + shock * 6 + wtfBy.size * 10 + wtfScore * 3;
       // how "them" it is: the strongest signal that the room will enjoy it
       const sig = STYLE.fit(m.author, t, true);
       score += Math.max(-8, Math.min(12, sig * 3));
@@ -1272,7 +1279,7 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
       if (/^(אוקיי|אוקי|כן|לא|סבבה|טוב|ok|בסדר|מה קורה|תודה)\b/i.test(t)) score -= 8;
       if (/(מחר|היום|בשעה|כתובת|מספר|שקל|₪)/.test(t) && !laughs) score -= 3; // logistics are dull
       if (t.includes("@")) score -= 6;
-      out.push({ i, text: t, author: m.author, ts: m.ts, score, laughs, sig, crowd: crowd.size, shock, reacts });
+      out.push({ i, text: t, author: m.author, ts: m.ts, score, laughs, sig, crowd: crowd.size, shock, reacts, wtf: wtfBy.size, wtfScore });
     });
     const seen = new Set();
     return out.sort((a, b) => b.score - a.score).filter((c) => (seen.has(c.text) ? false : (seen.add(c.text), true)));
@@ -1429,11 +1436,18 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
       const night = c.ts && new Date(c.ts).getHours() < 6;
       const hook = c.shock >= 2 && c.crowd < 2 ? rnd(["אחרי ההודעה הזאת כל הקבוצה נשארה בהלם", "הקבוצה שתקה דקה שלמה אחרי זה", "אף אחד לא ידע מה לענות על זה"])
         : rnd([...(c.crowd >= 3 ? [`${c.crowd} אנשים התפוצצו מצחוק אחרי ההודעה הזאת`] : []), "ההודעה שהפילה את הקבוצה", "אחרי זה אף אחד לא הצליח להפסיק לצחוק", "קלאסיקה של הקבוצה", ...(c.laughs >= 4 ? [`${c.laughs} תגובות של צחוק אחרי זה`] : [])]);
-      return { type: "moment", text: c.text, answer: c.author, author: c.author, ts: c.ts, hook: hook + (night ? " (באמצע הלילה)" : ""),
+      return { type: "moment", text: c.text, answer: c.author, author: c.author, ts: c.ts, hook: (Math.random() < .6 && reactLine(c)) || hook + (night ? " (באמצע הלילה)" : ""),
         options: smartOptions(c.author, pool, c.text), reveal: c.reacts.map((r) => `${r.a}: ${r.t}`).join("  ·  "), ...ctxOf(c.i) };
     });
   }
 
+  const reactLine = (c) => { const r = [...c.reacts].sort((a, b) => (b.w ? 1 : 0) - (a.w ? 1 : 0)).slice(0, 3).map((x) => `"${x.t.replace(/\s+/g, " ").slice(0, 34)}"`); return r.length ? `התגובות בקבוצה: ${r.join(" · ")}` : ""; };
+  function wtfQs(cands, pool, k) {
+    const top = cands.filter((c) => c.wtf >= 2 || (c.wtf >= 1 && c.wtfScore >= 3 && c.crowd >= 1)).filter((c) => c.text.split(/\s+/).length >= 3)
+      .sort((a, b) => (b.wtfScore * 4 + b.wtf * 6 + b.crowd * 3) - (a.wtfScore * 4 + a.wtf * 6 + a.crowd * 3)).slice(0, 150);
+    return sample(top, k, (c) => Math.pow(c.wtfScore + c.wtf * 2 + c.crowd, 2)).map((c) => ({ type: "moment", title: "רגע של WTF 🤯", text: c.text, answer: c.author, author: c.author, ts: c.ts,
+      hook: reactLine(c) || "הקבוצה לא האמינה שמישהו כתב את זה", options: smartOptions(c.author, pool, c.text), reveal: c.reacts.map((r) => `${r.a}: ${r.t}`).join("  ·  "), ...ctxOf(c.i) }));
+  }
   // a word one person owns: "who writes 'וואלה' the most?"
   function wordQs(pool, k) {
     if (!STYLE) return [];
@@ -1642,13 +1656,13 @@ ${samples}
     const per = {}, balanced = [];
     for (const q of quoteSrc) { per[q.author] = (per[q.author] || 0) + 1; if (per[q.author] <= Math.max(3, Math.ceil(total / pool.length) + 1)) balanced.push(q); }
 
-    const want = { finish: kinds.finish ? Math.round(total * .07) : 0, reply: kinds.reply ? Math.round(total * .07) : 0, phrase: kinds.phrase ? Math.round(total * .05) : 0, stat: kinds.stat ? Math.max(1, Math.round(total * .16)) : 0, moment: kinds.quote ? Math.round(total * .16) : 0, legend: kinds.quote ? Math.max(1, Math.round(total * .1)) : 0, day: kinds.stat ? Math.round(total * .08) : 0, number: kinds.number ? Math.max(1, Math.round(total * .08)) : 0, word: kinds.word ? Math.round(total * .05) : 0, when: kinds.when ? Math.max(1, Math.round(total * .05)) : 0, era: kinds.when ? Math.round(total * .05) : 0, ai: imposters.length };
+    const want = { finish: kinds.finish ? Math.round(total * .07) : 0, reply: kinds.reply ? Math.round(total * .07) : 0, phrase: kinds.phrase ? Math.round(total * .05) : 0, stat: kinds.stat ? Math.max(1, Math.round(total * .16)) : 0, moment: kinds.quote ? Math.round(total * .1) : 0, wtf: kinds.quote ? Math.max(1, Math.round(total * .2)) : 0, legend: kinds.quote ? Math.max(1, Math.round(total * .1)) : 0, day: kinds.stat ? Math.round(total * .08) : 0, number: kinds.number ? Math.max(1, Math.round(total * .08)) : 0, word: kinds.word ? Math.round(total * .05) : 0, when: kinds.when ? Math.max(1, Math.round(total * .05)) : 0, era: kinds.when ? Math.round(total * .05) : 0, ai: imposters.length };
     const used = new Set();
     S.seenQ = S.seenQ && S.seenFor === name ? S.seenQ : new Set(); S.seenFor = name;
     const take = (arr, k, again = false) => { const src = again ? arr : arr.filter((q) => !S.seenQ.has((q.full || q.text).replace(/…$/, "")));
       return src.filter((q) => { const key = (q.full || q.text).replace(/…$/, ""); if (used.has(key)) return false; used.add(key); return true; }).slice(0, k); };
     let extras = [
-      ...take(momentQs(cands, pool, want.moment), want.moment),
+      ...take(wtfQs(cands, pool, want.wtf * 2), want.wtf), ...take(momentQs(cands, pool, want.moment), want.moment),
       ...take(shuffle([...legendQs(pool, want.legend * 2), ...insideQs(pool, want.legend), ...firstQs(pool)]), want.legend), ...take(dayQs(pool, want.day * 2), want.day),
       ...take(finishQs(cands, pool, want.finish * 2), want.finish), ...take(replyQs(pool, want.reply * 2), want.reply),
       ...take(phraseQs(stats, pool, want.phrase), want.phrase), ...take(sample(statQs(stats, pool), want.stat * 2, () => 1), want.stat),
@@ -1661,7 +1675,7 @@ ${samples}
     if (qs.length < total) qs = shuffle([...qs, ...take(balanced.map((c) => quoteQ(c, pool)), total - qs.length, true)]);
     if (qs.length < 5) throw new Error("לא מצאתי מספיק הודעות טובות לשאלות. נסה צ'אט ארוך יותר או סמן עוד סוגי שאלות.");
     // the finale is worth double: prefer a juicy quote or the AI imposter
-    const fi = qs.findIndex((q) => q.type === "moment") >= 0 ? qs.findIndex((q) => q.type === "moment") : qs.findIndex((q) => q.type === "ai") >= 0 ? qs.findIndex((q) => q.type === "ai") : qs.length - 1;
+    const fi = qs.findIndex((q) => q.title === "רגע של WTF 🤯") >= 0 ? qs.findIndex((q) => q.title === "רגע של WTF 🤯") : qs.findIndex((q) => q.type === "moment") >= 0 ? qs.findIndex((q) => q.type === "moment") : qs.findIndex((q) => q.type === "ai") >= 0 ? qs.findIndex((q) => q.type === "ai") : qs.length - 1;
     const [fin] = qs.splice(fi, 1); qs.push(fin);
     qs.forEach((q) => S.seenQ.add((q.full || q.text).replace(/…$/, "")));
 
