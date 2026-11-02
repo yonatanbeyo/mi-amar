@@ -707,7 +707,7 @@ input[type=text] { background: var(--soft); color: var(--ink); border: 0; border
       let nb = actx.createBuffer(1, actx.sampleRate * 1.5, actx.sampleRate); const d = nb.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
       MIX = { master, music, sfx, noise: nb };
     }
-    MIX.master.gain.value = muted ? 0 : 1;
+    MIX.master.gain.value = muted ? 0 : .85;
     return actx;
   }
   // iPhone: Web Audio is silenced by the ring/silent switch unless the page asks to be treated as media playback.
@@ -799,7 +799,7 @@ input[type=text] { background: var(--soft); color: var(--ink); border: 0; border
     function fade(m, sec = .8) { if (!L) return; const t = actx.currentTime, w = MODES[m] || {}; for (const k of ["kick", "clap", "hat", "bass", "pad", "lead", "tension"]) { L[k].gain.cancelScheduledValues(t); L[k].gain.setTargetAtTime((w[k] || 0) * (k === "tension" ? level : 1), t, sec / 3); } }
     function tick() {
       if (!L || mode === "off") return;
-      MIX.master.gain.value = muted ? 0 : 1;
+      MIX.master.gain.value = muted ? 0 : .85;
       while (next < actx.currentTime + .12) {
         const s = step % 64, bar = (s / 16) | 0, b = s % 16, [root, tri] = CH[bar], t = next;
         if (b === 0 || b === 8 || (b === 6 && bar === 3) || (b === 10 && bar % 2)) kick(t, L.kick, .8);
