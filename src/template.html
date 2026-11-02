@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>מי אמר את זה? · משחק מסיבה מהצ'אט של הקבוצה</title>
 <meta name="description" content="מעלים את הצ'אט של הקבוצה מוואטסאפ, וכל אחד מנחש מהטלפון שלו מי כתב כל הודעה. משחק מסיבה בחינם.">
-<meta name="theme-color" content="#f4f1ff">
+<meta name="theme-color" content="#6a42ee">
 <meta property="og:title" content="מי אמר את זה? 🤔">
 <meta property="og:description" content="משחק מסיבה מהצ'אט של הקבוצה. כל אחד עונה מהטלפון שלו.">
 <meta property="og:image" content="https://mi-amar.pages.dev/og.png">
@@ -643,6 +643,12 @@ input[type=text] { background: var(--soft); color: var(--ink); border: 0; border
 .chip.lost { background: #ffe3ee; color: #b4235b; }
 .opts.revealed .opt.win.has-votes { opacity: 1; }
 
+.musicmenu { position: fixed; z-index: 60; background: var(--card); border: 3px solid var(--ink2); border-radius: 18px; padding: 10px; display: grid; gap: 6px; min-width: 200px; box-shadow: 0 6px 0 var(--ink2); font-family: var(--body); }
+.musicmenu b { font-weight: 800; padding: 2px 6px 4px; }
+.musicmenu button { text-align: start; border: 0; background: var(--soft); color: var(--ink); border-radius: 12px; padding: 10px 12px; font: 700 1rem var(--body); cursor: pointer; }
+.musicmenu button[aria-checked="true"] { background: var(--purple); color: #fff; }
+.musicmenu button[aria-checked="true"]::after { content: " ♪"; }
+
 @media (min-width: 1100px) {
   .qwrap .peek { --bs: 96px; top: -68px; }
   .scene { height: 300px; } .scene .buddy { --bs: 170px; } .sb { font-size: 1.15rem; }
@@ -651,6 +657,115 @@ input[type=text] { background: var(--soft); color: var(--ink); border: 0; border
   .doodles, .buddy .bd, .buddy .ey, .buddy .drop, .buddy .dots circle, .sb { animation: none; }
   .buddy .pu { transition: none; }
 }
+</style>
+<style id="v6">
+/* ===== v6: cartoon game UI =====
+   One art style everywhere, matching Bubbi: cel-shaded candy colours, a 3px ink outline and a hard ink shadow
+   on everything you can touch, a saturated purple stage, and Fredoka for every game word. */
+@font-face { font-family: "Fredoka"; font-weight: 600; font-display: swap; src: url(fonts/fredoka-hebrew-600-normal.woff2) format("woff2"); unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: "Fredoka"; font-weight: 700; font-display: swap; src: url(fonts/fredoka-hebrew-700-normal.woff2) format("woff2"); unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: "Fredoka"; font-weight: 600; font-display: swap; src: url(fonts/fredoka-latin-600-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+2000-206F; }
+@font-face { font-family: "Fredoka"; font-weight: 700; font-display: swap; src: url(fonts/fredoka-latin-700-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+2000-206F; }
+:root { --game: "Fredoka", "Rubik", system-ui, sans-serif; --stage: #6a42ee; --stage-d: #4a28c2; --o: #1b1530; --yel: #ffbe2e; --yel-d: #e09400; --line3: 3px solid var(--o); }
+html { background: var(--stage-d) !important; }
+body { background: radial-gradient(120% 900px at 50% 0%, #8763ff 0%, var(--stage) 45%, var(--stage-d) 100%) no-repeat, var(--stage-d) !important; min-height: 100vh; color: #fff; }
+.doodles { filter: brightness(0) invert(1); opacity: .07; }
+
+/* type: Fredoka for every game word */
+h1, h2, .sec, .kind, .btn, .opt, .stamp, .big-num, .banner, .code, .rbig, .counter, .chip, .sp, .lp, .betbtn b, .intro h3, .wipe b, .award b, .step b, .brow, .mode button b, .seg button, .drop strong, .musicmenu, #title { font-family: var(--game) !important; }
+#title { font-weight: 700; }
+h2, .sec { color: #fff !important; font-weight: 700; text-shadow: -2.5px 0 0 var(--o), 2.5px 0 0 var(--o), 0 -2.5px 0 var(--o), 0 2.5px 0 var(--o), -2px -2px 0 var(--o), 2px -2px 0 var(--o), -2px 2px 0 var(--o), 2px 2px 0 var(--o), 0 5px 0 var(--o); letter-spacing: .01em; }
+.kind { color: #fff !important; font-weight: 700; font-size: 1.15rem; text-shadow: -2px 0 0 var(--o), 2px 0 0 var(--o), 0 -2px 0 var(--o), 0 2px 0 var(--o), 0 3px 0 var(--o); }
+.counter { color: #fff !important; font-weight: 700; background: var(--o); border-radius: 99px; padding: 4px 12px; font-size: 1rem; }
+
+/* loose text sits on the purple stage: light; text inside cards stays ink */
+.dim, .note, .lead, .small, .foot, .kbd-hint, .ans-count, .waiting, .rank, .stamp small, .qr-side .dim, .lead b { color: rgba(255,255,255,.88); }
+.lead b { color: #fff; }
+:is(.panel, .bubble, .ctx, .award, .joinbox, .board, .how, .mode button, .rcard.miss, .sb, .musicmenu) :is(.dim, .note, .small, .meta) { color: var(--sub); }
+.mode button .dim, .hw span:last-child, .steps li span { color: var(--sub); }
+:is(.panel, .bubble, .award, .joinbox, .board, .how, .mode button) { color: var(--ink); }
+.panel b, .award b, .joinbox label, .steps b, .hw strong { color: var(--ink); }
+.panel .dim b { color: var(--ink); }
+
+/* everything you can touch: ink outline + hard ink shadow */
+.panel, .bubble, .ctx, .award, .joinbox, .board, .how, .mode button, .rcard, .qwrap .bubble, .err { border: var(--line3) !important; box-shadow: 0 6px 0 var(--o) !important; }
+.drop { border: 3px dashed var(--o) !important; background: rgba(255,255,255,.92) !important; box-shadow: 0 6px 0 var(--o) !important; }
+.bubble { border-radius: 28px 10px 28px 28px; }
+.ctx { box-shadow: 0 4px 0 var(--o) !important; }
+.context .ctx[style*="border-color"] { background: #fff4d6; }
+
+.btn { background: var(--yel); color: var(--o); border: var(--line3); border-radius: 18px; font-weight: 700; font-size: 1.15rem; letter-spacing: .01em;
+  box-shadow: inset 0 3px 0 rgba(255,255,255,.55), inset 0 -5px 0 rgba(0,0,0,.12), 0 6px 0 var(--o); transition: transform 70ms ease-out, box-shadow 70ms ease-out, filter 150ms ease; }
+.btn:active { transform: translateY(5px); box-shadow: inset 0 3px 0 rgba(255,255,255,.55), inset 0 -3px 0 rgba(0,0,0,.12), 0 1px 0 var(--o); }
+@media (hover: hover) and (pointer: fine) { .btn:hover, .icon-btn:hover, .chip:hover { filter: brightness(1.06); } }
+.btn.alt { background: #fff; color: var(--o); box-shadow: inset 0 -4px 0 rgba(27,21,48,.08), 0 5px 0 var(--o); }
+.btn.alt:active { box-shadow: 0 1px 0 var(--o); }
+.btn.armed { background: var(--pink); color: #fff; }
+.btn:disabled { filter: saturate(.3) brightness(.95); }
+.icon-btn { background: #fff; color: var(--o); border: var(--line3); border-radius: 14px; box-shadow: 0 4px 0 var(--o); width: 46px; height: 46px; }
+.icon-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--o); }
+.chip { background: #fff; color: var(--o); border: 2.5px solid var(--o); box-shadow: 0 3px 0 var(--o); font-weight: 600; }
+.chip.on, .chip[aria-pressed="true"] { background: var(--teal); color: #fff; }
+.chip.lost { background: #ffe3ee; color: #b4235b; }
+input[type=text], .code-in { background: #fff !important; border: var(--line3) !important; color: var(--o) !important; }
+.seg { background: rgba(27,21,48,.08); border: 2.5px solid var(--o); }
+.seg button[aria-pressed="true"] { background: var(--yel); color: var(--o); box-shadow: 0 2px 0 var(--o); }
+.mode button[aria-pressed="true"] { background: #fff7e0 !important; outline: 4px solid var(--yel); outline-offset: -1px; }
+
+/* the timer: a chunky bar */
+.timer { height: 18px; background: rgba(27,21,48,.35); border: var(--line3); border-radius: 99px; overflow: hidden; }
+.timer i { background: linear-gradient(180deg, #ffe08a 0 35%, var(--yel) 35%); border-radius: 0; }
+.timer.hurry i { background: linear-gradient(180deg, #ff9cc6 0 35%, var(--pink) 35%); }
+
+/* answer tiles: cel-shaded candy blocks */
+.opt { border: var(--line3) !important; border-radius: 24px; text-shadow: -1.5px 0 0 var(--o), 1.5px 0 0 var(--o), 0 -1.5px 0 var(--o), 0 1.5px 0 var(--o), 0 3px 0 var(--o); font-weight: 700;
+  box-shadow: inset 0 5px 0 rgba(255,255,255,.35), inset 0 -10px 0 rgba(0,0,0,.14), 0 7px 0 var(--o) !important; }
+.opts .opt, .pad .opt { background-image: none !important; }
+.opt:active { transform: translateY(6px); box-shadow: inset 0 5px 0 rgba(255,255,255,.35), inset 0 -6px 0 rgba(0,0,0,.14), 0 1px 0 var(--o) !important; }
+.opt .ini { border: 2.5px solid var(--o); text-shadow: none; color: #fff; background: rgba(255,255,255,.3); }
+.opts.revealed .opt { background: rgba(255,255,255,.28) !important; color: rgba(255,255,255,.75) !important; border-color: rgba(27,21,48,.35) !important; text-shadow: none; box-shadow: 0 5px 0 rgba(27,21,48,.35) !important; }
+.opts.revealed .opt.win { color: #fff !important; border-color: var(--o) !important; text-shadow: -1.5px 0 0 var(--o), 1.5px 0 0 var(--o), 0 -1.5px 0 var(--o), 0 1.5px 0 var(--o), 0 3px 0 var(--o);
+  box-shadow: inset 0 5px 0 rgba(255,255,255,.35), inset 0 -10px 0 rgba(0,0,0,.14), 0 7px 0 var(--o), 0 0 0 6px #fff, 0 0 0 9px var(--o) !important; }
+.pad.locked .opt.mine { box-shadow: inset 0 5px 0 rgba(255,255,255,.35), 0 7px 0 var(--o), 0 0 0 6px #fff, 0 0 0 9px var(--o) !important; }
+.opt .vc { border: 2px solid var(--o); }
+
+/* players, scores, results */
+.sp { background: #fff; color: var(--o); border: 2.5px solid var(--o); box-shadow: 0 3px 0 var(--o); }
+.sp b { color: var(--purple); } .sp.lead { background: var(--yel); } .sp.lead b { color: var(--o); }
+.lp { background: #fff; border: 2.5px solid var(--o) !important; box-shadow: 0 4px 0 var(--o); }
+.av { border: 2.5px solid var(--o); }
+.stamp { font-weight: 700; }
+.fly { color: var(--yel); text-shadow: -2px 0 0 var(--o), 2px 0 0 var(--o), 0 -2px 0 var(--o), 0 2px 0 var(--o), 0 4px 0 var(--o); font-family: var(--game); }
+.rcard.ok { background: var(--teal); } .rcard.no { background: var(--pink); }
+.rcard .rbig { text-shadow: -2.5px 0 0 var(--o), 2.5px 0 0 var(--o), 0 -2.5px 0 var(--o), 0 2.5px 0 var(--o), 0 5px 0 var(--o); }
+.rcard.miss .rbig { text-shadow: none; }
+.rcard .rbig small { text-shadow: none !important; font-family: var(--body); font-weight: 600; }
+.rank b { color: var(--yel); text-shadow: 0 2px 0 var(--o); }
+.step { border: var(--line3); box-shadow: 0 6px 0 var(--o) !important; }
+.step.p1 { background: var(--yel) !important; color: var(--o) !important; } .step.p1 .medal { color: var(--o); }
+.board { padding: 0; }
+.brow .pts { color: var(--purple); }
+.award b { color: var(--purple); }
+.code { color: var(--purple); }
+.betbtn { border: 3px dashed #fff; background: rgba(255,255,255,.12); color: #fff; box-shadow: none; }
+.betbtn span { color: rgba(255,255,255,.85); }
+.betbtn[aria-pressed="true"] { background: var(--yel); color: var(--o); border: var(--line3); box-shadow: 0 5px 0 var(--o); }
+.betbtn[aria-pressed="true"] span { color: var(--o); }
+.sb { border: var(--line3); box-shadow: 0 5px 0 var(--o) !important; }
+.sb small { color: var(--c) !important; }
+.live-dot { background: #3dfcb0; box-shadow: 0 0 0 2px var(--o); }
+.warn { color: #ffe08a; }
+
+/* overlays */
+.overlay { background: rgba(74,40,194,.94); color: #fff; }
+.banner small, .intro p { color: rgba(255,255,255,.9) !important; text-shadow: none !important; }
+.intro .tag { background: var(--yel); color: var(--o); border: 2.5px solid var(--o); font-family: var(--game); }
+.wipe { background: var(--yel); }
+.wipe small { color: var(--o) !important; font-family: var(--game); font-weight: 700; }
+.musicmenu { border: var(--line3); }
+.answered { gap: 6px; }
+.hw b { border: 2px solid var(--o); }
+.steps li::before { border: 2px solid var(--o); }
 </style>
 </head>
 <body>
@@ -777,57 +892,109 @@ input[type=text] { background: var(--soft); color: var(--ink); border: 0; border
     bet: () => { [660, 880, 1320].forEach((f, i) => tone(f, .1, "square", .07, i * .05, 0, null, 3000)); noise(.25, .1, .1, "highpass", 6000); },
   };
 
-  // ---------- music: one groove, built in layers that fade in and out with the game (vertical layering) ----------
-  // 112 BPM, 16th-note steps, 4-bar loop F - Dm - Bb - C, lead has 4 phrases so it repeats only every 16 bars
+  // ---------- music: styles the host can pick; each is one groove built in layers that fade with the game ----------
   const MUSIC = (() => {
-    const BPM = 112, STEP = 60 / BPM / 4, N = { F2: 87.31, G2: 98, A2: 110, Bb2: 116.54, C3: 130.81, D3: 146.83, F3: 174.61, A3: 220, Bb3: 233.08, C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392, A4: 440, C5: 523.25, D5: 587.33, F5: 698.46 };
-    const CH = [["F2", ["F4", "A4", "C5"]], ["D3", ["D4", "F4", "A4"]], ["Bb2", ["D4", "F4", "Bb3"]], ["C3", ["C4", "E4", "G4"]]];
-    const BASS = [0, 3, 6, 8, 10, 11, 14], OCT = new Set([6, 11]);
-    const LEAD = [
-      ["C5", 0, "A4", 3, "F4", 6, "G4", 8, "A4", 10], ["D5", 0, "C5", 3, "A4", 6, "F4", 10], ["F4", 0, "G4", 2, "A4", 4, "C5", 8], ["C5", 0, "D5", 3, "C5", 6, "A4", 8, "G4", 12],
-      ["A4", 0, "C5", 4, "D5", 8, "C5", 10], ["F5", 0, "D5", 3, "C5", 6, "A4", 10], ["D5", 0, "C5", 2, "A4", 4, "G4", 8], ["E4", 0, "G4", 4, "C5", 8, "D5", 12],
-    ];
-    const MODES = { menu: { pad: 1, bass: .7, hat: .5 }, lobby: { kick: 1, clap: 1, hat: 1, bass: 1, pad: 1, lead: 1 }, ask: { kick: 1, hat: 1, bass: 1, pad: .6, tension: 1 }, reveal: { kick: 1, clap: 1, hat: 1, bass: 1, pad: 1 }, end: { kick: 1, clap: 1, hat: 1, bass: 1, pad: 1, lead: 1 }, off: {} };
-    let L = null, mode = "off", step = 0, next = 0, timer = null, level = 0;
+    const F = (n) => 440 * Math.pow(2, (n - 69) / 12); // MIDI note -> Hz
+    // chord roots (MIDI) and triads per bar; 4-bar loops
+    const PROG = {
+      pop: [[41, [65, 69, 72]], [50, [62, 65, 69]], [46, [62, 65, 70]], [48, [60, 64, 67]]],          // F Dm Bb C
+      jazz: [[41, [64, 69, 72, 76]], [50, [60, 65, 69, 72]], [43, [62, 65, 70, 74]], [48, [58, 64, 67, 70]]], // Fmaj7 Dm7 Gm9 C7
+      minor: [[45, [60, 64, 69]], [41, [60, 65, 69]], [43, [59, 62, 67]], [40, [59, 64, 68]]],        // Am F G E
+      arcade: [[48, [60, 64, 67]], [45, [60, 64, 69]], [41, [60, 65, 69]], [43, [62, 67, 71]]],      // C Am F G
+    };
+    const SCALE = { pop: [65, 67, 69, 72, 74, 77], jazz: [64, 65, 69, 72, 74, 76], minor: [64, 67, 69, 71, 72, 76], arcade: [72, 74, 76, 79, 81, 84] };
+    const STYLES = {
+      party: { name: "מסיבה", bpm: 112, prog: "pop", swing: 0, kick: [0, 8], kickX: [6, 10], clap: [4, 12], hat: 2, bass: [0, 3, 6, 8, 10, 11, 14], bassOct: [6, 11], bassWave: "square", bassLp: 520, bassLen: 1.6, padWave: "triangle", padSteps: [2, 6, 10, 14], padLen: 1.4, padVol: .045, leadWave: "sine", leadVol: .07, leadEvery: 3 },
+      lofi: { name: "לו-פיי רגוע", bpm: 80, prog: "jazz", swing: .18, kick: [0, 7, 10], kickX: [], clap: [4, 12], clapVol: .14, hat: 2, hatVol: .6, bass: [0, 7, 10], bassOct: [], bassWave: "triangle", bassLp: 380, bassLen: 3, padWave: "sine", padSteps: [0, 8], padLen: 7, padVol: .05, leadWave: "triangle", leadVol: .05, leadEvery: 5, crackle: true },
+      arcade: { name: "ארקייד 8-ביט", bpm: 140, prog: "arcade", swing: 0, kick: [0, 8], kickX: [12], clap: [4, 12], noiseSnare: true, hat: 2, bass: [0, 2, 4, 6, 8, 10, 12, 14], bassOct: [2, 6, 10, 14], bassWave: "square", bassLp: 1200, bassLen: .9, padWave: "square", padSteps: [], padLen: 1, padVol: .03, arp: true, leadWave: "square", leadVol: .05, leadEvery: 2 },
+      trap: { name: "טראפ", bpm: 140, half: true, prog: "minor", swing: 0, kick: [0, 11], kickX: [3, 6], clap: [8], hat: 1, hatRoll: true, bass: [0, 11], bassOct: [], bassWave: "sine", bassLp: 900, bassLen: 6, bassGlide: true, padWave: "sawtooth", padSteps: [0], padLen: 14, padVol: .025, leadWave: "triangle", leadVol: .05, leadEvery: 4 },
+      off: { name: "בלי מוזיקה" },
+    };
+    const MODES = { menu: { pad: 1, bass: .7, hat: .5, lead: .4 }, lobby: { kick: 1, clap: 1, hat: 1, bass: 1, pad: 1, lead: 1 }, ask: { kick: 1, hat: 1, bass: 1, pad: .6, tension: 1 }, reveal: { kick: 1, clap: 1, hat: 1, bass: 1, pad: 1 }, end: { kick: 1, clap: 1, hat: 1, bass: 1, pad: 1, lead: 1 }, off: {} };
+    let style = store.get("music", "party"); if (!STYLES[style]) style = "party";
+    let L = null, mode = "off", step = 0, next = 0, timer = null, level = 0, melody = [];
+    function writeMelody() { // 8 one-bar phrases generated once per style from its scale, so it loops every 32 bars
+      const sc = SCALE[STYLES[style].prog] || SCALE.pop; let r = 7 + style.length;
+      const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
+      melody = Array.from({ length: 8 }, () => { const out = []; for (let b = 0; b < 16; b += 1 + Math.floor(rnd() * (STYLES[style].leadEvery || 3))) out.push([b, sc[Math.floor(rnd() * sc.length)]]); return out; });
+    }
+    writeMelody();
     function bus() {
       if (L || !audio()) return L;
       L = {}; ["kick", "clap", "hat", "bass", "pad", "lead", "tension"].forEach((k) => { const g = actx.createGain(); g.gain.value = 0; g.connect(MIX.music); L[k] = g; });
-      const dl = actx.createDelay(); dl.delayTime.value = STEP * 3; const fb = actx.createGain(); fb.gain.value = .32; const wet = actx.createGain(); wet.gain.value = .35;
-      L.leadIn = actx.createGain(); L.leadIn.connect(L.lead); L.leadIn.connect(dl); dl.connect(fb).connect(dl); dl.connect(wet).connect(L.lead);
+      const dl = actx.createDelay(); dl.delayTime.value = .4; const fb = actx.createGain(); fb.gain.value = .3; const wet = actx.createGain(); wet.gain.value = .35;
+      L.dl = dl; L.leadIn = actx.createGain(); L.leadIn.connect(L.lead); L.leadIn.connect(dl); dl.connect(fb).connect(dl); dl.connect(wet).connect(L.lead);
       return L;
     }
     function fade(m, sec = .8) { if (!L) return; const t = actx.currentTime, w = MODES[m] || {}; for (const k of ["kick", "clap", "hat", "bass", "pad", "lead", "tension"]) { L[k].gain.cancelScheduledValues(t); L[k].gain.setTargetAtTime((w[k] || 0) * (k === "tension" ? level : 1), t, sec / 3); } }
     function tick() {
       if (!L || mode === "off") return;
+      const P = STYLES[style]; if (!P.bpm) return;
       MIX.master.gain.value = muted ? 0 : .85;
+      const STEP = 60 / P.bpm / 4 * (P.half ? 1 : 1);
       while (next < actx.currentTime + .12) {
-        const s = step % 64, bar = (s / 16) | 0, b = s % 16, [root, tri] = CH[bar], t = next;
-        if (b === 0 || b === 8 || (b === 6 && bar === 3) || (b === 10 && bar % 2)) kick(t, L.kick, .8);
-        if (b === 4 || b === 12) clap(t, L.clap, .3);
-        if (b % 2 === 0) hat(t, L.hat, b % 4 === 2 ? .1 : .05, b === 14 && bar === 3);
-        if (BASS.includes(b)) pluck(t, N[root] * (OCT.has(b) ? 2 : 1), L.bass, .3, STEP * 1.6, "square", 520);
-        if (b === 2 || b === 6 || b === 10 || b === 14) tri.forEach((n) => pluck(t, N[n], L.pad, .045, STEP * 1.4, "triangle", 2400));
-        const ph = LEAD[((step / 16) | 0) % LEAD.length]; for (let i = 0; i < ph.length; i += 2) if (ph[i + 1] === b) pluck(t, N[ph[i]], L.leadIn, .07, STEP * 3, "sine", 3000);
+        const s = step % 64, bar = (s / 16) | 0, b = s % 16, [root, tri] = PROG[P.prog][bar];
+        const t = next + (b % 2 ? P.swing * STEP : 0);
+        const kicks = P.half ? P.kick : P.kick;
+        if (kicks.includes(b) || (P.kickX.includes(b) && bar % 2)) kick(t, L.kick, .8);
+        if (P.clap.includes(b)) { if (P.noiseSnare) noiseAt(t, .12, .25, "bandpass", 2500, 0, L.clap, .6); else clap(t, L.clap, P.clapVol || .3); }
+        if (b % P.hat === 0) hat(t, L.hat, (b % 4 === 2 ? .1 : .05) * (P.hatVol || 1), b === 14 && bar === 3);
+        if (P.hatRoll && bar === 3 && b >= 12) { hat(t + STEP / 3, L.hat, .05); hat(t + 2 * STEP / 3, L.hat, .05); }
+        if (P.bass.includes(b)) {
+          const f = F(root - 12) * (P.bassOct.includes(b) ? 2 : 1);
+          if (P.bassGlide) { const o = actx.createOscillator(), g = actx.createGain(); o.type = "sine"; o.frequency.setValueAtTime(f * 1.5, t); o.frequency.exponentialRampToValueAtTime(f, t + .06); g.gain.setValueAtTime(.55, t); g.gain.exponentialRampToValueAtTime(.0001, t + STEP * P.bassLen); o.connect(g).connect(L.bass); o.start(t); o.stop(t + STEP * P.bassLen + .02); }
+          else pluck(t, f, L.bass, .3, STEP * P.bassLen, P.bassWave, P.bassLp);
+        }
+        if (P.padSteps.includes(b)) tri.forEach((n) => pluck(t, F(n), L.pad, P.padVol, STEP * P.padLen, P.padWave, 2400));
+        if (P.arp) pluck(t, F(tri[b % tri.length] + 12), L.pad, .03, STEP * .9, "square", 3000);
+        if (P.crackle && Math.random() < .3) noiseAt(t, .01, .03, "highpass", 3000, 0, L.hat);
+        for (const [sb, n] of melody[((step / 16) | 0) % melody.length]) if (sb === b) pluck(t, F(n), L.leadIn, P.leadVol, STEP * 3, P.leadWave, 3000);
         // tension: a 16th-note arp and fast hats that get louder as the clock runs out
-        pluck(t, N[tri[b % 3]] * 2, L.tension, .035, STEP * .8, "square", 2000); if (b % 2) hat(t, L.tension, .06);
+        pluck(t, F(tri[b % 3] + 12), L.tension, .035, STEP * .8, "square", 2000); if (b % 2) hat(t, L.tension, .06);
         step++; next += STEP;
       }
     }
-    return {
+    const api = {
+      styles: STYLES,
+      get style() { return style; },
+      setStyle(s) {
+        if (!STYLES[s]) return; style = s; store.set("music", s); writeMelody(); step = 0;
+        if (s === "off") { const m = mode; api.play("off"); mode = "off"; api.wanted = m; return; }
+        if (L) L.dl.delayTime.value = 60 / STYLES[s].bpm * .75;
+        const m = api.wanted || mode; api.wanted = null; if (m && m !== "off") { mode = "off"; api.play(m); }
+      },
       play(m) {
+        if (style === "off" && m !== "off") { api.wanted = m; return; }
         if (m === mode) return; const prev = mode; mode = m;
         if (m === "off") { fade("off", .3); clearInterval(timer); timer = null; return; }
         if (!bus()) { mode = "off"; return; }
-        if (prev === "off" || !timer) { next = actx.currentTime + .06; step = 0; timer = setInterval(tick, 25); }
+        if (prev === "off" || !timer) { next = actx.currentTime + .06; step = 0; clearInterval(timer); timer = setInterval(tick, 25); }
         if (m === "ask") level = .25;
         fade(m, m === "reveal" ? 2 : .8);
       },
       intensity(k) { level = Math.max(.25, Math.min(1, k)); if (L && mode === "ask") { L.tension.gain.setTargetAtTime(level, actx.currentTime, .2); L.hat.gain.setTargetAtTime(.6 + .6 * level, actx.currentTime, .2); } },
-      // duck everything for a dramatic moment, then come back
       duck(sec = 1.2, depth = .08) { if (!L) return; const g = MIX.music.gain, t = actx.currentTime; g.cancelScheduledValues(t); g.setTargetAtTime(.55 * depth, t, .05); g.setTargetAtTime(.55, t + sec, .4); },
       get mode() { return mode; },
     };
+    return api;
   })();
+  // a small music picker next to the mute button (main screen only)
+  const ICON_NOTE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l11-2v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="currentColor"/><circle cx="17.5" cy="16" r="2.5" fill="currentColor"/></svg>';
+  const musicBtn = () => `<button class="icon-btn" id="musicbtn" aria-label="בחירת מוזיקה" aria-haspopup="true">${ICON_NOTE}</button>`;
+  function bindMusic() {
+    const b = document.getElementById("musicbtn"); if (!b) return;
+    b.onclick = (e) => {
+      e.stopPropagation(); SFX.tap();
+      let m = document.getElementById("musicmenu"); if (m) { m.remove(); return; }
+      m = document.createElement("div"); m.id = "musicmenu"; m.className = "musicmenu"; m.setAttribute("role", "menu");
+      m.innerHTML = `<b>מוזיקה</b>${Object.entries(MUSIC.styles).map(([k, v]) => `<button role="menuitemradio" aria-checked="${MUSIC.style === k}" data-s="${k}">${esc(v.name)}</button>`).join("")}`;
+      const r = b.getBoundingClientRect(); m.style.top = r.bottom + 8 + "px"; m.style.left = Math.max(8, Math.min(innerWidth - 220, r.left - 80)) + "px";
+      document.body.append(m);
+      anim(m, [{ opacity: 0, transform: "translateY(-6px) scale(.97)" }, { opacity: 1, transform: "none" }], { duration: 180, easing: "ease-out" });
+      m.querySelectorAll("button").forEach((x) => (x.onclick = (ev) => { ev.stopPropagation(); MUSIC.setStyle(x.dataset.s); pickMusic(); m.querySelectorAll("button").forEach((y) => y.setAttribute("aria-checked", String(y === x))); SFX.point(); }));
+      setTimeout(() => document.addEventListener("click", function off(ev) { if (!m.contains(ev.target)) { m.remove(); document.removeEventListener("click", off); } }), 0);
+    };
+  }
   const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
 
   // ---------- confetti ----------
@@ -1368,9 +1535,9 @@ ${samples}
     if (S.multi) hostEmit();
     snapshot();
   }
-  const muteBtn = () => `<button class="icon-btn" id="mute" aria-label="${muted ? "להפעיל צליל" : "להשתיק"}">${muted ? ICON_MUTE : ICON_SPK}</button>`;
+  const muteBtn = () => `<span class="row" style="gap:8px;flex-wrap:nowrap">${S.screen !== "remote" ? musicBtn() : ""}<button class="icon-btn" id="mute" aria-label="${muted ? "להפעיל צליל" : "להשתיק"}">${muted ? ICON_MUTE : ICON_SPK}</button></span>`;
   const ICON_SPK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>', ICON_MUTE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
-  function bindMute() { const b = document.getElementById("mute"); if (b) b.onclick = () => { muted = !muted; store.set("muted", muted); b.innerHTML = muted ? ICON_MUTE : ICON_SPK; if (!muted) SFX.tap(); }; }
+  function bindMute() { bindMusic(); const b = document.getElementById("mute"); if (b) b.onclick = () => { muted = !muted; store.set("muted", muted); b.innerHTML = muted ? ICON_MUTE : ICON_SPK; if (!muted) SFX.tap(); }; }
 
   const guideOS = () => S.guideOS || (OS === "android" ? "android" : "ios");
   const guideSteps = (os) => (os === "android"
@@ -1682,7 +1849,23 @@ ${samples}
         if (left <= 0) { clearInterval(timer); doReveal(true); }
       }, 50);
       document.getElementById("reveal").onclick = () => doReveal(false);
-      app.querySelectorAll(".opt").forEach((b) => (b.onpointerdown = () => SFX.tap(), b.onclick = () => doReveal(false)));
+      if (S.multi && S.hostName) {
+        S.hostBet = false;
+        const below = document.getElementById("below");
+        below.insertAdjacentHTML("afterbegin", `<button class="betbtn" id="hbet" aria-pressed="false"><b>🎲 ${esc(S.hostName)}, בטוח ב-100%?</b><span>צדקת: ניקוד כפול · טעית: ‎-${BET_LOSS}</span></button>`);
+        const hb = document.getElementById("hbet");
+        hb.onclick = () => { if (S.answers[S.hostName]) return; S.hostBet = !S.hostBet; hb.setAttribute("aria-pressed", String(S.hostBet)); if (S.hostBet) SFX.bet(); else SFX.tap(); };
+        app.querySelectorAll(".opt").forEach((b) => (b.onclick = () => {
+          if (!S.asking || S.answers[S.hostName]) return;
+          const c = q.options.indexOf(b.dataset.o); if (c < 0) return;
+          S.answers[S.hostName] = { c, t: Date.now(), b: !!S.hostBet }; hb.disabled = true;
+          SFX.pop(); buzz(30); answeredFx(S.hostName); markAnswered(); hostEmit();
+          // every tile flashes the same, so people watching the screen can't tell which one was picked
+          app.querySelectorAll(".opt").forEach((o) => anim(o, [{ transform: "scale(1)" }, { transform: "scale(.96)" }, { transform: "none" }], { duration: 260, easing: "ease-out" }));
+          hb.querySelector("b").textContent = `✓ ${S.hostName} ענה${S.hostBet ? " · 🎲 הימר" : ""}`;
+          checkAllIn();
+        }));
+      } else app.querySelectorAll(".opt").forEach((b) => (b.onpointerdown = () => SFX.tap(), b.onclick = () => { if (!S.multi) doReveal(false); }));
     }
 
     function doReveal(timeUp) {
@@ -2004,7 +2187,7 @@ ${samples}
     if (!r) { S.err = "לא הצלחתי לפתוח משחק. בודקים את האינטרנט ומנסים שוב, או משחקים על מסך אחד."; S.screen = "setup"; S.enter = true; render(); return; }
     S.multi = true; S.ep = Math.floor(Math.random() * 1e9); S.code = code;
     NET.bump("games");
-    S.players = []; S.scores = {}; S.streaks = {}; S.answers = {}; S.asking = false; S.revealed = false;
+    S.players = []; S.scores = {}; S.streaks = {}; S.answers = {}; S.asking = false; S.revealed = false; S.hostName = null;
     attachHost(r);
     S.screen = "lobby"; S.enter = true; render();
   }
@@ -2024,7 +2207,7 @@ ${samples}
     const g = S.game; if (!g) return null;
     // on the reveal, phones already see the points of this question (the host adds them for real on "next")
     const pendNow = (p) => S.screen === "play" && S.revealed ? ((S.res || {})[p] || [0, 0])[1] : 0;
-    const sc = Object.entries(S.scores || {}).map(([p, v]) => [p, v + pendNow(p)]).sort((a, b) => b[1] - a[1]).slice(0, 30);
+    const sc = Object.entries(S.scores || {}).map(([p, v]) => [p, Math.max(0, v + pendNow(p))]).sort((a, b) => b[1] - a[1]).slice(0, 30);
     const base = { c: S.code, ep: S.ep, names: S.players.slice(0, 30), sc, total: g.questions.length };
     if (S.screen === "lobby") return { ...base, ph: "lobby", pool: g.pool.slice(0, 12) };
     if (S.screen === "play") {
@@ -2047,6 +2230,11 @@ ${samples}
     R.lastSent = json;
     room.emit("st", st).catch(() => { R.lastSent = ""; });
   }
+  function checkAllIn() {
+    const need = new Set(R.active || []); if (S.hostName) need.add(S.hostName);
+    const got = [...need].filter((n) => S.answers[n]).length;
+    if (got && got >= need.size) later(() => { const b = document.getElementById("reveal"); if (b && S.asking) b.click(); }, 800);
+  }
   function hostPeers(ch) {
     const fresh = []; let answered = false;
     R.active = new Set();
@@ -2066,8 +2254,7 @@ ${samples}
     if (ch.joined.length || fresh.length) hostEmit();
     if (answered) {
       markAnswered(); hostEmit();
-      const got = Object.keys(S.answers).filter((n) => R.active.has(n)).length;
-      if (got && got >= R.active.size) later(() => { const b = document.getElementById("reveal"); if (b && S.asking) b.click(); }, 800);
+      checkAllIn();
     }
   }
   function onPlayersJoined(names) {
@@ -2150,9 +2337,25 @@ ${samples}
       </section>
       ${NET.mode === "local" ? `<p class="note warn">מצב בדיקה: Firebase עוד לא מחובר, אז אפשר להצטרף רק מחלון אחר באותו דפדפן. אחרי החיבור זה יעבוד מכל טלפון.</p>` : ""}
       <div class="lobby-players" id="lp">${S.players.length ? S.players.map((p) => `<span class="lp">${avatar(p)}<span>${esc(p)}</span></span>`).join("") : `<p class="waiting">מחכים לשחקנים <span class="typing"><i></i><i></i><i></i></span></p>`}</div>
+      <div id="iplay-slot">${S.hostName ? `<p class="note" style="text-align:center">אתה משחק בתור <b>${esc(S.hostName)}</b>: עונים בלחיצה על התשובות במסך הזה.</p>` : `<button class="btn alt" id="iplay" style="width:100%">🙋 גם אני משחק, מהמסך הזה</button>`}</div>
       <button class="btn big" id="go" style="width:100%"></button>
       <p class="note" style="text-align:center">בלי הרשמה ובלי אפליקציה. מי שמגיע באמצע מתחיל מ-0.</p>`;
     bindMute(); updateLobbyBtn();
+    const ip = document.getElementById("iplay");
+    if (ip) ip.onclick = () => {
+      SFX.tap();
+      const taken = new Set(S.players), pool = (S.game.pool || []).filter((p) => !taken.has(p));
+      const slot = document.getElementById("iplay-slot");
+      slot.innerHTML = `<section class="panel"><b>מי אתה?</b><div class="chips" id="hpool">${pool.map((p) => `<button class="chip" data-p="${esc(p)}">${esc(p)}</button>`).join("")}</div><div class="row"><input type="text" id="hn" maxlength="20" placeholder="או כינוי"><button class="btn" id="hgo">נכנס</button></div><p class="note">עונים בלחיצה על התשובות במסך הזה. אם המסך מחובר לטלוויזיה וכולם רואים אותו, עדיף לסרוק את הקוד גם מהטלפון שלך.</p></section>`;
+      const join = (name) => {
+        name = cleanName(name); if (!name || S.players.includes(name)) return;
+        S.hostName = name; S.players.push(name); S.scores[name] = S.scores[name] || 0; S.streaks[name] = 0;
+        slot.innerHTML = `<p class="note" style="text-align:center">אתה משחק בתור <b>${esc(name)}</b>: עונים בלחיצה על התשובות במסך הזה.</p>`;
+        onPlayersJoined([name]); hostEmit(); SFX.go();
+      };
+      slot.querySelectorAll("#hpool .chip").forEach((b) => (b.onclick = () => join(b.dataset.p)));
+      document.getElementById("hgo").onclick = () => join(document.getElementById("hn").value);
+    };
     const qrEl = app.querySelector(".qr svg"); if (qrEl) anim(qrEl, [{ opacity: 0, transform: "scale(.85) rotate(-4deg)" }, { opacity: 1, transform: "none" }], { duration: 520, delay: 250, easing: EASE.out, fill: "backwards" });
     document.getElementById("share-link").onclick = async () => {
       SFX.tap(); const url = joinURL(S.code), text = `בואו לשחק "מי אמר את זה?" על הצ'אט שלנו 🤔 נכנסים מכאן: ${url}`;
