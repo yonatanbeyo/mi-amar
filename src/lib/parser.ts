@@ -135,7 +135,7 @@ function cleanName(n: string): string {
   const name = n.replace(BIDI, "").replace(/^~\s*/, "").trim();
   // Unsaved contacts appear as phone numbers — mask them.
   const digits = name.replace(/[^\d]/g, "");
-  if (digits.length >= 8 && /^[+\d\s()-]+$/.test(name)) return "מספר שמסתיים ב-" + digits.slice(-3);
+  if (digits.length >= 8 && /^[+\d\s()\-\u00a0\u2010-\u2015\u202f]+$/.test(name)) return "מספר שמסתיים ב-" + digits.slice(-3);
   return name;
 }
 
