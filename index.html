@@ -539,7 +539,9 @@ body[data-kind="ai"]     { --accent: #b18cff;       --a1: #7b3dff; --a2: #ff3d7f
   const later = (fn, ms) => timeouts.push(setTimeout(fn, ms));
 
   // ---------- question building ----------
-  const clean = (t) => !/https?:|www\.|@\S+\.|@\u2068?\+?\d|\d{7,}|\d{2,3}-\d{6,}|<[^>]*(נערכה|edited)[^>]*>/i.test(t);
+  // ethnic slurs never go on the big screen (or into someone's TikTok)
+  const SLUR = /(כוש(י|ית|ים|יות)\b|ערבוש|פרענק|צ'?חצ'?ח|ניגר|nigg|faggot)/i;
+  const clean = (t) => !SLUR.test(t) && !/https?:|www\.|@\S+\.|@\u2068?\+?\d|\d{7,}|\d{2,3}-\d{6,}|<[^>]*(נערכה|edited)[^>]*>/i.test(t);
   // ---- style model: how typical is a message of a person, compared with everyone else ----
   // Questions are fun when the room CAN get them: "that is so him". Messages anyone could have written are dropped.
   const STOP = new Set("את של על זה זו לא כן אני אתה את הוא היא אנחנו אתם הם מה מי יש אין גם רק עם כל אבל אז או אם כי היה הייתה לי לך לו לה שלי שלך שלו שלה עוד כבר פה שם איך למה מתי איפה הזה הזאת זאת אחד אחת יותר הכי כמו בסדר ok the a to is it i you and of in".split(" "));
@@ -774,6 +776,8 @@ ${samples}
     msgs = C.parseWhatsApp(chatText);
     if (msgs.length < 30) throw new Error("לא הצלחתי לקרוא מספיק הודעות. צריך צ'אט קבוצתי עם לפחות 30 הודעות.");
     const stats = C.computeStats(msgs);
+    const out = S.out || [];
+    stats.people = stats.people.filter((p) => !out.includes(p.name)); // people who left are not part of the game at all
     const pool = stats.people.slice(0, 10).filter((p) => p.messages >= 3).map((p) => p.name);
     if (pool.length < 2) throw new Error("נמצאו פחות משני משתתפים. המשחק צריך צ'אט קבוצתי.");
     const kinds = S.kinds;
@@ -823,7 +827,7 @@ ${samples}
     };
   }
 
-  if (location.hash === "#qa") window.__qa = async (text) => { S.rounds = 20; S.kinds = { quote: true, finish: true, reply: true, phrase: true, word: true, when: true, stat: true, number: true, ai: false }; const st = () => {}; st.skip = new Promise(() => {}); return buildGame(text, "qa", st); };
+  if (location.hash === "#qa") window.__qa = async (text) => { S.out = C.departedMembers(text); S.rounds = 20; S.kinds = { quote: true, finish: true, reply: true, phrase: true, word: true, when: true, stat: true, number: true, ai: false }; const st = () => {}; st.skip = new Promise(() => {}); return buildGame(text, "qa", st); };
   // ---------- screens ----------
   function render() {
     clearInterval(timer); timeouts.forEach(clearTimeout); timeouts = [];
@@ -902,8 +906,10 @@ ${samples}
   }
 
   function setup() {
-    let preview = [];
-    try { preview = C.computeStats(C.parseWhatsApp(S.chatText)).people.slice(0, 10).map((p) => p.name); } catch {}
+    let everyone = [];
+    try { everyone = C.computeStats(C.parseWhatsApp(S.chatText)).people.filter((p) => p.messages >= 3).slice(0, 14).map((p) => p.name); } catch {}
+    if (!S.out || S.outFor !== S.chatName) { S.outFor = S.chatName; try { S.out = C.departedMembers(S.chatText).filter((n) => everyone.includes(n)); } catch { S.out = []; } }
+    const preview = everyone.filter((p) => !S.out.includes(p)).slice(0, 10);
     S.rounds = S.rounds || store.get("rounds", 10);
     S.kinds = S.kinds || { quote: true, finish: true, reply: true, phrase: true, word: true, when: true, stat: true, number: true, ai: true, ...store.get("kinds", {}) };
     if (!S.players || S.multi) S.players = preview.slice(0, 6);
@@ -916,6 +922,11 @@ ${samples}
         <button aria-pressed="${!!S.wantMulti}" data-m="1"><b>📱 כל אחד מהטלפון</b><span class="small dim">השאלות על המסך הזה, כל אחד עונה מהטלפון שלו, והניקוד נספר לבד</span></button>
         <button aria-pressed="${!S.wantMulti}" data-m="0"><b>📺 מסך אחד</b><span class="small dim">כולם צועקים תשובה, ואתם מסמנים מי צדק</span></button>
       </div>` : ""}
+      <section class="panel">
+        <b>מי בקבוצה עכשיו?</b>
+        <p class="dim small">רק מי שמסומן יופיע בשאלות ובתשובות. מי שיצא מהקבוצה כבר לא מסומן. אפשר לתקן בלחיצה.</p>
+        <div class="chips" id="members">${everyone.map((p) => `<button class="chip" aria-pressed="${!S.out.includes(p)}" data-m="${esc(p)}">${esc(p)}${S.out.includes(p) ? ` <span class="small">· יצא/ה</span>` : ""}</button>`).join("")}</div>
+      </section>
       <h2 id="who-h" ${S.wantMulti && canMulti() ? "hidden" : ""}>מי משחק?</h2>
       <section class="panel" id="who-p" ${S.wantMulti && canMulti() ? "hidden" : ""}>
         <p class="dim small">מסמנים מי בחדר. אחרי כל שאלה מקישים על מי שניחש נכון. שלוש תשובות נכונות ברצף שוות בונוס.</p>
@@ -937,6 +948,12 @@ ${samples}
     S.err = "";
     bindMute();
     document.getElementById("back").onclick = () => { S.screen = "home"; render(); };
+    app.querySelectorAll("#members .chip").forEach((b) => (b.onclick = () => {
+      SFX.tap(); const p = b.dataset.m, nowIn = S.out.includes(p);
+      S.out = nowIn ? S.out.filter((x) => x !== p) : [...S.out, p];
+      if (!nowIn && S.players) S.players = S.players.filter((x) => x !== p);
+      b.setAttribute("aria-pressed", String(nowIn));
+    }));
     app.querySelectorAll("#mode button").forEach((b) => (b.onclick = () => {
       SFX.tap(); S.wantMulti = b.dataset.m === "1"; store.set("multi", S.wantMulti);
       app.querySelectorAll("#mode button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));

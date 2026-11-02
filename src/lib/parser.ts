@@ -93,6 +93,29 @@ export function parseWhatsApp(input: string): Message[] {
   return fake.size ? out.filter((m) => !fake.has(m.author)) : out;
 }
 
+/** People who are no longer in the group: their last membership event was leaving or being removed.
+ *  WhatsApp writes these as system lines ("X left", "X removed Y", "X יצא/ה", "X הסיר/ה את Y"). */
+export function departedMembers(input: string): string[] {
+  const state = new Map<string, "in" | "out">();
+  const names = (s: string) => s.split(/\s*,\s*|\s+and\s+|\s+ו(?:את\s+)?(?=\S)|\s+ואת\s+/).map((x) => cleanName(x.replace(/^את\s+/, "").replace(/[.\s]+$/, ""))).filter((x) => x && x.length <= 60);
+  for (const rawLine of input.replace(/\r\n?/g, "\n").split("\n")) {
+    const line = rawLine.replace(BIDI, "");
+    const m = LINE_RE.exec(line); if (!m) continue;
+    let rest = line.slice(m[0].length).trim();
+    const marked = /:\s\u200e/.test(rawLine);
+    const idx = rest.indexOf(": ");
+    if (marked && idx > 0) rest = rest.slice(idx + 2).trim();       // iOS: "Group: ‎X left"
+    else if (idx > 0 && idx <= 80) continue;                         // a normal "Name: text" message
+    let r: RegExpExecArray | null;
+    if ((r = /^(.+?)\s+(?:left|יצא\/ה|יצאה|יצא|עזב\/ה|עזבה|עזב)$/i.exec(rest))) names(r[1]).forEach((n) => state.set(n, "out"));
+    else if ((r = /^(.+?)\s+(?:removed|הסיר\/ה\s+את|הסירה\s+את|הסיר\s+את)\s+(.+)$/i.exec(rest))) names(r[2]).forEach((n) => state.set(n, "out"));
+    else if ((r = /^(.+?)\s+(?:was removed|הוסר\/ה|הוסרה|הוסר)\b/i.exec(rest))) names(r[1]).forEach((n) => state.set(n, "out"));
+    else if ((r = /^(.+?)\s+(?:added|הוסיף\/ה\s+את|הוסיפה\s+את|הוסיף\s+את)\s+(.+)$/i.exec(rest))) names(r[2]).forEach((n) => state.set(n, "in"));
+    else if ((r = /^(.+?)\s+(?:joined|הצטרף\/ה|הצטרפה|הצטרף)\b/i.exec(rest))) names(r[1]).forEach((n) => state.set(n, "in"));
+  }
+  return [...state].filter(([n, v]) => v === "out" && !/^(you|את\/ה|אתה|את)$/i.test(n)).map(([n]) => n);
+}
+
 function cleanName(n: string): string {
   const name = n.replace(BIDI, "").replace(/^~\s*/, "").trim();
   // Unsaved contacts appear as phone numbers — mask them.
