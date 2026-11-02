@@ -649,6 +649,14 @@ input[type=text] { background: var(--soft); color: var(--ink); border: 0; border
 .musicmenu button[aria-checked="true"] { background: var(--purple); color: #fff; }
 .musicmenu button[aria-checked="true"]::after { content: " ♪"; }
 
+.bubble { white-space: pre-line; }
+#overlay[data-loading] { background: var(--stage) !important; }
+.loadcard h3 { font-size: clamp(1.8rem, 7vw, 2.6rem) !important; }
+.ld-bar { width: min(320px, 80vw); margin: 14px auto 0; }
+.ld-bar i { width: 40%; animation: ld 1.1s ease-in-out infinite alternate; transform-origin: right; }
+@keyframes ld { from { transform: translateX(0); } to { transform: translateX(-150%); } }
+@media (prefers-reduced-motion: reduce) { .ld-bar i { animation: none; width: 100%; } }
+
 @media (min-width: 1100px) {
   .qwrap .peek { --bs: 96px; top: -68px; }
   .scene { height: 300px; } .scene .buddy { --bs: 170px; } .sb { font-size: 1.15rem; }
@@ -1182,7 +1190,7 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
     stat: "מי בקבוצה הכי…",
     number: "כמה פעמים?",
   };
-  const KIND_TITLE = { legend: "מי אמר את זה ראשון?", day: "היום הכי משוגע", era: "מתי זה היה?", moment: "הרגע של הקבוצה", word: "של מי המילה?", when: "מתי זה נשלח?", quote: "מי אמר את זה?", finish: "איך זה נגמר?", reply: "מי ענה על זה?", phrase: "של מי הביטוי?", stat: "מי בקבוצה…", number: "כמה פעמים?", ai: "מי היה כותב את זה?" };
+  const KIND_TITLE = { story: "הסיפור של הקבוצה 📖", legend: "מי אמר את זה ראשון?", day: "היום הכי משוגע", era: "מתי זה היה?", moment: "הרגע של הקבוצה", word: "של מי המילה?", when: "מתי זה נשלח?", quote: "מי אמר את זה?", finish: "איך זה נגמר?", reply: "מי ענה על זה?", phrase: "של מי הביטוי?", stat: "מי בקבוצה…", number: "כמה פעמים?", ai: "מי היה כותב את זה?" };
 
   let S = { screen: "home" };
   let msgs = [];
@@ -1196,7 +1204,9 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
   const SLUR = /(כוש(י|ית|ים|יות)\b|ערבוש|פרענק|צ'?חצ'?ח|ניגר|nigg|faggot|סרטן)/i; // + illness curses: someone in the room may really be going through it
   // someone telling friends about a diagnosis is not a party-screen question: the game can't tell a joke from a real disclosure
   const HEALTH = /(אובחנ|מאובחנ|אבחון|אבחנה|תו נכה|על הרצף|פסיכיאטר|פסיכולוג|דיכאון|חרדות|התקף חרדה|הפרעת|adhd|כדורים נגד|ניתוח|אשפוז)/i;
-  const clean = (t) => !SLUR.test(t) && !HEALTH.test(t) && !/https?:|www\.|@\S+\.|@\u2068?\+?\d|\d{7,}|\d{2,3}-\d{6,}|<[^>]*(נערכה|edited)[^>]*>/i.test(t);
+  // sexual remarks about real people stay in the chat, not on a TV or in a story image
+  const SEXUAL = /(הכוס של|לכוס של|כוס של|ציצים|סקס|אוננ|מאונן|לזיין את|זיינתי|שכב עם|שכבה עם|עירום|ערומה|porn|פורנו)/i;
+  const clean = (t) => !SLUR.test(t) && !HEALTH.test(t) && !SEXUAL.test(t) && !/https?:|www\.|@\S+\.|@\u2068?\+?\d|\d{7,}|\d{2,3}-\d{6,}|<[^>]*(נערכה|edited)[^>]*>/i.test(t);
   // ---- style model: how typical is a message of a person, compared with everyone else ----
   // Questions are fun when the room CAN get them: "that is so him". Messages anyone could have written are dropped.
   const STOP = new Set("את של על זה זו לא כן אני אתה את הוא היא אנחנו אתם הם מה מי יש אין גם רק עם כל אבל אז או אם כי היה הייתה לי לך לו לה שלי שלך שלו שלה עוד כבר פה שם איך למה מתי איפה הזה הזאת זאת אחד אחת יותר הכי כמו בסדר ok the a to is it i you and of in".split(" "));
@@ -1451,6 +1461,50 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
     return sample(top, k, (c) => Math.pow(c.wtfScore + c.wtf * 2 + c.crowd, 2)).map((c) => ({ type: "moment", title: "רגע של WTF 🤯", text: c.text, answer: c.author, author: c.author, ts: c.ts,
       hook: reactLine(c) || "הקבוצה לא האמינה שמישהו כתב את זה", options: smartOptions(c.author, pool, c.text), reveal: c.reacts.map((r) => `${r.a}: ${r.t}`).join("  ·  "), ...ctxOf(c.i) }));
   }
+
+  // ---------- stories: the group's craziest episodes ----------
+  // Not one message: a few minutes where someone told something and everyone lost it ("מה אני שומע", "לא מכבד", "מה פספסתי", 😭).
+  // We score every 5-minute stretch by how many different people reacted and how hard, keep the hottest ones,
+  // and show the teller's own lines as a mini chat, names hidden.
+  function storyQs(pool, k) {
+    const BIN = 5 * 6e4, heat = new Map(), react = (m) => m.text && m.text.length < 60 && !m.text.includes("@") && (WTF.test(m.text) || LAUGH.test(m.text));
+    for (const m of msgs) {
+      if (!m.ts || !react(m)) continue;
+      const b = Math.floor(m.ts / BIN); let h = heat.get(b); if (!h) heat.set(b, (h = { b, who: new Set(), w: 0 }));
+      h.who.add(m.author); h.w += WTF_HARD.test(m.text) ? 3 : WTF.test(m.text) ? 2 : 1;
+    }
+    const hot = [...heat.values()].map((h) => ({ ...h, score: h.who.size * 4 + Math.min(20, h.w) })).filter((h) => h.who.size >= 3).sort((a, b) => b.score - a.score);
+    const taken = new Set(), eps = [];
+    const idxAt = (ts) => { let lo = 0, hi = msgs.length; while (lo < hi) { const mid = (lo + hi) >> 1; if ((msgs[mid].ts || 0) < ts) lo = mid + 1; else hi = mid; } return lo; };
+    for (const h of hot) {
+      if (eps.length >= 120) break;
+      if (taken.has(h.b) || taken.has(h.b - 1) || taken.has(h.b + 1)) continue;
+      taken.add(h.b);
+      const from = idxAt((h.b - 1) * BIN), to = idxAt((h.b + 1) * BIN);
+      // the teller: whoever wrote the most real lines (not reactions) in the stretch
+      const lines = {}; for (let i = from; i < to; i++) { const m = msgs[i]; if (m.text && !m.media && !react(m) && m.text.split(/\s+/).length >= 3) lines[m.author] = (lines[m.author] || 0) + 1; }
+      const teller = Object.entries(lines).sort((a, b) => b[1] - a[1])[0]; if (!teller || !pool.includes(teller[0])) continue;
+      // the punchline: the teller's line that drew the most different reactors in the next 3 minutes
+      let best = null;
+      for (let i = from; i < to; i++) {
+        const m = msgs[i]; if (m.author !== teller[0] || !m.text || m.media || react(m) || !clean(m.text)) continue;
+        const wc = m.text.split(/\s+/).length; if (wc < 3 || wc > 28) continue;
+        const who = new Set(), said = [];
+        for (let j = i + 1; j < msgs.length && msgs[j].ts - m.ts < 3 * 6e4; j++) { const r = msgs[j]; if (r.author !== m.author && react(r) && clean(r.text)) { if (!who.has(r.author) && r.text.length <= 28) said.push(r); who.add(r.author); } }
+        if (!best || who.size > best.who.size) best = { i, who, said };
+      }
+      if (!best || best.who.size < 2 || !best.said.length) continue;
+      // the snippet: the punchline plus up to two of the teller's lines right before it
+      const snip = [msgs[best.i]];
+      for (let j = best.i - 1; j >= Math.max(0, from - 30) && snip.length < 3; j--) { const m = msgs[j]; if (msgs[best.i].ts - m.ts > 3 * 6e4) break; if (m.author === teller[0] && m.text && !m.media && !react(m) && clean(m.text) && !m.text.includes("@") && m.text.split(/\s+/).length >= 3) snip.unshift(m); }
+      if (snip.reduce((x, m) => x + m.text.split(/\s+/).length, 0) < 9) continue;
+      if (snip.some((m) => HEALTH.test(m.text) || SLUR.test(m.text))) continue;
+      eps.push({ text: snip.map((m) => m.text.replace(/\s+/g, " ").slice(0, 120)).join("\n"), author: teller[0], ts: msgs[best.i].ts, i: best.i, score: h.score + best.who.size * 5, said: best.said.slice(0, 3) });
+    }
+    return sample(eps, k, (e) => e.score * e.score).map((e) => ({ type: "story", title: "הסיפור של הקבוצה 📖", text: e.text, answer: e.author, author: e.author, ts: e.ts,
+      hook: `התגובות: ${e.said.map((r) => `"${r.text.replace(/\s+/g, " ").slice(0, 30)}"`).join(" · ")}`, options: smartOptions(e.author, pool, e.text),
+      reveal: e.said.map((r) => `${r.author}: ${r.text.slice(0, 40)}`).join("  ·  "), ...ctxOf(e.i) }));
+  }
   // a word one person owns: "who writes 'וואלה' the most?"
   function wordQs(pool, k) {
     if (!STYLE) return [];
@@ -1659,13 +1713,13 @@ ${samples}
     const per = {}, balanced = [];
     for (const q of quoteSrc) { per[q.author] = (per[q.author] || 0) + 1; if (per[q.author] <= Math.max(3, Math.ceil(total / pool.length) + 1)) balanced.push(q); }
 
-    const want = { finish: kinds.finish ? Math.round(total * .07) : 0, reply: kinds.reply ? Math.round(total * .07) : 0, phrase: kinds.phrase ? Math.round(total * .05) : 0, stat: kinds.stat ? Math.max(1, Math.round(total * .16)) : 0, moment: kinds.quote ? Math.round(total * .1) : 0, wtf: kinds.quote ? Math.max(1, Math.round(total * .2)) : 0, legend: kinds.quote ? Math.max(1, Math.round(total * .1)) : 0, day: kinds.stat ? Math.round(total * .08) : 0, number: kinds.number ? Math.max(1, Math.round(total * .08)) : 0, word: kinds.word ? Math.round(total * .05) : 0, when: kinds.when ? Math.max(1, Math.round(total * .05)) : 0, era: kinds.when ? Math.round(total * .05) : 0, ai: imposters.length };
+    const want = { finish: kinds.finish ? Math.round(total * .07) : 0, reply: kinds.reply ? Math.round(total * .07) : 0, phrase: kinds.phrase ? Math.round(total * .05) : 0, stat: kinds.stat ? Math.max(1, Math.round(total * .16)) : 0, moment: kinds.quote ? Math.round(total * .06) : 0, wtf: kinds.quote ? Math.max(1, Math.round(total * .14)) : 0, story: kinds.quote ? Math.max(1, Math.round(total * .14)) : 0, legend: kinds.quote ? Math.max(1, Math.round(total * .1)) : 0, day: kinds.stat ? Math.round(total * .08) : 0, number: kinds.number ? Math.max(1, Math.round(total * .08)) : 0, word: kinds.word ? Math.round(total * .05) : 0, when: kinds.when ? Math.max(1, Math.round(total * .05)) : 0, era: kinds.when ? Math.round(total * .05) : 0, ai: imposters.length };
     const used = new Set();
     S.seenQ = S.seenQ && S.seenFor === name ? S.seenQ : new Set(); S.seenFor = name;
     const take = (arr, k, again = false) => { const src = again ? arr : arr.filter((q) => !S.seenQ.has((q.full || q.text).replace(/…$/, "")));
       return src.filter((q) => { const key = (q.full || q.text).replace(/…$/, ""); if (used.has(key)) return false; used.add(key); return true; }).slice(0, k); };
     let extras = [
-      ...take(wtfQs(cands, pool, want.wtf * 2), want.wtf), ...take(momentQs(cands, pool, want.moment), want.moment),
+      ...take(storyQs(pool, want.story * 2), want.story), ...take(wtfQs(cands, pool, want.wtf * 2), want.wtf), ...take(momentQs(cands, pool, want.moment), want.moment),
       ...take(shuffle([...legendQs(pool, want.legend * 2), ...insideQs(pool, want.legend), ...firstQs(pool)]), want.legend), ...take(dayQs(pool, want.day * 2), want.day),
       ...take(finishQs(cands, pool, want.finish * 2), want.finish), ...take(replyQs(pool, want.reply * 2), want.reply),
       ...take(phraseQs(stats, pool, want.phrase), want.phrase), ...take(sample(statQs(stats, pool), want.stat * 2, () => 1), want.stat),
@@ -1678,7 +1732,7 @@ ${samples}
     if (qs.length < total) qs = shuffle([...qs, ...take(balanced.map((c) => quoteQ(c, pool)), total - qs.length, true)]);
     if (qs.length < 5) throw new Error("לא מצאתי מספיק הודעות טובות לשאלות. נסה צ'אט ארוך יותר או סמן עוד סוגי שאלות.");
     // the finale is worth double: prefer a juicy quote or the AI imposter
-    const fi = qs.findIndex((q) => q.title === "רגע של WTF 🤯") >= 0 ? qs.findIndex((q) => q.title === "רגע של WTF 🤯") : qs.findIndex((q) => q.type === "moment") >= 0 ? qs.findIndex((q) => q.type === "moment") : qs.findIndex((q) => q.type === "ai") >= 0 ? qs.findIndex((q) => q.type === "ai") : qs.length - 1;
+    const fi = qs.findIndex((q) => q.type === "story") >= 0 ? qs.findIndex((q) => q.type === "story") : qs.findIndex((q) => q.title === "רגע של WTF 🤯") >= 0 ? qs.findIndex((q) => q.title === "רגע של WTF 🤯") : qs.findIndex((q) => q.type === "moment") >= 0 ? qs.findIndex((q) => q.type === "moment") : qs.findIndex((q) => q.type === "ai") >= 0 ? qs.findIndex((q) => q.type === "ai") : qs.length - 1;
     const [fin] = qs.splice(fi, 1); qs.push(fin);
     qs.forEach((q) => S.seenQ.add((q.full || q.text).replace(/…$/, "")));
 
@@ -1720,6 +1774,13 @@ ${samples}
     ? ["פותחים את הקבוצה בוואטסאפ", "לוחצים על <b>⋮</b> למעלה ← <b>עוד</b> ← <b>ייצוא צ'אט</b>", "בוחרים <b>ללא מדיה</b>", "שומרים בקבצים, וחוזרים לכאן ללחוץ על <b>להעלות צ'אט</b>"]
     : ["פותחים את הקבוצה בוואטסאפ ולוחצים על <b>השם שלה</b> למעלה", "גוללים למטה ובוחרים <b>ייצוא צ'אט</b>", "בוחרים <b>ללא מדיה</b>", "בוחרים <b>שמירה בקבצים</b>, וחוזרים לכאן ללחוץ על <b>להעלות צ'אט</b>"]
   ).map((t) => `<li><span>${t}</span></li>`).join("");
+  // a full-screen "working on it" card with Bubbi; loading(null) hides it
+  const paint = (ms = 0) => new Promise((r) => requestAnimationFrame(() => setTimeout(r, Math.max(30, ms))));
+  function loading(title, sub = "") {
+    if (title == null) { if (overlay.dataset.loading) { overlay.hidden = true; overlay.innerHTML = ""; delete overlay.dataset.loading; } return; }
+    if (!overlay.dataset.loading) { overlay.dataset.loading = "1"; overlay.hidden = false; overlay.innerHTML = `<div class="intro loadcard">${buddy("think")}<h3 id="ld-t"></h3><p id="ld-s"></p><div class="timer ld-bar"><i></i></div></div>`; }
+    overlay.querySelector("#ld-t").textContent = title; overlay.querySelector("#ld-s").textContent = sub;
+  }
   function home(err = S.err) {
     S.err = "";
     const TICK = ["אני כבר בדרך", "מי בא היום?", "חחחחחח מת", "רגע מי זה אמר", "אחי די", "שולח תמונה", "5 דקות ואני יוצא", "מישהו ער?", "סתם סתם", "איזה אגדה"];
@@ -1765,13 +1826,19 @@ ${samples}
     document.getElementById("pick").onclick = () => { audio(); file.click(); };
     file.onchange = async () => {
       const f = file.files[0]; if (!f) return;
+      audio();
       try {
+        // big chats take a few seconds: show what is happening instead of a frozen screen
+        loading("פותח את הקובץ…", f.size > 2e6 ? `${(f.size / 1e6).toFixed(0)}MB של צ'אט. זה ייקח כמה שניות` : "");
+        await paint();
         const text = await C.readChatFile(f);
+        loading("קורא את ההודעות…", "סופר מי כתב מה ומתי"); await paint();
         // a wrong file (a photo, the wrong zip, a one-on-one chat) should say so here, not leave an empty setup screen
-        let people = 0; try { people = C.computeStats(C.parseWhatsApp(text)).people.filter((p) => p.messages >= 3).length; } catch {}
-        if (people < 2) { file.value = ""; home(people === 1 ? "זה נראה כמו צ'אט של שני אנשים. המשחק צריך צ'אט של קבוצה." : `הקובץ "${f.name}" לא נראה כמו צ'אט שיוצא מוואטסאפ. בוחרים את הקובץ שוואטסאפ יצר, בדרך כלל בשם "WhatsApp Chat - שם הקבוצה".`); return; }
-        S.chatText = text; S.chatName = f.name.replace(/\.(zip|txt)$/i, "").replace(/^(whatsapp chat( with|\s*-)?|צ['׳]אט WhatsApp עם)\s*/i, "").trim(); S.players = null; S.screen = "setup"; render(); }
-      catch (e) { home(e.message || "לא הצלחתי לקרוא את הקובץ."); }
+        let people = 0, total = 0; try { const P = parsedFor(text); people = P.stats.people.filter((p) => p.messages >= 3).length; total = P.msgs.length; } catch {}
+        if (people >= 2) { loading(`נמצאו ${n(total)} הודעות!`, "מחפש את הרגעים הכי מטורפים בקבוצה"); SFX.pop(); await paint(500); }
+        if (people < 2) { loading(null); file.value = ""; home(people === 1 ? "זה נראה כמו צ'אט של שני אנשים. המשחק צריך צ'אט של קבוצה." : `הקובץ "${f.name}" לא נראה כמו צ'אט שיוצא מוואטסאפ. בוחרים את הקובץ שוואטסאפ יצר, בדרך כלל בשם "WhatsApp Chat - שם הקבוצה".`); return; }
+        S.chatText = text; S.chatName = f.name.replace(/\.(zip|txt)$/i, "").replace(/^(whatsapp chat( with|\s*-)?|צ['׳]אט WhatsApp עם)\s*/i, "").trim(); S.players = null; S.screen = "setup"; render(); loading(null); }
+      catch (e) { loading(null); home(e.message || "לא הצלחתי לקרוא את הקובץ."); }
     };
     app.querySelectorAll(".os-tabs button").forEach((b) => (b.onclick = () => {
       S.guideOS = b.dataset.os; SFX.tap();
@@ -1919,6 +1986,7 @@ ${samples}
     word: ["של מי המילה?", "מילה אחת שמישהו פה פשוט לא מפסיק לכתוב."],
     when: ["מתי זה נשלח?", "הודעה אמיתית. באיזו שעה ביום מישהו כתב אותה?"],
     era: ["מתי זה היה?", "הודעה אמיתית מהקבוצה. באיזו תקופה היא נשלחה?"],
+    story: ["הסיפור של הקבוצה", "כמה שורות מסיפור שהקבוצה לא הפסיקה להגיב עליו. מי סיפר אותו?"],
     legend: ["האגדות של הקבוצה", "משפטים ומילים שהפכו לבדיחה פנימית. מי התחיל אותם?"],
     day: ["היום הכי משוגע", "הימים שבהם הקבוצה התפוצצה מהודעות. על מה, ומי התחיל?"],
     ai: ["המתחזה", "Claude כתב הודעה מזויפת בסגנון של מישהו מכם. את מי הוא מחקה?"],
@@ -1966,7 +2034,7 @@ ${samples}
     bindMute();
     const bubble = document.getElementById("bubble");
     const fillBubble = () => {
-      const named = ["quote", "moment", "finish", "ai", "when", "era"].includes(q.type) || q.msg;
+      const named = ["quote", "moment", "finish", "ai", "when", "era", "story"].includes(q.type) || q.msg;
       const sender = !named ? "" : (S.revealed || q.type === "when" || q.type === "era") ? `<span class="sender" style="color:${colorOf(q.author)}">${esc(q.type === "ai" ? q.answer : q.author)}</span>` : `<span class="sender hidden-name">???</span>`;
       bubble.innerHTML = `${sender}${q.type === "ai" ? `<span class="ai-tag">נכתב על ידי Claude</span><br>` : ""}${body}<span class="meta">${S.revealed && q.ts ? fmtDate(q.ts) : q.type === "ai" ? "הודעה מזויפת בסגנון של מישהו מכם" : q.type === "moment" ? (S.revealed ? `${q.author} · ${fmtDate(q.ts)}` : q.hook) : q.type === "word" ? "מי כותב את זה הכי הרבה?" : q.type === "when" ? (S.revealed ? `${q.author} · ${fmtDate(q.ts)}` : "באיזו שעה זה נשלח?") : q.type === "stat" || q.type === "number" ? "לפי הצ'אט שלכם" : q.hook || "הודעה מהקבוצה"}</span>`;
       bubble.classList.remove("pop"); void bubble.offsetWidth; bubble.classList.add("pop");
