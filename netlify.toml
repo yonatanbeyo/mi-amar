@@ -1,0 +1,6 @@
+# The site moved to Cloudflare Pages. Old links and QR codes keep working by redirecting there.
+[[redirects]]
+  from = "/*"
+  to = "https://mi-amar.pages.dev/:splat"
+  status = 301
+  force = true
