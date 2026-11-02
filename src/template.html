@@ -893,7 +893,12 @@ ${samples}
     document.getElementById("pick").onclick = () => { audio(); file.click(); };
     file.onchange = async () => {
       const f = file.files[0]; if (!f) return;
-      try { S.chatText = await C.readChatFile(f); S.chatName = f.name.replace(/\.(zip|txt)$/i, "").replace(/^(whatsapp chat( with|\s*-)?|צ['׳]אט WhatsApp עם)\s*/i, "").trim(); S.players = null; S.screen = "setup"; render(); }
+      try {
+        const text = await C.readChatFile(f);
+        // a wrong file (a photo, the wrong zip, a one-on-one chat) should say so here, not leave an empty setup screen
+        let people = 0; try { people = C.computeStats(C.parseWhatsApp(text)).people.filter((p) => p.messages >= 3).length; } catch {}
+        if (people < 2) { file.value = ""; home(people === 1 ? "זה נראה כמו צ'אט של שני אנשים. המשחק צריך צ'אט של קבוצה." : `הקובץ "${f.name}" לא נראה כמו צ'אט שיוצא מוואטסאפ. בוחרים את הקובץ שוואטסאפ יצר, בדרך כלל בשם "WhatsApp Chat - שם הקבוצה".`); return; }
+        S.chatText = text; S.chatName = f.name.replace(/\.(zip|txt)$/i, "").replace(/^(whatsapp chat( with|\s*-)?|צ['׳]אט WhatsApp עם)\s*/i, "").trim(); S.players = null; S.screen = "setup"; render(); }
       catch (e) { home(e.message || "לא הצלחתי לקרוא את הקובץ."); }
     };
     app.querySelectorAll(".os-tabs button").forEach((b) => (b.onclick = () => {
