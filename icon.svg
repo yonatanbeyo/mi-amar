@@ -1,19 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-14 -8 148 148"><rect x="-14" y="-8" width="148" height="148" rx="32" fill="#ffa928"/><style>[data-m]{display:none}[data-m~="idle"]{display:inline}</style>
-    <ellipse cx="60" cy="122" rx="34" ry="5" fill="#1b1530" opacity=".08"/>
-    <g class="bd">
-      <path d="M38 14H82A30 30 0 0 1 112 44V62A30 30 0 0 1 82 92H80L94 112L64 92H38A30 30 0 0 1 8 62V44A30 30 0 0 1 38 14Z" fill="#5a3fd6"/>
-      <path d="M38 8H82A30 30 0 0 1 112 38V56A30 30 0 0 1 82 86H80L94 106L64 86H38A30 30 0 0 1 8 56V38A30 30 0 0 1 38 8Z" fill="#7b5cff"/>
-      <ellipse cx="32" cy="22" rx="11" ry="6" fill="#fff" opacity=".28" transform="rotate(-24 32 22)"/>
-      <g data-m="idle think shock sweat"><g class="ey"><ellipse cx="44" cy="44" rx="12" ry="14" fill="#fff"/><ellipse cx="76" cy="44" rx="12" ry="14" fill="#fff"/></g>
-        <g class="pu"><circle cx="45" cy="46" r="6.5" fill="#1b1530"/><circle cx="77" cy="46" r="6.5" fill="#1b1530"/><circle cx="47.5" cy="43" r="2.2" fill="#fff"/><circle cx="79.5" cy="43" r="2.2" fill="#fff"/></g></g>
-      <g data-m="laugh party" fill="none" stroke="#1b1530" stroke-width="5" stroke-linecap="round"><path d="M34 47Q44 35 54 47"/><path d="M66 47Q76 35 86 47"/></g>
-      <ellipse cx="30" cy="62" rx="7" ry="4" fill="#ff5fa2" opacity=".6"/><ellipse cx="90" cy="62" rx="7" ry="4" fill="#ff5fa2" opacity=".6"/>
-      <path data-m="idle" d="M50 64Q60 74 70 64" fill="none" stroke="#1b1530" stroke-width="5" stroke-linecap="round"/>
-      <path data-m="think" d="M54 69H67" fill="none" stroke="#1b1530" stroke-width="5" stroke-linecap="round"/>
-      <g data-m="shock"><ellipse cx="60" cy="70" rx="8" ry="10" fill="#1b1530"/><ellipse cx="60" cy="75" rx="5" ry="3.5" fill="#ff5fa2"/></g>
-      <g data-m="laugh party"><path d="M42 60H78Q76 83 60 83Q44 83 42 60Z" fill="#1b1530"/><path d="M51 76Q60 69 69 76Q67 83 60 83Q53 83 51 76Z" fill="#ff5fa2"/></g>
-      <path data-m="sweat" d="M47 69Q52 64 57 69Q62 74 67 69Q71 65 74 68" fill="none" stroke="#1b1530" stroke-width="4.5" stroke-linecap="round"/>
-      <path data-m="sweat" class="drop" d="M106 18Q113 29 106 33Q99 29 106 18Z" fill="#5fb4ff"/>
-      <g data-m="think" class="dots" fill="#b8b0d8"><circle cx="104" cy="4" r="3.5"/><circle cx="113" cy="-6" r="4.5"/><circle cx="124" cy="-17" r="5.5"/></g>
-      <g data-m="party"><path d="M43 14L60-17L77 14Z" fill="#ffa928"/><path d="M50 2L70 2M55-7L66-7" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><circle cx="60" cy="-18" r="6" fill="#ff5fa2"/></g>
-    </g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-26 -28 212 212"><rect x="-26" y="-28" width="212" height="212" rx="46" fill="#ffa928"/><style>[data-m]{display:none}[data-m~="idle"]{display:inline}</style><defs><clipPath id="bbc"><path d="M54 22H108A40 40 0 0 1 148 62V84A40 40 0 0 1 108 124H66L38 146L44 120A40 40 0 0 1 14 84V62A40 40 0 0 1 54 22Z"/></clipPath></defs>
+<ellipse cx="80" cy="170" rx="46" ry="6" fill="#1b1530" opacity=".1"/>
+<g class="bd">
+<path d="M66 122L63 152M98 122L100 152" stroke="#1b1530" stroke-width="7" stroke-linecap="round"/>
+<ellipse cx="60" cy="158" rx="16" ry="9" fill="#ffa928" stroke="#1b1530" stroke-width="4"/><ellipse cx="103" cy="158" rx="16" ry="9" fill="#ffa928" stroke="#1b1530" stroke-width="4"/>
+<path d="M54 152h10M97 152h10" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+<path d="M72 26C66 6 92-2 95 11C97 20 85 21 87 13" fill="none" stroke="#1b1530" stroke-width="5" stroke-linecap="round"/>
+<path d="M54 22H108A40 40 0 0 1 148 62V84A40 40 0 0 1 108 124H66L38 146L44 120A40 40 0 0 1 14 84V62A40 40 0 0 1 54 22Z" fill="#7b5cff"/>
+<g clip-path="url(#bbc)"><ellipse cx="100" cy="136" rx="86" ry="32" fill="#5a3fd6"/><ellipse cx="150" cy="80" rx="14" ry="60" fill="#5a3fd6" opacity=".6"/></g>
+<path d="M54 22H108A40 40 0 0 1 148 62V84A40 40 0 0 1 108 124H66L38 146L44 120A40 40 0 0 1 14 84V62A40 40 0 0 1 54 22Z" fill="none" stroke="#1b1530" stroke-width="5" stroke-linejoin="round"/>
+<path d="M26 74Q24 42 54 32" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".45"/>
+<g data-m="idle think shock sweat"><g class="ey"><ellipse cx="62" cy="68" rx="15" ry="18" fill="#fff" stroke="#1b1530" stroke-width="3.5"/><ellipse cx="101" cy="66" rx="17" ry="21" fill="#fff" stroke="#1b1530" stroke-width="3.5"/></g>
+<g class="pu"><circle cx="64" cy="70" r="7.5" fill="#1b1530"/><circle cx="103" cy="68" r="8.5" fill="#1b1530"/><circle cx="67" cy="66" r="2.6" fill="#fff"/><circle cx="106.5" cy="63.5" r="3" fill="#fff"/></g></g>
+<g data-m="laugh party" fill="none" stroke="#1b1530" stroke-width="6" stroke-linecap="round"><path d="M48 72Q62 54 76 72"/><path d="M86 70Q101 50 116 70"/></g>
+<g fill="none" stroke="#1b1530" stroke-width="5.5" stroke-linecap="round">
+<path data-m="idle" d="M49 44Q60 38 71 43M88 40Q101 33 114 40"/>
+<path data-m="think" d="M50 46L72 47M88 34Q101 27 114 36"/>
+<path data-m="shock" d="M50 39Q61 30 72 38M88 33Q101 23 114 32"/>
+<path data-m="sweat" d="M50 47L71 40M90 38L113 45"/>
+<path data-m="laugh party" d="M50 46Q61 38 72 44M88 42Q101 34 114 42"/></g>
+<ellipse cx="44" cy="92" rx="8" ry="5" fill="#ff5fa2" opacity=".65"/><ellipse cx="124" cy="90" rx="8" ry="5" fill="#ff5fa2" opacity=".65"/>
+<path data-m="idle" d="M70 97Q83 108 98 94" fill="none" stroke="#1b1530" stroke-width="5" stroke-linecap="round"/>
+<path data-m="think" d="M72 101Q80 97 92 102" fill="none" stroke="#1b1530" stroke-width="5" stroke-linecap="round"/>
+<g data-m="shock"><ellipse cx="83" cy="103" rx="10" ry="13" fill="#1b1530"/><ellipse cx="83" cy="110" rx="6" ry="4" fill="#ff5fa2"/></g>
+<g data-m="laugh party"><path d="M62 92H104Q102 119 83 119Q64 119 62 92Z" fill="#1b1530" stroke="#1b1530" stroke-width="3" stroke-linejoin="round"/><path d="M66 93H100V99H66Z" fill="#fff"/><path d="M71 112Q83 103 95 112Q91 119 83 119Q75 119 71 112Z" fill="#ff5fa2"/></g>
+<path data-m="sweat" d="M68 101Q73 95 78 101Q83 107 88 101Q93 95 98 101" fill="none" stroke="#1b1530" stroke-width="4.5" stroke-linecap="round"/>
+<path data-m="sweat" class="drop" d="M36 34Q44 46 36 51Q28 46 36 34Z" fill="#5fb4ff" stroke="#1b1530" stroke-width="2.5"/>
+<g fill="none" stroke-linecap="round">
+<g data-m="idle"><path d="M18 84Q2 68 6 48M146 92Q160 104 156 120" stroke="#1b1530" stroke-width="14"/><path d="M18 84Q2 68 6 48M146 92Q160 104 156 120" stroke="#7b5cff" stroke-width="7"/><circle cx="6" cy="46" r="8" fill="#7b5cff" stroke="#1b1530" stroke-width="4"/><circle cx="156" cy="122" r="8" fill="#7b5cff" stroke="#1b1530" stroke-width="4"/></g>
+<g data-m="think"><path d="M18 92Q4 104 8 120M146 92Q138 122 112 116" stroke="#1b1530" stroke-width="14"/><path d="M18 92Q4 104 8 120M146 92Q138 122 112 116" stroke="#7b5cff" stroke-width="7"/><circle cx="8" cy="122" r="8" fill="#7b5cff" stroke="#1b1530" stroke-width="4"/><circle cx="108" cy="114" r="9" fill="#7b5cff" stroke="#1b1530" stroke-width="4"/></g>
+<g data-m="shock"><path d="M18 88Q14 108 36 102M146 86Q150 106 130 100" stroke="#1b1530" stroke-width="14"/><path d="M18 88Q14 108 36 102M146 86Q150 106 130 100" stroke="#7b5cff" stroke-width="7"/><circle cx="38" cy="100" r="9" fill="#7b5cff" stroke="#1b1530" stroke-width="4"/><circle cx="128" cy="98" r="9" fill="#7b5cff" stroke="#1b1530" stroke-width="4"/></g>
+<g data-m="laugh party"><path d="M18 84Q2 68 6 48M146 84Q162 68 158 48" stroke="#1b1530" stroke-width="14"/><path d="M18 84Q2 68 6 48M146 84Q162 68 158 48" stroke="#7b5cff" stroke-width="7"/><circle cx="6" cy="46" r="8" fill="#7b5cff" stroke="#1b1530" stroke-width="4"/><circle cx="158" cy="46" r="8" fill="#7b5cff" stroke="#1b1530" stroke-width="4"/></g>
+<g data-m="sweat"><path d="M20 98Q34 128 64 130M144 96Q130 128 100 130" stroke="#1b1530" stroke-width="14"/><path d="M20 98Q34 128 64 130M144 96Q130 128 100 130" stroke="#7b5cff" stroke-width="7"/><circle cx="68" cy="130" r="8" fill="#7b5cff" stroke="#1b1530" stroke-width="4"/><circle cx="96" cy="130" r="8" fill="#7b5cff" stroke="#1b1530" stroke-width="4"/></g></g>
+<g data-m="idle think shock sweat laugh"><circle cx="142" cy="28" r="14" fill="#ff4f6d" stroke="#1b1530" stroke-width="4"/><text x="142" y="34.5" text-anchor="middle" font-family="Arial Black,Arial" font-weight="900" font-size="18" fill="#fff">1</text></g>
+<g data-m="party"><path d="M68 28L88-12L108 24Z" fill="#ffa928" stroke="#1b1530" stroke-width="4" stroke-linejoin="round"/><path d="M76 12L100 12M82 0L94 0" stroke="#fff" stroke-width="4" stroke-linecap="round"/><circle cx="88" cy="-14" r="7" fill="#ff5fa2" stroke="#1b1530" stroke-width="3.5"/></g>
+</g></svg>
