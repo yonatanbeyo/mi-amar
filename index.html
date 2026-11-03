@@ -653,29 +653,59 @@ input[type=text] { background: var(--soft); color: var(--ink); border: 0; border
 .rate { display: flex; align-items: center; justify-content: center; gap: 10px; color: rgba(255,255,255,.9); font-weight: 600; }
 .rate .chip { font-size: 1.3rem; padding: 4px 14px; }
 /* the winners show */
-.show { position: fixed; inset: 0; z-index: 28; display: grid; grid-template-rows: auto 1fr auto; justify-items: center; padding: 7vh 16px 3vh; overflow: hidden; color: #fff; text-align: center; cursor: pointer;
-  background: radial-gradient(60% 55% at 50% 45%, #8763ff 0%, #3a1fa8 65%, #1c0f5c 100%); transition: background-color .6s; }
-.show::after { content: ""; position: absolute; inset: 0; background: radial-gradient(28% 24% at 50% 58%, transparent 0%, rgba(5,2,20,.85) 100%); opacity: 0; transition: opacity .6s ease; pointer-events: none; }
+.show { position: fixed; inset: 0; z-index: 28; display: grid; grid-template-rows: auto 1fr auto; justify-items: center; padding: max(6vh, 30px) 14px 3vh; overflow: hidden; color: #fff; text-align: center; cursor: pointer;
+  background: radial-gradient(70% 60% at 50% 30%, #6f48f4 0%, #34199a 55%, #140850 100%); perspective: 900px; }
+.show::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .7s ease;
+  background: radial-gradient(22% 30% at 50% 62%, rgba(0,0,0,0) 0%, rgba(4,1,18,.92) 100%); }
 .show.dark::after { opacity: 1; }
-.beams i { position: absolute; top: -10%; width: 34vmax; height: 130vh; background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0) 75%); clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%); transform-origin: 50% 0; animation: sweep 3.2s ease-in-out infinite alternate; left: 8%; }
-.beams i + i { left: auto; right: 8%; animation-direction: alternate-reverse; }
-.show.tense .beams i { animation-duration: .6s; }
-@keyframes sweep { from { transform: rotate(-24deg); } to { transform: rotate(24deg); } }
-.show-title { position: relative; z-index: 2; font-family: var(--game); font-weight: 700; font-size: clamp(2rem, 8vw, 3.6rem); line-height: 1.1; color: #fff; transform: rotate(-2deg); max-width: 22ch;
-  text-shadow: -3px 0 0 var(--o), 3px 0 0 var(--o), 0 -3px 0 var(--o), 0 3px 0 var(--o), -2px -2px 0 var(--o), 2px -2px 0 var(--o), -2px 2px 0 var(--o), 2px 2px 0 var(--o), 0 6px 0 var(--o); }
-.show-stage { position: relative; z-index: 2; width: 100%; max-width: 760px; justify-self: center; display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 10px; align-self: end; }
-.pcol { display: grid; justify-items: center; gap: 8px; position: relative; grid-row: 1; }
+/* volumetric spotlights: soft, additive, swinging */
+.beams i { position: absolute; top: -12%; width: 30vmax; height: 135vh; transform-origin: 50% 0; mix-blend-mode: screen; filter: blur(14px);
+  background: linear-gradient(180deg, rgba(255,240,200,.38), rgba(255,240,200,.08) 60%, transparent 85%); clip-path: polygon(47% 0, 53% 0, 100% 100%, 0 100%);
+  animation: sweep 3.6s cubic-bezier(.45,0,.55,1) infinite alternate; left: 6%; }
+.beams i:nth-child(2) { left: auto; right: 6%; animation-direction: alternate-reverse; }
+.beams i:nth-child(3) { left: 50%; margin-left: -15vmax; opacity: 0; transform: none; animation: none; transition: opacity .6s; }
+.show.dark .beams i:nth-child(3) { opacity: 1; }
+.show.tense .beams i:not(:nth-child(3)) { animation-duration: .55s; }
+@keyframes sweep { from { transform: rotate(-26deg); } to { transform: rotate(26deg); } }
+.floor { position: absolute; bottom: -8vh; left: 50%; width: 120vw; height: 30vh; transform: translateX(-50%); border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255,214,120,.35), rgba(255,214,120,0)); filter: blur(10px); pointer-events: none; }
+/* sunburst behind the winner */
+.rays { position: absolute; left: 50%; top: 58%; width: 220vmax; height: 220vmax; margin: -110vmax 0 0 -110vmax; opacity: 0; transition: opacity .8s ease; pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, rgba(255,214,120,.16) 0deg 8deg, rgba(255,214,120,0) 8deg 20deg); animation: spin 26s linear infinite;
+  -webkit-mask: radial-gradient(closest-side, #000 20%, transparent 70%); mask: radial-gradient(closest-side, #000 20%, transparent 70%); }
+.show.crowned .rays { opacity: 1; }
+@keyframes spin { to { transform: rotate(360deg); } }
+/* title: letters drop in */
+.show-title { position: relative; z-index: 3; font-family: var(--game); font-weight: 700; font-size: clamp(1.9rem, 8vw, 3.6rem); line-height: 1.1; color: #fff; transform: rotate(-2deg); max-width: 20ch; min-height: 1.2em; }
+.show-title span { display: inline-block; text-shadow: -3px 0 0 var(--o), 3px 0 0 var(--o), 0 -3px 0 var(--o), 0 3px 0 var(--o), -2px -2px 0 var(--o), 2px -2px 0 var(--o), -2px 2px 0 var(--o), 2px 2px 0 var(--o), 0 6px 0 var(--o); }
+.show-title.in span { animation: letter .5s cubic-bezier(.2,1.4,.4,1) both; animation-delay: calc(var(--i) * 28ms); }
+@keyframes letter { from { transform: translateY(-60px) rotate(-12deg) scale(1.6); opacity: 0; } to { transform: none; opacity: 1; } }
+/* stage + podium */
+.show-stage { position: relative; z-index: 3; width: 100%; max-width: 760px; justify-self: center; display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 10px; align-self: end; }
+.pcol { display: grid; justify-items: center; gap: 10px; position: relative; grid-row: 1; transition: filter .5s ease, opacity .5s ease; }
 .pcol.p1 { grid-column: 2; } .pcol.p2 { grid-column: 1; } .pcol.p3 { grid-column: 3; }
-.pname { font-family: var(--game); font-weight: 700; font-size: clamp(1.3rem, 5.5vw, 2.4rem); color: var(--c); line-height: 1.05; transform: rotate(-3deg); word-break: break-word;
-  text-shadow: -3px 0 0 #fff, 3px 0 0 #fff, 0 -3px 0 #fff, 0 3px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff, 0 6px 0 var(--o); }
-.p1 .pname { font-size: clamp(1.8rem, 8vw, 3.4rem); }
-.ppts { font-family: var(--game); font-weight: 700; background: var(--o); color: #fff; border-radius: 99px; padding: 3px 14px; font-variant-numeric: tabular-nums; }
-.pblock { width: 100%; border: 3px solid var(--o); border-bottom: 0; border-radius: 20px 20px 0 0; transform-origin: bottom; display: grid; place-items: start center; padding-top: 10px; box-shadow: inset 0 6px 0 rgba(255,255,255,.4), inset 0 -14px 0 rgba(0,0,0,.12); }
-.pblock b { font-family: var(--game); font-size: 2.6rem; color: #fff; text-shadow: 0 3px 0 var(--o), -2px 0 0 var(--o), 2px 0 0 var(--o), 0 -2px 0 var(--o); }
-.p1 .pblock { height: min(32vh, 260px); background: #ffbe2e; } .p2 .pblock { height: min(22vh, 180px); background: #c9d3ea; } .p3 .pblock { height: min(15vh, 130px); background: #e3a065; }
-.pcrown { position: absolute; top: -3.4rem; font-size: 3.4rem; filter: drop-shadow(0 4px 0 var(--o)); }
-.show-hint { position: relative; z-index: 2; opacity: .6; font-size: .9rem; margin-top: 10px; }
-@media (prefers-reduced-motion: reduce) { .beams i { animation: none; } }
+.pcol:not(.lit) { filter: brightness(.45) saturate(.6); }
+.pcard { width: 100%; aspect-ratio: 1 / .78; position: relative; transform-style: preserve-3d; transition: transform .9s cubic-bezier(.3,1.5,.4,1); }
+.p1 .pcard { aspect-ratio: 1 / .9; }
+.pcol.open .pcard { transform: rotateY(180deg); }
+.pcard.shake { animation: wobble .18s ease-in-out infinite alternate; }
+@keyframes wobble { from { transform: rotate(-2.5deg) translateY(-2px); } to { transform: rotate(2.5deg) translateY(2px); } }
+.face { position: absolute; inset: 0; border: 3px solid var(--o); border-radius: 22px; display: grid; place-items: center; align-content: center; gap: 6px; backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: 0 6px 0 var(--o); padding: 8px; }
+.face.front { background: linear-gradient(160deg, #8a6bff, #5a3fd6); font-family: var(--game); font-weight: 700; font-size: clamp(2.6rem, 10vw, 4.4rem); color: #fff; text-shadow: 0 4px 0 var(--o); }
+.face.back { transform: rotateY(180deg); background: #fff; }
+.face.back b { font-family: var(--game); font-weight: 700; font-size: clamp(1.1rem, 4.6vw, 2.1rem); line-height: 1.05; color: var(--c); word-break: break-word; }
+.p1 .face.back b { font-size: clamp(1.4rem, 6vw, 2.8rem); }
+.ppts { font-family: var(--game); font-weight: 700; background: var(--o); color: #fff; border-radius: 99px; padding: 2px 12px; font-variant-numeric: tabular-nums; font-size: clamp(.85rem, 3.4vw, 1.1rem); }
+.pblock { width: 100%; border: 3px solid var(--o); border-bottom: 0; border-radius: 18px 18px 0 0; transform-origin: bottom; display: grid; place-items: start center; padding-top: 8px; box-shadow: inset 0 6px 0 rgba(255,255,255,.45), inset 0 -16px 0 rgba(0,0,0,.14); }
+.pcol:not(.open) .pblock { transform: scaleY(0); }
+.pblock b { font-family: var(--game); font-size: clamp(1.8rem, 7vw, 2.8rem); color: #fff; text-shadow: 0 3px 0 var(--o), -2px 0 0 var(--o), 2px 0 0 var(--o), 0 -2px 0 var(--o); }
+.p1 .pblock { height: min(26vh, 230px); background: linear-gradient(180deg, #ffd45c, #ffb21e); } .p2 .pblock { height: min(18vh, 160px); background: linear-gradient(180deg, #e4e9f5, #b8c3dc); } .p3 .pblock { height: min(12vh, 110px); background: linear-gradient(180deg, #f0b67e, #d98f50); }
+.pcrown { position: absolute; z-index: 2; top: -3.2rem; font-size: clamp(2.4rem, 9vw, 3.6rem); opacity: 0; filter: drop-shadow(0 4px 0 var(--o)); }
+.show.crowned .pcrown { animation: crown 1.2s cubic-bezier(.3,0,.3,1) .35s both; }
+@keyframes crown { 0% { transform: translateY(-70vh) rotate(-40deg); opacity: 1; } 65% { transform: translateY(0) rotate(10deg) scale(1.15, .85); opacity: 1; } 80% { transform: translateY(-18px) rotate(-5deg); opacity: 1; } 100% { transform: none; opacity: 1; } }
+.show.crowned .p1 .face.back { box-shadow: 0 6px 0 var(--o), 0 0 0 6px #ffd45c, 0 0 40px 10px rgba(255,212,92,.6); }
+.show-hint { position: relative; z-index: 3; opacity: .55; font-size: .85rem; margin-top: 10px; }
+@media (prefers-reduced-motion: reduce) { .beams i, .rays, .pcard.shake, .show-title.in span, .show.crowned .pcrown { animation: none; } .pcrown { opacity: 1; } }
 #overlay[data-loading] { background: var(--stage) !important; }
 .loadcard h3 { font-size: clamp(1.8rem, 7vw, 2.6rem) !important; }
 .ld-bar { width: min(320px, 80vw); margin: 14px auto 0; }
@@ -1035,24 +1065,80 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
   }
   const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
 
-  // ---------- confetti ----------
+  // ---------- particles: paper confetti that flutters, cannons, and fireworks with trails ----------
   const fx = document.getElementById("fx"), ctx = fx.getContext("2d");
   let parts = [], fxRun = false;
+  const FXC = ["#7b5cff", "#ff5fa2", "#ffbe2e", "#19c4a0", "#5fb4ff", "#ffffff"];
+  const DPR = () => Math.min(2, devicePixelRatio || 1);
+  function fxSize() { const d = DPR(), w = innerWidth * d, h = innerHeight * d; if (fx.width !== w || fx.height !== h) { fx.width = w; fx.height = h; } return d; }
+  function fxGo() { if (!fxRun) { fxRun = true; requestAnimationFrame(stepFx); } }
+  // one piece of paper: it spins in 3D (its width flips), drifts with drag and sways like real confetti
+  function paper(x, y, vx, vy, d, col) {
+    const shape = Math.random(); // 60% rectangles, 25% ribbons, 15% dots
+    return { k: "p", x, y, vx, vy, r: (3.5 + Math.random() * 5) * d, c: col || rnd(FXC), a: Math.random() * 6, va: (Math.random() - .5) * .3, flip: Math.random() * 6, vf: .08 + Math.random() * .18,
+      sway: Math.random() * 6, shape: shape < .6 ? 0 : shape < .85 ? 1 : 2, life: 1, d };
+  }
   function confetti(count = 120, ox, oy, spread = 1) {
-    if (RM) return;
-    const w = fx.width = innerWidth * devicePixelRatio, h = fx.height = innerHeight * devicePixelRatio;
-    const cols = ["#7b5cff", "#ff5fa2", "#ffa928", "#19c4a0", "#5fb4ff", "#ffffff"];
-    const X = ox != null ? ox * devicePixelRatio : w / 2, Y = oy != null ? oy * devicePixelRatio : h * .45;
-    for (let i = 0; i < count; i++) parts.push({ x: X + (ox != null ? 0 : (Math.random() - .5) * w * .3), y: Y, vx: (Math.random() - .5) * 26 * spread * devicePixelRatio, vy: (-Math.random() * 22 * spread - 8 * spread) * devicePixelRatio, r: (4 + Math.random() * 6) * devicePixelRatio, c: rnd(cols), a: Math.random() * 6, va: (Math.random() - .5) * .4, life: 1 });
-    if (!fxRun) { fxRun = true; requestAnimationFrame(stepFx); }
+    if (RM) return; const d = fxSize();
+    const X = ox != null ? ox * d : fx.width / 2, Y = oy != null ? oy * d : fx.height * .45;
+    for (let i = 0; i < count; i++) { const ang = Math.random() * Math.PI * 2, sp = (6 + Math.random() * 16) * spread * d;
+      parts.push(paper(X + (ox != null ? 0 : (Math.random() - .5) * fx.width * .3), Y, Math.cos(ang) * sp, Math.sin(ang) * sp - 10 * spread * d, d)); }
+    fxGo();
+  }
+  // party cannons from the two bottom corners, aimed up and inward
+  function cannons(count = 140) {
+    if (RM) return; const d = fxSize();
+    for (const side of [0, 1]) for (let i = 0; i < count / 2; i++) {
+      const x = side ? fx.width + 10 : -10, y = fx.height + 10, ang = (side ? -1 : 1) * (Math.PI / 2 - (.35 + Math.random() * .45)), sp = (22 + Math.random() * 18) * d;
+      parts.push(paper(x, y, Math.sin(ang) * sp, -Math.cos(Math.abs(ang)) * sp, d));
+    }
+    fxGo();
+  }
+  // a rocket climbs with a spark trail, then bursts into glowing sparks that fall and fade
+  function firework(x, y, col) {
+    if (RM) return; const d = fxSize();
+    parts.push({ k: "r", x: x * d + (Math.random() - .5) * 40 * d, y: fx.height + 10, tx: x * d, ty: y * d, c: col || rnd(FXC.slice(0, 5)), d, life: 1, px: 0, py: 0 });
+    fxGo();
+  }
+  function burst(p) {
+    const n = 70 + Math.floor(Math.random() * 30), ring = Math.random() < .4;
+    for (let i = 0; i < n; i++) { const ang = (i / n) * Math.PI * 2 + Math.random() * .1, sp = (ring ? 9 : 3 + Math.random() * 9) * p.d;
+      parts.push({ k: "s", x: p.x, y: p.y, px: p.x, py: p.y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, c: Math.random() < .2 ? "#ffffff" : p.c, life: 1, fade: .012 + Math.random() * .01, d: p.d, tw: Math.random() < .3 }); }
+    parts.push({ k: "f", x: p.x, y: p.y, c: p.c, life: 1, d: p.d }); // the flash at the centre
+    try { tone(80 + Math.random() * 30, .5, "sine", .3, 0, .5); noise(.5, .16, 0, "lowpass", 900); later(() => { for (let i = 0; i < 8; i++) noise(.04, .05, i * .05 + Math.random() * .1, "highpass", 6000); }, 120); } catch {}
   }
   function stepFx() {
     ctx.clearRect(0, 0, fx.width, fx.height);
-    parts = parts.filter((p) => p.life > 0 && p.y < fx.height + 40);
+    const keep = [];
     for (const p of parts) {
-      p.vy += .7 * devicePixelRatio; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.a += p.va; p.life -= .006;
-      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.globalAlpha = Math.max(0, p.life); ctx.fillStyle = p.c; ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); ctx.restore();
+      if (p.k === "p") {
+        p.vy += .45 * p.d; p.vx *= .965; p.vy *= .975; p.sway += .08; p.x += p.vx + Math.sin(p.sway) * .9 * p.d; p.y += p.vy; p.a += p.va; p.flip += p.vf; p.life -= .004;
+        if (p.life <= 0 || p.y > fx.height + 60) continue;
+        const sx = Math.cos(p.flip); // the 3D turn: width goes to zero and back, the far side is darker
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.scale(sx, 1); ctx.globalAlpha = Math.min(1, p.life * 2); ctx.fillStyle = p.c;
+        if (sx < 0) ctx.globalAlpha *= .78;
+        if (p.shape === 0) ctx.fillRect(-p.r, -p.r * .6, p.r * 2, p.r * 1.2);
+        else if (p.shape === 1) { ctx.fillRect(-p.r * .45, -p.r * 2, p.r * .9, p.r * 4); }
+        else { ctx.beginPath(); ctx.arc(0, 0, p.r * .8, 0, Math.PI * 2); ctx.fill(); }
+        ctx.restore(); keep.push(p);
+      } else if (p.k === "r") {
+        p.px = p.x; p.py = p.y; p.x += (p.tx - p.x) * .075; p.y += (p.ty - p.y) * .075;
+        ctx.strokeStyle = p.c; ctx.lineWidth = 3 * p.d; ctx.globalAlpha = 1; ctx.beginPath(); ctx.moveTo(p.px, p.py + 18 * p.d); ctx.lineTo(p.x, p.y); ctx.stroke();
+        if (Math.abs(p.y - p.ty) < 6 * p.d) burst(p); else keep.push(p);
+      } else if (p.k === "s") {
+        p.px = p.x; p.py = p.y; p.vx *= .955; p.vy = p.vy * .955 + .12 * p.d; p.x += p.vx; p.y += p.vy; p.life -= p.fade;
+        if (p.life <= 0) continue;
+        ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = Math.max(0, p.life) * (p.tw && Math.random() < .3 ? .3 : 1);
+        ctx.strokeStyle = p.c; ctx.lineWidth = 2.6 * p.d; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(p.px - p.vx * 1.5, p.py - p.vy * 1.5); ctx.lineTo(p.x, p.y); ctx.stroke();
+        ctx.globalCompositeOperation = "source-over"; keep.push(p);
+      } else if (p.k === "f") {
+        p.life -= .06; if (p.life <= 0) continue;
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 120 * p.d); g.addColorStop(0, "rgba(255,255,255," + .55 * p.life + ")"); g.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(p.x - 120 * p.d, p.y - 120 * p.d, 240 * p.d, 240 * p.d); keep.push(p);
+      }
     }
+    ctx.globalAlpha = 1;
+    parts = keep;
     if (parts.length) requestAnimationFrame(stepFx); else { fxRun = false; ctx.clearRect(0, 0, fx.width, fx.height); }
   }
 
@@ -2415,47 +2501,66 @@ ${samples}
   }
 
 
+  // ---------- the winners show (runs on the big screen and on every phone) ----------
+  // a TV-style reveal: for each place a "?" card under a spotlight, a drum-roll, the card flips to the name and a podium rises.
+  // First place gets the full treatment: lights out, heartbeat, flip, sunburst, falling crown, cannons and fireworks.
   async function podiumShow(rows) {
+    document.querySelector(".show")?.remove();
     const box = document.createElement("div"); box.className = "show";
-    box.innerHTML = `<div class="beams" aria-hidden="true"><i></i><i></i></div><div class="show-title" id="sh-t" aria-live="polite"></div><div class="show-stage" id="sh-s"></div><div class="show-hint">הקישו כדי לדלג</div>`;
+    box.innerHTML = `<div class="rays" aria-hidden="true"></div><div class="beams" aria-hidden="true"><i></i><i></i><i></i></div><div class="floor" aria-hidden="true"></div>
+      <div class="show-title" id="sh-t" aria-live="polite"></div><div class="show-stage" id="sh-s"></div><div class="show-hint">הקישו כדי לדלג</div>`;
     document.body.append(box);
     let skip = false; box.onclick = () => { skip = true; };
     const wait = (ms) => new Promise((r) => { const t0 = Date.now(), iv = setInterval(() => { if (skip || Date.now() - t0 >= ms) { clearInterval(iv); r(); } }, 30); });
     const title = box.querySelector("#sh-t"), stage = box.querySelector("#sh-s");
     MUSIC.duck(40, .12);
-    const say = (txt) => { title.textContent = txt; anim(title, [{ transform: "scale(2.2) rotate(-6deg)", opacity: 0 }, { transform: "scale(.95) rotate(-2deg)", opacity: 1, offset: .6 }, { transform: "rotate(-2deg)", opacity: 1 }], { duration: 480, easing: EASE.out }); };
-    const places = rows.slice(0, 3).map(([name, pts], i) => ({ name, pts, place: i + 1 })).reverse();
+    const say = (txt) => {
+      title.innerHTML = [...txt].map((ch, i) => `<span style="--i:${i}">${ch === " " ? "&nbsp;" : esc(ch)}</span>`).join(""); // letters drop in one by one
+      title.classList.remove("in"); void title.offsetWidth; title.classList.add("in");
+    };
+    const places = rows.slice(0, 3).map(([name, pts], i) => ({ name, pts, place: i + 1 }));
+    // the stage is built up front: three mystery cards in their podium spots, waiting
+    const cols = {};
     for (const p of places) {
-      const win = p.place === 1;
+      const col = document.createElement("div"); col.className = `pcol p${p.place}`;
+      col.innerHTML = `${p.place === 1 ? `<span class="pcrown">👑</span>` : ""}<div class="pcard"><div class="face front">?</div><div class="face back" style="--c:${colorOf(p.name)}"><b>${esc(p.name)}</b><span class="ppts">0</span></div></div><div class="pblock"><b>${p.place}</b></div>`;
+      stage.append(col); cols[p.place] = col;
+    }
+    const tickCount = (el, to, ms) => { const t0 = performance.now(); let last = -1; const step = (now) => { const k = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - k, 3), v = Math.round(to * e); el.textContent = n(v); const s = Math.floor(e * 18); if (s !== last && k < 1) { last = s; tone(900 + s * 40, .025, "square", .03); } if (k < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); };
+    await wait(400);
+    for (const p of [...places].reverse()) {
+      const win = p.place === 1, col = cols[p.place], card = col.querySelector(".pcard");
       if (!skip) {
-        say(win ? (places.length > 1 ? "ו... במקום הראשון" : "והמנצח/ת של הערב") : p.place === 2 ? "במקום השני" : "במקום השלישי");
+        say(win ? (places.length > 1 ? "ובמקום הראשון" : "והמנצח של הערב") : p.place === 2 ? "במקום השני" : "במקום השלישי");
+        box.dataset.focus = p.place; col.classList.add("lit");
         box.classList.toggle("tense", win); box.classList.toggle("dark", win);
-        SFX.drum(win ? 2.9 : 1.3); buzz(win ? [40, 60, 40, 60, 40, 60] : 20);
-        if (win) for (let k = 0; k < 12; k++) later(() => { if (!skip) addTrauma(.05 + k * .02); }, k * 230); // heartbeat that keeps rising
-        await wait(win ? 3000 : 1400);
+        SFX.drum(win ? 3.1 : 1.5); buzz(win ? [40, 70, 40, 70, 40, 70, 40] : 25);
+        card.classList.add("shake");
+        if (win) for (let k = 0; k < 13; k++) later(() => { if (!skip) { addTrauma(.04 + k * .022); tone(55, .12, "sine", .25 + k * .02); } }, k * 230); // a heartbeat that keeps rising
+        await wait(win ? 3200 : 1600);
+        card.classList.remove("shake");
       }
       box.classList.remove("dark");
-      const col = document.createElement("div"); col.className = `pcol p${p.place}`;
-      col.innerHTML = `${win ? `<span class="pcrown">👑</span>` : ""}<div class="pname" style="--c:${colorOf(p.name)}">${esc(p.name)}</div><div class="ppts">0</div><div class="pblock"><b>${p.place}</b></div>`;
-      stage.append(col);
-      const name = col.querySelector(".pname"), block = col.querySelector(".pblock");
-      if (skip) { col.querySelector(".ppts").textContent = n(p.pts); continue; }
-      SFX.slam(); flash(); addTrauma(win ? 1 : .45); buzz(win ? [80, 40, 160] : 40);
-      anim(block, [{ transform: "scaleY(0)" }, { transform: "scaleY(1.08)", offset: .7 }, { transform: "scaleY(1)" }], { duration: 650, easing: EASE.out });
-      anim(name, [{ transform: "scale(3) rotate(-10deg)", opacity: 0 }, { transform: "scale(.9) rotate(-2deg)", opacity: 1, offset: .6 }, { transform: "scale(1) rotate(-3deg)", opacity: 1 }], { duration: 560, easing: EASE.out });
-      countUp(col.querySelector(".ppts"), 0, p.pts, win ? 1400 : 800);
-      const c = center(name); ring(c.x, c.y, "#ffffff", win ? 420 : 260); confetti(win ? 240 : 70, c.x, c.y, win ? 1.3 : .7);
+      col.classList.add("open", "lit");
+      const val = col.querySelector(".ppts");
+      if (skip) { val.textContent = n(p.pts); continue; }
+      // the flip, the podium rising, the name landing
+      SFX.slam(); addTrauma(win ? 1 : .4); buzz(win ? [90, 40, 180] : 40);
+      anim(col.querySelector(".pblock"), [{ transform: "scaleY(0)" }, { transform: "scaleY(1.1)", offset: .65 }, { transform: "scaleY(.97)", offset: .85 }, { transform: "scaleY(1)" }], { duration: 700, easing: "cubic-bezier(.2,.8,.2,1)" });
+      tickCount(val, p.pts, win ? 1500 : 900);
+      const c = center(card);
+      ring(c.x, c.y, "#ffffff", win ? 460 : 260); confetti(win ? 120 : 50, c.x, c.y, win ? 1.1 : .6);
       if (win) {
-        const cr = col.querySelector(".pcrown");
-        anim(cr, [{ transform: "translateY(-60vh) rotate(-30deg)", opacity: 1 }, { transform: "translateY(0) rotate(8deg)", offset: .7 }, { transform: "translateY(-14px) rotate(-4deg)", offset: .85 }, { transform: "none" }], { duration: 1100, delay: 250, easing: "cubic-bezier(.3,0,.3,1)", fill: "backwards" });
-        later(() => { SFX.coin(6); addTrauma(.4); }, 1050);
-        SFX.win(); say(`${p.name} מכיר/ה את הקבוצה הכי טוב!`);
-        [[.2, .3], [.8, .25], [.5, .15], [.3, .55], [.7, .5]].forEach(([x, y], i) => later(() => { if (!skip) { confetti(90, innerWidth * x, innerHeight * y, .9); ring(innerWidth * x, innerHeight * y, ["#ffbe2e", "#ff5fa2", "#19c4a0", "#7b5cff", "#fff"][i], 200); SFX.pop(); } }, 700 + i * 320));
-        await wait(4200);
-      } else { SFX.reveal(); await wait(1300); }
+        box.classList.add("crowned"); flash();
+        later(() => { SFX.coin(6); addTrauma(.35); }, 1100);
+        SFX.win(); later(() => cannons(180), 250);
+        [[.18, .28], [.82, .24], [.5, .14], [.3, .4], [.7, .38], [.5, .3]].forEach(([x, y], i) => later(() => { if (!skip) firework(innerWidth * x, innerHeight * y, ["#ffbe2e", "#ff5fa2", "#19c4a0", "#7b5cff", "#5fb4ff", "#ffbe2e"][i]); }, 500 + i * 420));
+        later(() => say(`${p.name} מכיר את הקבוצה הכי טוב!`), 1300);
+        await wait(5200);
+      } else { SFX.reveal(); await wait(1500); }
     }
-    if (skip) await new Promise((r) => setTimeout(r, 400));
-    await anim(box, [{ opacity: 1 }, { opacity: 0 }], { duration: 350, easing: "ease-out", fill: "forwards" }).finished;
+    if (skip) await new Promise((r) => setTimeout(r, 500));
+    await anim(box, [{ opacity: 1 }, { opacity: 0 }], { duration: 400, easing: "ease-out", fill: "forwards" }).finished;
     box.remove();
   }
   function end() {
@@ -2573,7 +2678,7 @@ ${samples}
       return { ...qb, ph: "wait" };
     }
     if (S.screen === "mid") return { ...base, ph: "mid", idx: S.idx };
-    if (S.screen === "end" && S.showing) return { ...base, sc: [], ph: "drum" };
+    if (S.screen === "end" && S.showing) return { ...base, sc: [], ph: "drum", pod: Object.entries(S.scores || {}).filter((r) => r[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([p, v]) => [String(p).slice(0, 40), v]) };
     if (S.screen === "end") return { ...base, ph: "end", tm: g.total, bq: g.bestQuote ? { text: String(g.bestQuote.text).slice(0, 160), author: g.bestQuote.author, laughs: g.bestQuote.laughs } : null, aw: (g.awards || []).slice(0, 4).map(([k, v, d]) => [k, String(v).slice(0, 40), String(d).slice(0, 40)]) };
     return null;
   }
@@ -2819,7 +2924,8 @@ ${samples}
       const big = cls === "ok" ? `צדקת!<small>+${n(r[1])} נקודות${r[3] ? " · ההימור הכפיל 🎲" : ""}</small>` : cls === "no" ? (r[3] ? `הימרת ונפלת 💥<small>‎-${BET_LOSS} · התשובה: ${esc(ans || "")}</small>` : `לא הפעם<small>התשובה: ${esc(ans || "")}</small>`) : `פספסת<small>התשובה: ${esc(ans || "")}</small>`;
       body = `<div class="top"><span class="counter">${(d.idx | 0) + 1}/${d.total | 0}</span></div><div class="rcard ${cls}" id="rres">${buddy(cls === "ok" ? "laugh" : cls === "no" ? "shock" : "sweat")}<div class="rbig">${big}</div></div>${rankLine(d)}`;
     } else if (d.ph === "drum") {
-      body = `<div class="rcard miss">${buddy("sweat")}<div class="rbig" style="font-size:2.6rem">תסתכלו על המסך!<small>מכריזים על המנצחים…</small></div></div>`;
+      body = `<div class="rcard miss">${buddy("sweat")}<div class="rbig" style="font-size:2.4rem">מכריזים על המנצחים…</div></div>`;
+      if (R.showFor !== d.ep && Array.isArray(d.pod) && d.pod.length) { R.showFor = d.ep; later(() => podiumShow(d.pod), 50); }
     } else if (d.ph === "mid") {
       body = `<h2>תמונת מצב</h2>${rankLine(d)}${boardHtml((d.sc || []).slice(0, 8))}<p class="waiting">ממשיכים מהמסך הגדול</p>`;
     } else if (d.ph === "end") {
