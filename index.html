@@ -652,6 +652,30 @@ input[type=text] { background: var(--soft); color: var(--ink); border: 0; border
 .bubble, .opt > span { white-space: pre-line; }
 .rate { display: flex; align-items: center; justify-content: center; gap: 10px; color: rgba(255,255,255,.9); font-weight: 600; }
 .rate .chip { font-size: 1.3rem; padding: 4px 14px; }
+/* the winners show */
+.show { position: fixed; inset: 0; z-index: 28; display: grid; grid-template-rows: auto 1fr auto; justify-items: center; padding: 7vh 16px 3vh; overflow: hidden; color: #fff; text-align: center; cursor: pointer;
+  background: radial-gradient(60% 55% at 50% 45%, #8763ff 0%, #3a1fa8 65%, #1c0f5c 100%); transition: background-color .6s; }
+.show::after { content: ""; position: absolute; inset: 0; background: radial-gradient(28% 24% at 50% 58%, transparent 0%, rgba(5,2,20,.85) 100%); opacity: 0; transition: opacity .6s ease; pointer-events: none; }
+.show.dark::after { opacity: 1; }
+.beams i { position: absolute; top: -10%; width: 34vmax; height: 130vh; background: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0) 75%); clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%); transform-origin: 50% 0; animation: sweep 3.2s ease-in-out infinite alternate; left: 8%; }
+.beams i + i { left: auto; right: 8%; animation-direction: alternate-reverse; }
+.show.tense .beams i { animation-duration: .6s; }
+@keyframes sweep { from { transform: rotate(-24deg); } to { transform: rotate(24deg); } }
+.show-title { position: relative; z-index: 2; font-family: var(--game); font-weight: 700; font-size: clamp(2rem, 8vw, 3.6rem); line-height: 1.1; color: #fff; transform: rotate(-2deg); max-width: 22ch;
+  text-shadow: -3px 0 0 var(--o), 3px 0 0 var(--o), 0 -3px 0 var(--o), 0 3px 0 var(--o), -2px -2px 0 var(--o), 2px -2px 0 var(--o), -2px 2px 0 var(--o), 2px 2px 0 var(--o), 0 6px 0 var(--o); }
+.show-stage { position: relative; z-index: 2; width: 100%; max-width: 760px; justify-self: center; display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 10px; align-self: end; }
+.pcol { display: grid; justify-items: center; gap: 8px; position: relative; grid-row: 1; }
+.pcol.p1 { grid-column: 2; } .pcol.p2 { grid-column: 1; } .pcol.p3 { grid-column: 3; }
+.pname { font-family: var(--game); font-weight: 700; font-size: clamp(1.3rem, 5.5vw, 2.4rem); color: var(--c); line-height: 1.05; transform: rotate(-3deg); word-break: break-word;
+  text-shadow: -3px 0 0 #fff, 3px 0 0 #fff, 0 -3px 0 #fff, 0 3px 0 #fff, -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff, 0 6px 0 var(--o); }
+.p1 .pname { font-size: clamp(1.8rem, 8vw, 3.4rem); }
+.ppts { font-family: var(--game); font-weight: 700; background: var(--o); color: #fff; border-radius: 99px; padding: 3px 14px; font-variant-numeric: tabular-nums; }
+.pblock { width: 100%; border: 3px solid var(--o); border-bottom: 0; border-radius: 20px 20px 0 0; transform-origin: bottom; display: grid; place-items: start center; padding-top: 10px; box-shadow: inset 0 6px 0 rgba(255,255,255,.4), inset 0 -14px 0 rgba(0,0,0,.12); }
+.pblock b { font-family: var(--game); font-size: 2.6rem; color: #fff; text-shadow: 0 3px 0 var(--o), -2px 0 0 var(--o), 2px 0 0 var(--o), 0 -2px 0 var(--o); }
+.p1 .pblock { height: min(32vh, 260px); background: #ffbe2e; } .p2 .pblock { height: min(22vh, 180px); background: #c9d3ea; } .p3 .pblock { height: min(15vh, 130px); background: #e3a065; }
+.pcrown { position: absolute; top: -3.4rem; font-size: 3.4rem; filter: drop-shadow(0 4px 0 var(--o)); }
+.show-hint { position: relative; z-index: 2; opacity: .6; font-size: .9rem; margin-top: 10px; }
+@media (prefers-reduced-motion: reduce) { .beams i { animation: none; } }
 #overlay[data-loading] { background: var(--stage) !important; }
 .loadcard h3 { font-size: clamp(1.8rem, 7vw, 2.6rem) !important; }
 .ld-bar { width: min(320px, 80vw); margin: 14px auto 0; }
@@ -1959,7 +1983,7 @@ ${samples}
         S.multi = false; NET.bump("single");
         S.scores = Object.fromEntries(S.players.map((p) => [p, 0]));
         S.streaks = Object.fromEntries(S.players.map((p) => [p, 0]));
-        S.idx = 0; S.revealed = false; S.screen = "play"; S.enter = true; S.prevOrder = S.players.slice(); S.midScores = null; S.endCounted = false;
+        S.idx = 0; S.revealed = false; S.screen = "play"; S.enter = true; S.prevOrder = S.players.slice(); S.midScores = null; S.endCounted = false; S.shown = false;
         S.seenKinds = {};
         keepAwake(true);
         await countdown();
@@ -2390,9 +2414,59 @@ ${samples}
     }, "image/png");
   }
 
+
+  async function podiumShow(rows) {
+    const box = document.createElement("div"); box.className = "show";
+    box.innerHTML = `<div class="beams" aria-hidden="true"><i></i><i></i></div><div class="show-title" id="sh-t" aria-live="polite"></div><div class="show-stage" id="sh-s"></div><div class="show-hint">הקישו כדי לדלג</div>`;
+    document.body.append(box);
+    let skip = false; box.onclick = () => { skip = true; };
+    const wait = (ms) => new Promise((r) => { const t0 = Date.now(), iv = setInterval(() => { if (skip || Date.now() - t0 >= ms) { clearInterval(iv); r(); } }, 30); });
+    const title = box.querySelector("#sh-t"), stage = box.querySelector("#sh-s");
+    MUSIC.duck(40, .12);
+    const say = (txt) => { title.textContent = txt; anim(title, [{ transform: "scale(2.2) rotate(-6deg)", opacity: 0 }, { transform: "scale(.95) rotate(-2deg)", opacity: 1, offset: .6 }, { transform: "rotate(-2deg)", opacity: 1 }], { duration: 480, easing: EASE.out }); };
+    const places = rows.slice(0, 3).map(([name, pts], i) => ({ name, pts, place: i + 1 })).reverse();
+    for (const p of places) {
+      const win = p.place === 1;
+      if (!skip) {
+        say(win ? (places.length > 1 ? "ו... במקום הראשון" : "והמנצח/ת של הערב") : p.place === 2 ? "במקום השני" : "במקום השלישי");
+        box.classList.toggle("tense", win); box.classList.toggle("dark", win);
+        SFX.drum(win ? 2.9 : 1.3); buzz(win ? [40, 60, 40, 60, 40, 60] : 20);
+        if (win) for (let k = 0; k < 12; k++) later(() => { if (!skip) addTrauma(.05 + k * .02); }, k * 230); // heartbeat that keeps rising
+        await wait(win ? 3000 : 1400);
+      }
+      box.classList.remove("dark");
+      const col = document.createElement("div"); col.className = `pcol p${p.place}`;
+      col.innerHTML = `${win ? `<span class="pcrown">👑</span>` : ""}<div class="pname" style="--c:${colorOf(p.name)}">${esc(p.name)}</div><div class="ppts">0</div><div class="pblock"><b>${p.place}</b></div>`;
+      stage.append(col);
+      const name = col.querySelector(".pname"), block = col.querySelector(".pblock");
+      if (skip) { col.querySelector(".ppts").textContent = n(p.pts); continue; }
+      SFX.slam(); flash(); addTrauma(win ? 1 : .45); buzz(win ? [80, 40, 160] : 40);
+      anim(block, [{ transform: "scaleY(0)" }, { transform: "scaleY(1.08)", offset: .7 }, { transform: "scaleY(1)" }], { duration: 650, easing: EASE.out });
+      anim(name, [{ transform: "scale(3) rotate(-10deg)", opacity: 0 }, { transform: "scale(.9) rotate(-2deg)", opacity: 1, offset: .6 }, { transform: "scale(1) rotate(-3deg)", opacity: 1 }], { duration: 560, easing: EASE.out });
+      countUp(col.querySelector(".ppts"), 0, p.pts, win ? 1400 : 800);
+      const c = center(name); ring(c.x, c.y, "#ffffff", win ? 420 : 260); confetti(win ? 240 : 70, c.x, c.y, win ? 1.3 : .7);
+      if (win) {
+        const cr = col.querySelector(".pcrown");
+        anim(cr, [{ transform: "translateY(-60vh) rotate(-30deg)", opacity: 1 }, { transform: "translateY(0) rotate(8deg)", offset: .7 }, { transform: "translateY(-14px) rotate(-4deg)", offset: .85 }, { transform: "none" }], { duration: 1100, delay: 250, easing: "cubic-bezier(.3,0,.3,1)", fill: "backwards" });
+        later(() => { SFX.coin(6); addTrauma(.4); }, 1050);
+        SFX.win(); say(`${p.name} מכיר/ה את הקבוצה הכי טוב!`);
+        [[.2, .3], [.8, .25], [.5, .15], [.3, .55], [.7, .5]].forEach(([x, y], i) => later(() => { if (!skip) { confetti(90, innerWidth * x, innerHeight * y, .9); ring(innerWidth * x, innerHeight * y, ["#ffbe2e", "#ff5fa2", "#19c4a0", "#7b5cff", "#fff"][i], 200); SFX.pop(); } }, 700 + i * 320));
+        await wait(4200);
+      } else { SFX.reveal(); await wait(1300); }
+    }
+    if (skip) await new Promise((r) => setTimeout(r, 400));
+    await anim(box, [{ opacity: 1 }, { opacity: 0 }], { duration: 350, easing: "ease-out", fill: "forwards" }).finished;
+    box.remove();
+  }
   function end() {
     if (!S.endCounted) { S.endCounted = true; NET.bump("finished"); }
     const rows = Object.entries(S.scores || {}).sort((a, b) => b[1] - a[1]);
+    // the big moment: places three, two and one, one at a time, before the full results
+    if (!S.shown && rows[0] && rows[0][1] > 0) {
+      S.shown = true; S.showing = true; app.innerHTML = "";
+      podiumShow(rows.filter((r) => r[1] > 0)).then(() => { S.showing = false; S.enter = true; render(); });
+      return;
+    }
     const g = S.game;
     const shareText = `שיחקנו "מי אמר את זה?" על ${n(g.total)} הודעות מהקבוצה.\n` + rows.map(([p, s], i) => `${["🥇", "🥈", "🥉"][i] || `${i + 1}.`} ${p} - ${s}`).join("\n") + (g.bestQuote ? `\n\nהציטוט של הערב: "${g.bestQuote.text}" (${g.bestQuote.author})` : "");
     const top3 = rows.slice(0, 3);
@@ -2499,6 +2573,7 @@ ${samples}
       return { ...qb, ph: "wait" };
     }
     if (S.screen === "mid") return { ...base, ph: "mid", idx: S.idx };
+    if (S.screen === "end" && S.showing) return { ...base, sc: [], ph: "drum" };
     if (S.screen === "end") return { ...base, ph: "end", tm: g.total, bq: g.bestQuote ? { text: String(g.bestQuote.text).slice(0, 160), author: g.bestQuote.author, laughs: g.bestQuote.laughs } : null, aw: (g.awards || []).slice(0, 4).map(([k, v, d]) => [k, String(v).slice(0, 40), String(d).slice(0, 40)]) };
     return null;
   }
@@ -2743,6 +2818,8 @@ ${samples}
       const cls = !r || r[2] ? "miss" : r[0] ? "ok" : "no";
       const big = cls === "ok" ? `צדקת!<small>+${n(r[1])} נקודות${r[3] ? " · ההימור הכפיל 🎲" : ""}</small>` : cls === "no" ? (r[3] ? `הימרת ונפלת 💥<small>‎-${BET_LOSS} · התשובה: ${esc(ans || "")}</small>` : `לא הפעם<small>התשובה: ${esc(ans || "")}</small>`) : `פספסת<small>התשובה: ${esc(ans || "")}</small>`;
       body = `<div class="top"><span class="counter">${(d.idx | 0) + 1}/${d.total | 0}</span></div><div class="rcard ${cls}" id="rres">${buddy(cls === "ok" ? "laugh" : cls === "no" ? "shock" : "sweat")}<div class="rbig">${big}</div></div>${rankLine(d)}`;
+    } else if (d.ph === "drum") {
+      body = `<div class="rcard miss">${buddy("sweat")}<div class="rbig" style="font-size:2.6rem">תסתכלו על המסך!<small>מכריזים על המנצחים…</small></div></div>`;
     } else if (d.ph === "mid") {
       body = `<h2>תמונת מצב</h2>${rankLine(d)}${boardHtml((d.sc || []).slice(0, 8))}<p class="waiting">ממשיכים מהמסך הגדול</p>`;
     } else if (d.ph === "end") {
