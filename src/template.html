@@ -1452,7 +1452,7 @@ body.yt-mini #ytmin { display: none; }
     stat: "מי בקבוצה הכי…",
     number: "כמה פעמים?",
   };
-  const KIND_TITLE = { story: "הסיפור של הקבוצה 📖", legend: "מי אמר את זה ראשון?", day: "היום הכי משוגע", era: "מתי זה היה?", moment: "הרגע של הקבוצה", word: "של מי המילה?", when: "מתי זה נשלח?", quote: "מי אמר את זה?", finish: "איך זה נגמר?", reply: "מי ענה על זה?", phrase: "של מי הביטוי?", stat: "מי בקבוצה…", number: "כמה פעמים?", ai: "מי היה כותב את זה?" };
+  const KIND_TITLE = { fake: "אמיתי או מזויף? 🕵️", vs: "מי יותר? ⚔️", first: "מה היה קודם? ⏳", story: "הסיפור של הקבוצה 📖", legend: "מי אמר את זה ראשון?", day: "היום הכי משוגע", era: "מתי זה היה?", moment: "הרגע של הקבוצה", word: "של מי המילה?", when: "מתי זה נשלח?", quote: "מי אמר את זה?", finish: "איך זה נגמר?", reply: "מי ענה על זה?", phrase: "של מי הביטוי?", stat: "מי בקבוצה…", number: "כמה פעמים?", ai: "מי היה כותב את זה?" };
 
   let S = { screen: "home" };
   let msgs = [];
@@ -1630,7 +1630,7 @@ body.yt-mini #ytmin { display: none; }
       sc -= Math.abs(take.length - want) * .9;
       if (Math.abs(e.length - end.length) > Math.max(12, end.length * .5)) sc -= 2;
       if (/\p{Extended_Pictographic}/u.test(e) !== /\p{Extended_Pictographic}/u.test(end)) sc -= .7;
-      out.push([e, sc]);
+      out.push([e, sc, i]);
     }
     return out.sort((a, b) => b[1] - a[1]);
   }
@@ -1775,7 +1775,7 @@ body.yt-mini #ytmin { display: none; }
   const roast = (a) => rnd(ROAST).replace("%a", a);
   const reactLine = (c) => { const r = [...c.reacts].sort((a, b) => (b.w ? 1 : 0) - (a.w ? 1 : 0)).slice(0, 3).map((x) => `"${x.t.replace(/\s+/g, " ").slice(0, 34)}"`); return r.length ? `התגובות בקבוצה: ${r.join(" · ")}` : ""; };
   function wtfQs(cands, pool, k) {
-    const top = cands.filter((c) => c.wtf >= 2 || (c.wtf >= 1 && c.wtfScore >= 3 && c.crowd >= 1)).filter((c) => c.text.split(/\s+/).length >= 3)
+    const top = cands.filter((c) => (c.wtf >= 2 && (c.crowd >= 1 || c.wtfScore >= 5)) || (c.wtf >= 1 && c.wtfScore >= 3 && c.crowd >= 2)).filter((c) => c.text.split(/\s+/).length >= 4 && !STUDY.test(c.text) && !LOGISTICS.test(c.text))
       .sort((a, b) => (b.wtfScore * 4 + b.wtf * 6 + b.crowd * 3) - (a.wtfScore * 4 + a.wtf * 6 + a.crowd * 3)).slice(0, 150);
     return sample(top, k, (c) => Math.pow(c.wtfScore + c.wtf * 2 + c.crowd, 2)).map((c) => ({ type: "moment", title: "רגע של WTF 🤯", text: c.text, answer: c.author, author: c.author, ts: c.ts,
       hook: reactLine(c) || "הקבוצה לא האמינה שמישהו כתב את זה", options: smartOptions(c.author, pool, c.text), reveal: roast(c.author) + "  ·  " + c.reacts.map((r) => `${r.a}: ${r.t}`).join("  ·  "), ...ctxOf(c.i) }));
@@ -1842,6 +1842,149 @@ body.yt-mini #ytmin { display: none; }
       hook: `התגובות: ${e.said.map((r) => `"${r.text.replace(/\s+/g, " ")}"`).join(" · ")}`, options: smartOptions(e.author, pool, e.text),
       reveal: roast(e.author) + "  ·  " + (e.punch ? `ואז ${e.author}: "${e.punch.text.slice(0, 90)}"  ·  ` : "") + e.said.map((r) => `${r.author}: ${r.text}`).join("  ·  "), ...ctxOf(e.i) }));
   }
+  // ---------- "מה קרה?": someone asks what happened, someone else explains. That explanation is the best story there is ----------
+  const ASKQ = /^(למה |אז |נו |אחי |רגע |שנייה )?(מה קרה|מה פספסתי|מה הלך פה|מה היה|מה נהיה|מה הסיפור|על מה מדברים|מה הקטע|מה הוא עשה|מה היא עשתה|מה עשית|מה עשיתם|תספר|תספרי|תספרו|ספר|ספרי|ספרו|פרטים|תעדכנו|ואז)\s*[?!.]*\s*(אחי|אחשלי)?\s*[?!.]*$/;
+  const NARR = /(ואז|פתאום|קיצר|קיצור|בקיצור|הלכתי|באתי|הגעתי|אמרתי|אמר לי|אמרה לי|הוא אמר|היא אמרה|הוא כזה|היא כזה|אני כזה|ראיתי|שמעתי|גילו|גילתה|גילה|תפסו|תפס|נתפס|עבר לידי|עברה לידי|התקשר|התקשרה|הבנתי|בסוף|באמצע|לקח אותו|לקחה אותו|צעק|צעקה|נפל|נפלה|שבר|שברה|נאבד|גנב|ברח|ברחה)/;
+  const STUDY = /(זווית|משוש|רדיוס|משוואה|נגזרת|תרגיל|שיעורי בית|פיזיקה|מתמטיקה|בגרות|מתכונת|יח"ל|יחל|ציון|עבודה ב|גרף|פונקציה|סעיף)/;
+  const reacts = (m) => m && m.text && m.text.length < 60 && !m.text.includes("@") && !PRAISE.test(m.text) && (WTF.test(m.text) || LAUGH.test(m.text) || SHOCK.test(m.text));
+  const okLine = (m) => m && m.text && !m.media && !m.deleted && !m.text.includes("@") && clean(m.text) && !HEALTH.test(m.text) && !SEXUAL.test(m.text);
+  // what the room said in the minutes after line i (not counting `who`)
+  function roomAfter(i, who, mins = 10) {
+    const said = [], seen = new Set(); let laughs = 0;
+    for (let j = i + 1; j < Math.min(msgs.length, i + 60); j++) {
+      const m = msgs[j]; if (!m.ts || m.ts - msgs[i].ts > mins * 6e4) break;
+      if (m.author === who || !reacts(m)) continue;
+      if (LAUGH.test(m.text)) laughs++;
+      if (!seen.has(m.author)) { seen.add(m.author); if (said.length < 3 && m.text.length <= 30 && clean(m.text)) said.push(m); }
+    }
+    return { who: seen.size, laughs, said };
+  }
+  function askQs(pool, k) {
+    const eps = [];
+    for (let i = 0; i < msgs.length; i++) {
+      const q = msgs[i]; if (!q.text || !q.ts || q.text.length > 40 || !ASKQ.test(q.text.trim())) continue;
+      const by = {};
+      for (let j = i + 1; j < Math.min(msgs.length, i + 30); j++) { const m = msgs[j]; if (!m.ts || m.ts - q.ts > 5 * 6e4) break; if (m.author === q.author || !pool.includes(m.author)) continue; (by[m.author] ||= []).push(j); }
+      // the explainer: whoever wrote the most real words right after the question
+      let best = null;
+      for (const [a, js] of Object.entries(by)) {
+        const lines = js.filter((j) => okLine(msgs[j]) && msgs[j].text.split(/\s+/).length >= 2 && !/\?\s*$/.test(msgs[j].text) && !reacts(msgs[j])).slice(0, 5);
+        const w = lines.reduce((x, j) => x + msgs[j].text.split(/\s+/).length, 0);
+        if (!best || w > best.w) best = { a, lines, w };
+      }
+      if (!best || best.lines.length < 2 || best.w < 12 || best.w > 90) continue;
+      const all = best.lines.map((j) => msgs[j].text).join(" ");
+      if (STUDY.test(all) || js_bad(best.lines)) continue;
+      const room = roomAfter(best.lines[0], best.a, 12);
+      const narr = (all.match(new RegExp(NARR.source, "g")) || []).length;
+      if (!narr) continue;
+      const score = narr * 5 + room.who * 6 + Math.min(10, room.laughs) + (STRONG_OPEN.test(all) ? 12 : 0) + Math.min(best.w, 50) / 5 - (LOGISTICS.test(all) ? 14 : 0);
+      eps.push({ i: best.lines[0], q, author: best.a, ts: msgs[best.lines[0]].ts, text: best.lines.map((j) => msgs[j].text.replace(/\s+/g, " ").slice(0, 110)).join("\n"), said: room.said, score });
+      i += 8;
+    }
+    const top = eps.filter((e) => e.score >= 14).sort((a, b) => b.score - a.score).slice(0, 200);
+    return sample(top, k, (e) => e.score * e.score).map((e) => ({ type: "story", title: "מה קרה? 🗞️", text: e.text, answer: e.author, author: e.author, ts: e.ts,
+      hook: `${e.q.author} שאל "${e.q.text.trim().slice(0, 30)}". מי ענה ככה?`, options: smartOptions(e.author, pool, e.text),
+      reveal: roast(e.author) + (e.said.length ? "  ·  " + e.said.map((r) => `${r.author}: ${r.text}`).join("  ·  ") : ""), ...ctxOf(e.i) }));
+  }
+  // a run of lines from someone the chat was waiting on (question to a third person: skip)
+  const js_bad = (lines) => lines.some((j) => /(@|https?:)/.test(msgs[j].text));
+
+  // ---------- news: "נפרדתי", "עברתי טסט", "נתפסתי"... and the group lost it ----------
+  const NEWS = /(נפרדתי|נפרדנו|עזב אותה|עזבה אותו|נפרדו|יש לי חברה|יש לי חבר|יוצא עם|יוצאת עם|התקבלתי|קיבלו אותי|לא קיבלו אותי|עברתי טסט|עברתי את הטסט|נכשלתי|נפלתי בטסט|קיבלתי רישיון|קיבלתי עבודה|התחלתי לעבוד|פיטרו אותי|עפתי מ|העיפו אותי|השעו אותי|נתפסתי|תפסו אותי|שברתי|נשברה לי|נשבר לי|גנבו לי|איבדתי את|אבד לי|נאבד לי|עוברים דירה|עובר דירה|קניתי|התנשקתי|נישקתי|הציעו לי|אני טס|קיבלתי צו|גילתה ש|גילה ש|גילו ש|אמא שלי ראתה|אבא שלי ראה|המורה תפס|המורה תפסה|הרב תפס|השוטר|משטרה|דוח|קנס)/;
+  function newsQs(pool, k) {
+    const out = [];
+    for (let i = 0; i < msgs.length; i++) {
+      const m = msgs[i]; if (!pool.includes(m.author) || !okLine(m) || !NEWS.test(m.text) || /\?/.test(m.text)) continue;
+      const w = m.text.split(/\s+/).length; if (w < 3 || w > 40 || STUDY.test(m.text)) continue;
+      const room = roomAfter(i, m.author, 10); if (room.who < 2) continue;
+      // their next line or two finish the thought
+      const lines = [m];
+      for (let j = i + 1; j < Math.min(msgs.length, i + 6) && lines.length < 3; j++) { const x = msgs[j]; if (!x.ts || x.ts - m.ts > 2 * 6e4) break; if (x.author === m.author && okLine(x) && !reacts(x) && x.text.split(/\s+/).length >= 2) lines.push(x); }
+      out.push({ i, author: m.author, ts: m.ts, text: lines.map((x) => x.text.replace(/\s+/g, " ").slice(0, 110)).join("\n"), said: room.said, score: room.who * 6 + Math.min(12, room.laughs) + (lines.length - 1) * 3 });
+      i += 5;
+    }
+    return sample(out.sort((a, b) => b.score - a.score).slice(0, 120), k, (e) => e.score * e.score).map((e) => ({ type: "moment", title: "החדשות של הקבוצה 📢", text: e.text, answer: e.author, author: e.author, ts: e.ts,
+      hook: e.said.length ? `התגובות: ${e.said.map((r) => `"${r.text.replace(/\s+/g, " ")}"`).join(" · ")}` : "הודעה שהקפיצה את כל הקבוצה", options: smartOptions(e.author, pool, e.text),
+      reveal: e.said.map((r) => `${r.author}: ${r.text}`).join("  ·  "), ...ctxOf(e.i) }));
+  }
+
+  // ---------- real or fake? a real message, or the start of one glued to the end of another ----------
+  const REAL = "נשלח באמת ✅", FAKE = "מזויף ❌";
+  function fakeQs(cands, pool, k) {
+    const good = cands.filter((c) => { const w = c.text.split(/\s+/).length; return w >= 6 && w <= 20 && !c.text.includes("\n") && c.score > 12; }).slice(0, 300);
+    const out = [];
+    for (const c of sample(good, k * 4)) {
+      if (out.length >= k) break;
+      if (Math.random() < .45) { out.push({ type: "fake", text: c.text, answer: REAL, author: c.author, ts: c.ts, options: [REAL, FAKE], stamp: "אמיתי!", hook: "נשלח בקבוצה, או שהמשחק הדביק שתי הודעות?", reveal: `${c.author} באמת כתב את זה`, ...ctxOf(c.i) }); continue; }
+      const w = c.text.split(/\s+/); let best = null;
+      for (let cut = Math.max(3, Math.floor(w.length * .4)); cut <= w.length - 2; cut++) {
+        const e = endingsAfter(w.slice(0, cut), w.slice(cut).join(" "), c.i).find((x) => x[1] > .5 && x[0].split(/\s+/).length >= 2);
+        if (e && (!best || e[1] > best.e[1])) best = { cut, e };
+      }
+      if (!best) continue;
+      const src = msgs[best.e[2]];
+      out.push({ type: "fake", text: w.slice(0, best.cut).join(" ") + " " + best.e[0], answer: FAKE, author: c.author, options: [REAL, FAKE], stamp: "מזויף!", hook: "נשלח בקבוצה, או שהמשחק הדביק שתי הודעות?",
+        reveal: `ההתחלה של ${c.author}: "${c.text.slice(0, 60)}"  ·  הסוף של ${src.author}: "${src.text.slice(0, 60)}"` });
+    }
+    return out;
+  }
+
+  // ---------- head to head: two players, one habit ----------
+  function vsQs(stats, pool, k) {
+    const ppl = pool.filter((p) => ((stats.people.find((x) => x.name === p) || {}).messages || 0) >= 40);
+    if (ppl.length < 2) return [];
+    const cats = [
+      [/😭/, "שלח יותר 😭", "😭"], [/(חח{3,}|😂|🤣)/, "צחק יותר בקבוצה", "צחוקים"], [/\?\s*$/, "שאל יותר שאלות", "שאלות"], [SPICY, "קילל יותר", "קללות"],
+      [/(^|\s)אחי(\s|$)/, 'אמר יותר "אחי"', '"אחי"'], [/(סליחה|סורי|sorry)/i, "התנצל יותר", "סליחות"], [/(רעב|אוכל|פיצה|שווארמה|המבורגר|סושי|פלאפל)/, "דיבר יותר על אוכל", "הודעות על אוכל"],
+      [/(אני מת|מתתי|אנימת|נרצח)/, 'היה "מת" יותר פעמים', 'פעמים "מת"'], [/(לישון|עייף|עייפה|ישנתי|נרדמתי)/, "דיבר יותר על לישון", "הודעות על שינה"], [/(אוהב|אוהבת|❤️|🥰|😍)/, "יותר רומנטי בקבוצה", "הודעות אהבה"],
+      [/(כסף|שקל|₪|לשלם|יקר)/, "דיבר יותר על כסף", "הודעות על כסף"], [/(\p{L})\1{3,}/u, "מותח יותר מילים (כמוווו זההה)", "מילים מתוחות"], ["night", "כתב יותר בין חצות לחמש", "הודעות בלילה"], ["deleted", "מחק יותר הודעות", "מחיקות"], ["media", "שלח יותר תמונות, סטיקרים וסרטונים", "קבצים"],
+    ];
+    const cnt = cats.map(() => ({}));
+    for (const m of msgs) {
+      if (!ppl.includes(m.author)) continue;
+      cats.forEach(([re], ci) => {
+        const hit = re === "night" ? m.ts && new Date(m.ts).getHours() < 5 && !m.media : re === "deleted" ? m.deleted : re === "media" ? m.media : m.text && !m.media && re.test(m.text);
+        if (hit) cnt[ci][m.author] = (cnt[ci][m.author] || 0) + 1;
+      });
+    }
+    const all = [];
+    cats.forEach(([, title, unit], ci) => {
+      for (let a = 0; a < ppl.length; a++) for (let b = a + 1; b < ppl.length; b++) {
+        const x = cnt[ci][ppl[a]] || 0, y = cnt[ci][ppl[b]] || 0, hi = Math.max(x, y), lo = Math.min(x, y);
+        // close enough to argue about, far enough to have a real answer
+        if (lo < 5 || hi / lo < 1.15 || hi / lo > 3) continue;
+        all.push({ ci, a: ppl[a], b: ppl[b], x, y, title, unit });
+      }
+    });
+    const out = [], usedC = new Set(), usedP = {};
+    for (const v of shuffle(all)) {
+      if (out.length >= k || usedC.has(v.ci) || (usedP[v.a] || 0) + (usedP[v.b] || 0) >= 2) continue;
+      usedC.add(v.ci); usedP[v.a] = (usedP[v.a] || 0) + 1; usedP[v.b] = (usedP[v.b] || 0) + 1;
+      const win = v.x > v.y ? v.a : v.b;
+      out.push({ type: "vs", text: `${v.a} נגד ${v.b}: מי ${v.title}?`, answer: win, author: win, options: shuffle([v.a, v.b]), hook: "לפי כל הצ'אט שלכם",
+        reveal: `${v.a}: ${n(v.x)} ${v.unit}  ·  ${v.b}: ${n(v.y)} ${v.unit}` });
+    }
+    return out;
+  }
+
+  // ---------- which came first? two classics from the chat ----------
+  function firstOfQs(cands, k) {
+    const top = cands.filter((c) => c.ts && (c.crowd >= 1 || c.wtf >= 1) && c.text.length <= 70 && c.text.split(/\s+/).length >= 3 && !c.text.includes("\n")).slice(0, 200);
+    if (top.length < 6 || top[0].ts == null) return [];
+    const span = Math.max(...top.map((c) => c.ts)) - Math.min(...top.map((c) => c.ts)); if (span < 60 * 864e5) return [];
+    const out = [], used = new Set();
+    for (const a of sample(top, k * 6)) {
+      if (out.length >= k) break; if (used.has(a)) continue;
+      const b = shuffle(top).find((c) => c !== a && !used.has(c) && c.author !== a.author && Math.abs(c.ts - a.ts) > Math.max(30 * 864e5, span / 6));
+      if (!b) continue; used.add(a); used.add(b);
+      const [p, q] = a.ts < b.ts ? [a, b] : [b, a];
+      out.push({ type: "first", text: "איזו מההודעות האלה נשלחה קודם?", key: p.text + " | " + q.text, answer: p.text, author: p.author, ts: p.ts, options: shuffle([p.text, q.text]), long: true, stamp: fmtDate(p.ts),
+        hook: "שתי קלאסיקות של הקבוצה. מה היה קודם?", reveal: `קודם: ${p.author}, ${fmtDate(p.ts)}  ·  אחר כך: ${q.author}, ${fmtDate(q.ts)}` });
+    }
+    return out;
+  }
+
   // a word one person owns: "who writes 'וואלה' the most?"
   function wordQs(pool, k) {
     if (!STYLE) return [];
@@ -2050,12 +2193,16 @@ ${samples}
     const per = {}, balanced = [];
     for (const q of quoteSrc) { per[q.author] = (per[q.author] || 0) + 1; if (per[q.author] <= Math.max(3, Math.ceil(total / pool.length) + 1)) balanced.push(q); }
 
-    const want = { finish: kinds.finish ? Math.round(total * .07) : 0, reply: 0, phrase: kinds.phrase ? Math.round(total * .05) : 0, stat: kinds.stat ? Math.max(1, Math.round(total * .16)) : 0, moment: kinds.quote ? Math.round(total * .06) : 0, wtf: kinds.quote ? Math.max(1, Math.round(total * .14)) : 0, story: kinds.quote ? Math.max(1, Math.round(total * .14)) : 0, legend: kinds.quote ? Math.max(1, Math.round(total * .1)) : 0, day: kinds.stat ? Math.round(total * .08) : 0, number: kinds.number ? Math.max(1, Math.round(total * .08)) : 0, word: kinds.word ? Math.round(total * .05) : 0, when: kinds.when ? Math.max(1, Math.round(total * .05)) : 0, era: kinds.when ? Math.round(total * .05) : 0, ai: imposters.length };
+    // a bit of everything, and never too much of one thing
+    const share = (k, f, min = 0) => k ? Math.max(min, Math.round(total * f)) : 0;
+    const want = { finish: share(kinds.finish, .06), reply: 0, phrase: share(kinds.phrase, .04), stat: share(kinds.stat, .08, 1), moment: share(kinds.quote, .05), wtf: share(kinds.quote, .08, 1), story: share(kinds.quote, .08, 1), ask: share(kinds.quote, .1, 1), news: share(kinds.quote, .06), fake: share(kinds.quote, .07, 1), legend: share(kinds.quote, .06), day: kinds.stat && total >= 10 ? 1 : 0, number: share(kinds.number, .06, 1), vs: share(kinds.stat, .08, 1), word: share(kinds.word, .04), when: share(kinds.when, .04), era: share(kinds.when, .04), first: share(kinds.when, .05), ai: imposters.length };
     const used = new Set();
     S.seenQ = S.seenQ && S.seenFor === name ? S.seenQ : new Set(); S.seenFor = name;
-    const take = (arr, k, again = false) => { const src = again ? arr : arr.filter((q) => !S.seenQ.has((q.full || q.text).replace(/…$/, "")));
-      return src.filter((q) => { const key = (q.full || q.text).replace(/…$/, ""); if (used.has(key)) return false; used.add(key); return true; }).slice(0, k); };
+    const qkey = (q) => (q.key || q.full || q.text).replace(/…$/, "");
+    const take = (arr, k, again = false) => { const src = again ? arr : arr.filter((q) => !S.seenQ.has(qkey(q)));
+      return src.filter((q) => { const key = qkey(q); if (used.has(key)) return false; used.add(key); return true; }).slice(0, k); };
     let extras = [
+      ...take(askQs(pool, want.ask * 2), want.ask), ...take(newsQs(pool, want.news * 2), want.news), ...take(fakeQs(cands, pool, want.fake * 2), want.fake), ...take(vsQs(stats, pool, want.vs * 2), want.vs), ...take(firstOfQs(cands, want.first * 2), want.first),
       ...take(storyQs(pool, want.story * 2), want.story), ...take(wtfQs(cands, pool, want.wtf * 2), want.wtf), ...take(momentQs(cands, pool, want.moment), want.moment),
       ...take(shuffle([...legendQs(pool, want.legend * 2), ...insideQs(pool, want.legend), ...firstQs(pool)]), want.legend), ...take(dayQs(pool, want.day * 2), want.day),
       ...take(finishQs(cands, pool, want.finish * 2), want.finish), ...take(replyQs(pool, want.reply * 2), want.reply),
@@ -2070,8 +2217,15 @@ ${samples}
     if (qs.length < 5) throw new Error("לא מצאתי מספיק הודעות טובות לשאלות. נסה צ'אט ארוך יותר או סמן עוד סוגי שאלות.");
     // the finale is worth double: prefer a juicy quote or the AI imposter
     const fi = qs.findIndex((q) => q.type === "story") >= 0 ? qs.findIndex((q) => q.type === "story") : qs.findIndex((q) => q.title === "רגע של WTF 🤯") >= 0 ? qs.findIndex((q) => q.title === "רגע של WTF 🤯") : qs.findIndex((q) => q.type === "moment") >= 0 ? qs.findIndex((q) => q.type === "moment") : qs.findIndex((q) => q.type === "ai") >= 0 ? qs.findIndex((q) => q.type === "ai") : qs.length - 1;
-    const [fin] = qs.splice(fi, 1); qs.push(fin);
-    qs.forEach((q) => S.seenQ.add((q.full || q.text).replace(/…$/, "")));
+    const [fin] = qs.splice(fi, 1);
+    // never the same kind twice in a row, and not the same answer three times running
+    { const left = qs.slice(), out = [];
+      while (left.length) { const pk = out[out.length - 1], pk2 = out[out.length - 2];
+        let j = left.findIndex((q) => (!pk || (q.title || q.type) !== (pk.title || pk.type)) && !(pk && pk2 && q.answer === pk.answer && q.answer === pk2.answer));
+        if (j < 0) j = 0; out.push(left.splice(j, 1)[0]); }
+      qs = out; }
+    qs.push(fin);
+    qs.forEach((q) => S.seenQ.add(qkey(q)));
 
     const bestQuote = cands.filter((c) => c.laughs > 0).sort((a, b) => b.laughs - a.laughs)[0];
     return {
@@ -2331,6 +2485,9 @@ ${samples}
     story: ["הסיפור של הקבוצה", "כמה שורות מסיפור שהקבוצה לא הפסיקה להגיב עליו. מי סיפר אותו?"],
     legend: ["האגדות של הקבוצה", "משפטים ומילים שהפכו לבדיחה פנימית. מי התחיל אותם?"],
     day: ["היום הכי משוגע", "הימים שבהם הקבוצה התפוצצה מהודעות. על מה, ומי התחיל?"],
+    fake: ["אמיתי או מזויף?", "חלק מההודעות באמת נשלחו בקבוצה, וחלק הודבקו משתי הודעות שונות. מה זה?"],
+    vs: ["מי יותר?", "שני אנשים מהקבוצה, הרגל אחד. מי מנצח לפי הצ'אט?"],
+    first: ["מה היה קודם?", "שתי הודעות מפורסמות מהקבוצה. איזו נשלחה קודם?"],
     ai: ["המתחזה", "Claude כתב הודעה מזויפת בסגנון של מישהו מכם. את מי הוא מחקה?"],
   };
   function introCard(type) {
@@ -2367,7 +2524,7 @@ ${samples}
   function optsHtml(q, revealed, votes, nPlayers) {
     return q.options.map((o, i) => {
       const v = votes ? (votes[i] || 0) : null;
-      return `<button class="opt ${q.long ? "long" : ""} ${revealed && o === q.answer ? "win" : ""} ${v ? "has-votes" : ""}" data-o="${esc(o)}" data-i="${i}">${v != null ? `<i class="votes" data-k="${v / Math.max(1, nPlayers)}"></i>${v ? `<span class="vc">${v}</span>` : ""}` : ""}${!q.long && !["finish", "when", "number", "era"].includes(q.type) ? `<i class="ini" aria-hidden="true">${esc([...String(o).trim()][0] || "?")}</i>` : ""}<span>${esc(o)}</span></button>`;
+      return `<button class="opt ${q.long ? "long" : ""} ${revealed && o === q.answer ? "win" : ""} ${v ? "has-votes" : ""}" data-o="${esc(o)}" data-i="${i}">${v != null ? `<i class="votes" data-k="${v / Math.max(1, nPlayers)}"></i>${v ? `<span class="vc">${v}</span>` : ""}` : ""}${!q.long && !["finish", "when", "number", "era", "fake", "first"].includes(q.type) ? `<i class="ini" aria-hidden="true">${esc([...String(o).trim()][0] || "?")}</i>` : ""}<span>${esc(o)}</span></button>`;
     }).join("");
   }
   // the stamp with the answer and the messages around it
