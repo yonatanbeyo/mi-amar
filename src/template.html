@@ -1463,7 +1463,7 @@ body.yt-mini #ytmin { display: none; }
 
   // ---------- question building ----------
   // ethnic slurs never go on the big screen (or into someone's TikTok)
-  const SLUR = /(כוש(י|ית|ים|יות)\b|ערבוש|פרענק|צ'?חצ'?ח|ניגר|nigg|faggot|סרטן)/i; // + illness curses: someone in the room may really be going through it
+  const SLUR = /(כוש(י|ית|ים|יות)(?!\p{L})|ערבוש|פרענק|צ'?חצ'?ח|ניגר|nigg|faggot|סרטן|איידס)/iu; // + illness curses: someone in the room may really be going through it
   // someone telling friends about a diagnosis is not a party-screen question: the game can't tell a joke from a real disclosure
   const HEALTH = /(אובחנ|מאובחנ|אבחון|אבחנה|תו נכה|על הרצף|פסיכיאטר|פסיכולוג|דיכאון|חרדות|התקף חרדה|הפרעת|adhd|כדורים נגד|ניתוח|אשפוז)/i;
   // sexual remarks about real people stay in the chat, not on a TV or in a story image
@@ -1598,39 +1598,51 @@ body.yt-mini #ytmin { display: none; }
   const endKey = (e) => e.split(/\s+/).map(wnorm).join(" ");
   function wordIndex() {
     if (WIDX && WIDX.src === msgs) return WIDX;
-    const map = new Map(), from = Math.max(0, msgs.length - 60000);
+    // every word, and every pair of words, points at what was written right after it
+    const map = new Map(), from = Math.max(0, msgs.length - 120000);
+    const put = (k, code, cap) => { let arr = map.get(k); if (!arr) map.set(k, (arr = [])); if (arr.length < cap) arr.push(code); else if (Math.random() < .15) arr[Math.floor(Math.random() * cap)] = code; };
     for (let i = from; i < msgs.length; i++) {
       const m = msgs[i]; if (!m || !m.text || m.media || m.deleted || m.text.length > 240 || /[@\n]/.test(m.text)) continue;
       const w = m.text.trim().split(/\s+/); if (w.length < 3 || w.length > 40) continue;
-      for (let p = 0; p < w.length - 2; p++) {
-        const k = wnorm(w[p]); if (!k) continue;
-        let arr = map.get(k); if (!arr) map.set(k, (arr = []));
-        if (arr.length < 500) arr.push(i * 64 + p + 1); else if (Math.random() < .2) arr[Math.floor(Math.random() * 500)] = i * 64 + p + 1;
+      let prev = "";
+      for (let p = 0; p < w.length - 1; p++) {
+        const k = wnorm(w[p]); if (!k) { prev = ""; continue; }
+        put(k, i * 64 + p + 1, 500);
+        if (prev) put(prev + " " + k, i * 64 + p + 1, 300);
+        prev = k;
       }
     }
     return (WIDX = { src: msgs, map });
   }
+  const content = (t) => new Set(tokens(t).filter((x) => x.length > 1 && !STOP.has(x) && !COMMON.has(x)));
+  // real endings that followed the same words somewhere else in the chat, best first: [text, score, message index]
   function endingsAfter(startW, end, skipI) {
-    const W = wordIndex(), last = wnorm(startW[startW.length - 1]), prev = startW.length > 1 ? wnorm(startW[startW.length - 2]) : "";
-    const want = end.split(/\s+/).length, seen = new Set([endKey(end)]), out = [];
+    const W = wordIndex(), n1 = startW.map(wnorm), last = n1[n1.length - 1], prev = n1.length > 1 ? n1[n1.length - 2] : "";
+    const want = end.split(/\s+/).length, seen = new Set([endKey(end)]), out = [], codes = new Set();
     if (!last) return out;
-    for (const code of W.map.get(last) || []) {
-      const i = Math.floor(code / 64), p = code % 64; if (Math.abs(i - skipI) < 2) continue;
-      const w = msgs[i].text.trim().split(/\s+/), rest = w.slice(p); if (rest.length < 2) continue;
-      // about as long as the real ending; stop where a sentence stops
-      let take = rest.slice(0, want + 1);
-      const stop = take.findIndex((x, j) => j >= Math.max(1, want - 2) && /[.!?…]$/.test(x));
-      if (stop >= 0) take = take.slice(0, stop + 1); else if (rest.length > want + 1) take = rest.slice(0, want);
-      const e = take.join(" "), key = endKey(e);
-      if (e.length > 90 || !key.trim() || seen.has(key) || endKey(end).includes(key) || key.includes(endKey(end)) || !clean(e)) continue;
+    const topic = content(startW.join(" "));
+    const endQ = /\?\s*$/.test(end), endE = /\p{Extended_Pictographic}/u.test(end);
+    const bi = prev ? W.map.get(prev + " " + last) || [] : [];
+    for (const [list, two] of [[bi, true], [W.map.get(last) || [], false]]) for (const code of list) {
+      if (codes.has(code)) continue; codes.add(code);
+      const i = Math.floor(code / 64), p = code % 64; if (Math.abs(i - skipI) < 3) continue;
+      const w = msgs[i].text.trim().split(/\s+/), rest = w.slice(p);
+      // the whole rest of a real message, about as long as the answer: never a sentence cut in the middle
+      if (rest.length < 2 || Math.abs(rest.length - want) > 2) continue;
+      const e = rest.join(" "), key = endKey(e);
+      if (e.length > 90 || !key.trim() || seen.has(key) || endKey(end).includes(key) || key.includes(endKey(end)) || !clean(e) || HEALTH.test(e) || SEXUAL.test(e)) continue;
       seen.add(key);
-      let sc = Math.random() * 1.5;
-      if (prev && p >= 2 && wnorm(w[p - 2]) === prev) sc += 4;   // the same two words before it: fits even better
-      if (take.length === rest.length) sc += 2;                  // a real end of a message, like the answer
-      sc -= Math.abs(take.length - want) * .9;
-      if (Math.abs(e.length - end.length) > Math.max(12, end.length * .5)) sc -= 2;
-      if (/\p{Extended_Pictographic}/u.test(e) !== /\p{Extended_Pictographic}/u.test(end)) sc -= .7;
-      out.push([e, sc, i]);
+      let sc = Math.random();
+      if (two) sc += 6; else sc -= 2;                            // the same two words before it: it fits the sentence
+      for (let b = 3; b <= 4; b++) if (p >= b && n1.length >= b && wnorm(w[p - b]) === n1[n1.length - b]) sc += 2; // and even more words in common
+      // same subject as the sentence (the start of that message talks about the same things)
+      let ov = 0; for (const t of content(w.slice(0, p).join(" "))) if (topic.has(t)) ov++;
+      sc += Math.min(3, ov) * 1.5;
+      sc -= Math.abs(rest.length - want) * 1;
+      if (Math.abs(e.length - end.length) > Math.max(10, end.length * .45)) sc -= 2;
+      if (/\?\s*$/.test(e) !== endQ) sc -= 2;
+      if (/\p{Extended_Pictographic}/u.test(e) !== endE) sc -= 1;
+      out.push([e, sc, i, two]);
     }
     return out.sort((a, b) => b[1] - a[1]);
   }
@@ -1651,8 +1663,12 @@ body.yt-mini #ytmin { display: none; }
         if (end.length > 90 || /^[,.!?]/.test(end)) continue;
         // no two options may open with the same two words, or the odd one out gives itself away
         const head = (e) => endKey(e).split(" ").slice(0, 2).join(" "), heads = new Set([head(end)]);
-        const dec = endingsAfter(w.slice(0, cut), end, c.i).filter((x) => x[1] > -1.5 && !heads.has(head(x[0])) && heads.add(head(x[0]))).slice(0, 3);
-        if (dec.length < 3) continue;
+        if (w.length - cut > 7) continue;
+        // and no first word that only the decoys share ("שלי… / שלי… / שלי…" next to the real one gives it away)
+        const first = (e) => endKey(e).split(" ")[0], f0 = first(end), firsts = new Set();
+        const dec = endingsAfter(w.slice(0, cut), end, c.i).filter((x) => x[1] > 2 && !heads.has(head(x[0])) && (first(x[0]) === f0 || !firsts.has(first(x[0]))) && heads.add(head(x[0])) && firsts.add(first(x[0]))).slice(0, 3);
+        // all three must fit: at least two of them followed the same two words as the real sentence
+        if (dec.length < 3 || dec.filter((x) => x[3]).length < 2) continue;
         const sc = dec.reduce((a, x) => a + x[1], 0) + (cut === nat ? 1.5 : 0) - Math.max(0, w.length - cut - 7) * .6;
         if (!best || sc > best.sc) best = { cut, end, dec, sc };
       }
