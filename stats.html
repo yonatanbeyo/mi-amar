@@ -54,6 +54,7 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
   <section class="chart"><b>מכשירים</b><div class="rows" id="dev"></div></section>
   <section class="chart"><b>מדינות (לפי אזור הזמן בטלפון)</b><div class="rows" id="geo"></div></section>
   <button id="again">רענון</button>
+  <p class="dim" id="since" style="font-weight:700"></p>
   <p class="dim">הנתונים נספרים מרגע שהמונה הופעל. לא נשמר כאן שום דבר מהצ'אטים ושום פרט מזהה, רק מספרים. טיפ: בביו של טיקטוק שימו mi-amar.pages.dev/?ref=tiktok ובאינסטגרם ?ref=instagram, כדי לראות בדיוק מאיפה כל אחד הגיע.</p>
 </main>
 <script src="config.js"></script>
@@ -67,7 +68,11 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
   async function load() {
     const s = await net.readStats();
     if (!s) { document.getElementById("upd").innerHTML = '<span class="err">לא הצלחתי לקרוא את הנתונים.</span>'; return; }
-    const t = s.total || {}, days = s.days || {}, td = days[key(new Date())] || {};
+    const days = s.days || {}, td = days[key(new Date())] || {}, ALL = /[?&]all=1/.test(location.search), SINCE = "2026-11-04";
+    let t = s.total || {};
+    if (!ALL) { const sum = {}; Object.entries(days).forEach(([d, o]) => { if (d >= SINCE) Object.entries(o).forEach(([k, v]) => { if (!k.startsWith("r_")) sum[k] = (sum[k] || 0) + (v || 0); }); });
+      Object.entries(s.total || {}).forEach(([k, v]) => { if (k.startsWith("r_")) sum[k] = v; }); t = sum; }
+    document.getElementById("since").innerHTML = ALL ? 'מציג את כל הזמנים · <a href="stats.html">רק מאז 4.11</a>' : 'סופר מאז 4.11 (העלאת הסרטונים). הדירוגים 👍/👎 נשארים מכל הזמנים · <a href="stats.html?all=1">הצג את כל הזמנים</a>';
     const started = (o) => (o.started || 0) + (o.single || 0);
     document.getElementById("cards").innerHTML = LABELS.map(([k, label, note]) => {
       const total = k === "started" ? started(t) : t[k], today = k === "started" ? started(td) : td[k];
