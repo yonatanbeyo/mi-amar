@@ -834,6 +834,15 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
 .opts.locked .opt.mine { opacity: 1; transform: scale(1.03); box-shadow: inset 0 5px 0 rgba(255,255,255,.35), 0 7px 0 var(--o), 0 0 0 6px #fff, 0 0 0 9px var(--o) !important; }
 .mres { text-align: center; font-family: var(--display); font-weight: 800; font-size: clamp(1.6rem, 7vw, 2.2rem); padding: 12px 16px; border-radius: 22px; background: var(--card); color: var(--ink); box-shadow: 0 5px 0 var(--line); }
 .mres.ok { background: var(--teal); color: #fff; box-shadow: 0 5px 0 var(--teal-d); } .mres.no { background: var(--pink); color: #fff; box-shadow: 0 5px 0 var(--pink-d); }
+.ytdock { position: fixed; left: 10px; bottom: 10px; z-index: 55; width: 216px; background: var(--card); border: 3px solid var(--ink2); border-radius: 18px; padding: 6px; box-shadow: 0 6px 0 var(--ink2); font-family: var(--body); color: var(--ink); }
+.ythead { display: flex; align-items: center; gap: 6px; padding: 0 4px 6px; } .ythead b { flex: 1; font-weight: 800; color: var(--ink) !important; text-shadow: none !important; -webkit-text-stroke: 0 !important; }
+.ythead button { border: 0; background: var(--soft); color: var(--ink); border-radius: 10px; width: 34px; height: 30px; font-size: 1rem; cursor: pointer; }
+.ytp, .ytp iframe { width: 200px; height: 200px; border-radius: 12px; display: block; overflow: hidden; background: #000; }
+.ytdock p { margin: 6px 4px 0; color: var(--ink); }
+body.has-yt #app { padding-bottom: 280px; }
+.ytbox { grid-column: 1 / -1; display: grid; gap: 8px; padding: 8px 4px 2px; color: var(--ink); }
+.ytbox input { min-width: 0; flex: 1; } .ytbox a { color: var(--purple); font-weight: 700; }
+.musicmenu .songs-btn { grid-column: 1 / -1; }
 </style>
 </head>
 <body>
@@ -989,6 +998,7 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
       reggaeton: { name: "רגאטון", bpm: 94, prog: "minor", swing: 0, kick: [0, 4, 8, 12], kickX: [], clap: [3, 6, 11, 14], clapVol: .26, hat: 2, hatVol: .7, bass: [0, 3, 6, 8, 11, 14], bassOct: [], bassWave: "sine", bassLp: 600, bassLen: 2.6, padWave: "triangle", padSteps: [0, 8], padLen: 6, padVol: .035, leadWave: "triangle", leadVol: .055, leadEvery: 3 },
       disco: { name: "דיסקו פאנק", bpm: 116, prog: "disco", swing: 0, kick: [0, 4, 8, 12], kickX: [], clap: [4, 12], hat: 2, ohat: [2, 6, 10, 14], bass: [0, 2, 4, 6, 8, 10, 12, 14], bassOct: [2, 6, 10, 14], bassWave: "square", bassLp: 900, bassLen: .9, padWave: "square", padSteps: [2, 7, 10], padLen: .7, padVol: .03, leadWave: "sawtooth", leadVol: .04, leadEvery: 2 },
       dnb: { name: "דראם אנד בייס", bpm: 172, prog: "minor", swing: 0, kick: [0, 10], kickX: [], clap: [4, 12], hat: 2, hatVol: .8, bass: [0, 10], bassOct: [], bassWave: "sine", bassLp: 900, bassLen: 7, bassGlide: true, padWave: "sine", padSteps: [0], padLen: 16, padVol: .04, leadWave: "triangle", leadVol: .045, leadEvery: 4 },
+      songs: { name: "שירים אמיתיים 🎤" },
       off: { name: "בלי מוזיקה" },
     };
     const MODES = { menu: { pad: 1, bass: .7, hat: .5, lead: .4 }, lobby: { kick: 1, clap: 1, hat: 1, bass: 1, pad: 1, lead: 1 }, ask: { kick: 1, hat: 1, bass: 1, pad: .6, tension: 1 }, reveal: { kick: 1, clap: 1, hat: 1, bass: 1, pad: 1 }, end: { kick: 1, clap: 1, hat: 1, bass: 1, pad: 1, lead: 1 }, off: {} };
@@ -1052,12 +1062,13 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
       get style() { return style; },
       setStyle(s) {
         if (!STYLES[s]) return; style = s; store.set("music", s); writeMelody(); step = 0;
-        if (s === "off") { const m = mode; api.play("off"); mode = "off"; api.wanted = m; return; }
+        if (s !== "songs" && typeof SONGS !== "undefined") SONGS.stop();
+        if (s === "off" || s === "songs") { const m = mode; api.play("off"); mode = "off"; api.wanted = m; return; }
         if (L) L.dl.delayTime.value = 60 / STYLES[s].bpm * .75;
         const m = api.wanted || mode; api.wanted = null; if (m && m !== "off") { mode = "off"; api.play(m); }
       },
       play(m) {
-        if (style === "off" && m !== "off") { api.wanted = m; return; }
+        if ((style === "off" || style === "songs") && m !== "off") { api.wanted = m; return; }
         if (m === mode) return; const prev = mode; mode = m;
         if (m === "off") { fade("off", .3); clearInterval(timer); timer = null; return; }
         if (!bus()) { mode = "off"; return; }
@@ -1066,10 +1077,84 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
         fade(m, m === "reveal" ? 2 : .8);
       },
       intensity(k) { level = Math.max(.25, Math.min(1, k)); if (L && mode === "ask") { L.tension.gain.setTargetAtTime(level, actx.currentTime, .2); L.hat.gain.setTargetAtTime(.6 + .6 * level, actx.currentTime, .2); } },
-      duck(sec = 1.2, depth = .08) { if (!L) return; const g = MIX.music.gain, t = actx.currentTime; g.cancelScheduledValues(t); g.setTargetAtTime(.55 * depth, t, .05); g.setTargetAtTime(.55, t + sec, .4); },
+      duck(sec = 1.2, depth = .08) { if (style === "songs") SONGS.duck(sec); if (!L) return; const g = MIX.music.gain, t = actx.currentTime; g.cancelScheduledValues(t); g.setTargetAtTime(.55 * depth, t, .05); g.setTargetAtTime(.55, t + sec, .4); },
       get mode() { return mode; },
     };
     return api;
+  })();
+  // ---------- real songs: a YouTube video or playlist the host pastes, in the official player (visible, as YouTube requires) ----------
+  const SONGS = (() => {
+    let byUs = false, player = null, api = null, dock = null, errs = 0, level = 100, duckT = null, want = "menu", checkT = null;
+    const parse = (u) => {
+      u = String(u || "").trim(); if (!u) return null;
+      let url; try { url = new URL(/^https?:\/\//i.test(u) ? u : "https://" + u); } catch { return null; }
+      const h = url.hostname.replace(/^(www|m|music)\./, "");
+      let v = null; const list = url.searchParams.get("list");
+      if (h === "youtu.be") v = url.pathname.slice(1).split("/")[0];
+      else if (h === "youtube.com") v = url.searchParams.get("v") || (url.pathname.match(/^\/(shorts|embed|live)\/([\w-]+)/) || [])[2] || null;
+      else return null;
+      const ok = { v: v && /^[\w-]{6,20}$/.test(v) ? v : null, list: list && /^[\w-]{10,80}$/.test(list) ? list : null };
+      return ok.v || ok.list ? ok : null;
+    };
+    const loadApi = () => (api ||= new Promise((res, rej) => {
+      if (window.YT && window.YT.Player) return res(window.YT);
+      const prev = window.onYouTubeIframeAPIReady; window.onYouTubeIframeAPIReady = () => { prev && prev(); res(window.YT); };
+      const s = document.createElement("script"); s.src = "https://www.youtube.com/iframe_api"; s.onerror = () => { api = null; rej(new Error("yt")); }; document.head.append(s);
+    }));
+    const msg = (t) => { const m = document.getElementById("ytmsg"); if (m) { m.textContent = t || ""; m.hidden = !t; } };
+    function buildDock() {
+      if (dock) return;
+      dock = document.createElement("div"); dock.className = "ytdock"; dock.id = "ytdock";
+      dock.innerHTML = `<div class="ythead"><b>🎤 שירים</b><button id="ytnext" aria-label="השיר הבא">⏭</button><button id="ytx" aria-label="לסגור את השירים">✕</button></div><div class="ytp"><div id="ytp"></div></div><p id="ytmsg" class="small" hidden></p>`;
+      document.body.append(dock); document.body.classList.add("has-yt");
+      dock.querySelector("#ytnext").onclick = () => { SFX.tap(); try { player.nextVideo(); } catch {} };
+      dock.querySelector("#ytx").onclick = () => { SFX.tap(); MUSIC.setStyle("party"); pickMusic(); };
+    }
+    async function start(url) {
+      const src = parse(url); if (!src) return false;
+      store.set("yt", url); errs = 0; buildDock(); msg("טוען…");
+      let YT; try { YT = await loadApi(); } catch { msg("לא הצלחתי להתחבר ליוטיוב. בודקים את האינטרנט ומנסים שוב."); return true; }
+      if (player) { try { player.destroy(); } catch {} player = null; dock.querySelector(".ytp").innerHTML = `<div id="ytp"></div>`; }
+      const vars = { playsinline: 1, rel: 0, autoplay: 1, modestbranding: 1 };
+      if (src.list) Object.assign(vars, { listType: "playlist", list: src.list }); else Object.assign(vars, { loop: 1, playlist: src.v });
+      player = new YT.Player("ytp", {
+        width: 200, height: 200, videoId: src.v || undefined, playerVars: vars,
+        events: {
+          onReady: (e) => { try { if (src.list) e.target.setShuffle(true); e.target.setVolume(level); e.target.playVideo(); } catch {} apply(); },
+          onStateChange: (e) => { if (e.data === 1) { errs = 0; msg(""); } },
+          // many official clips can't play outside YouTube: skip them, and say so if nothing plays
+          onError: () => {
+            errs++;
+            if (src.list && errs < 10) { msg("השיר הזה חסום מחוץ ליוטיוב, מדלג…"); setTimeout(() => { try { player.nextVideo(); } catch {} }, 600); }
+            else msg(src.list ? "רוב השירים ברשימה חסומים מחוץ ליוטיוב. נסו פלייליסט אחר (למשל של רמיקסים או של דיג'יי)." : "השיר הזה חסום מחוץ ליוטיוב. נסו קישור אחר או פלייליסט.");
+          },
+        },
+      });
+      clearTimeout(checkT);
+      checkT = setTimeout(() => { try { if (player && player.getPlayerState && player.getPlayerState() !== 1 && !errs) msg("הקישו על הסרטון כדי להתחיל לנגן ▶"); } catch {} }, 3500);
+      return true;
+    }
+    function stop() { clearTimeout(checkT); try { player && player.destroy(); } catch {} player = null; dock?.remove(); dock = null; document.body.classList.remove("has-yt"); }
+    // quieter while a question is on (iPhone ignores volume, so there the song just keeps going)
+    function apply() {
+      if (!player || !player.getPlayerState) return;
+      try {
+        if (want === "off" || muted) { if (player.getPlayerState() === 1) { player.pauseVideo(); byUs = true; } return; }
+        if (byUs && player.getPlayerState() === 2) { byUs = false; player.playVideo(); }
+        level = want === "ask" ? 35 : 100; if (!duckT) player.setVolume(level);
+      } catch {}
+    }
+    return {
+      parse, start, stop,
+      get on() { return !!dock; },
+      saved: () => store.get("yt", ""),
+      mode(m) {
+        want = m;
+        if (!dock && m !== "off" && unlocked && store.get("yt", "") && S.screen !== "remote" && !new URLSearchParams(location.search).get("c")) { start(store.get("yt", "")); return; }
+        apply();
+      },
+      duck(sec) { if (!player) return; try { player.setVolume(20); } catch {} clearTimeout(duckT); duckT = setTimeout(() => { duckT = null; apply(); }, Math.min(sec, 8) * 1000); },
+    };
   })();
   // a small music picker next to the mute button (main screen only)
   const ICON_NOTE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l11-2v12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="currentColor"/><circle cx="17.5" cy="16" r="2.5" fill="currentColor"/></svg>';
@@ -1080,11 +1165,23 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
       e.stopPropagation(); SFX.tap();
       let m = document.getElementById("musicmenu"); if (m) { m.remove(); return; }
       m = document.createElement("div"); m.id = "musicmenu"; m.className = "musicmenu"; m.setAttribute("role", "menu");
-      m.innerHTML = `<b>מוזיקה</b>${Object.entries(MUSIC.styles).map(([k, v]) => `<button role="menuitemradio" aria-checked="${MUSIC.style === k}" data-s="${k}">${esc(v.name)}</button>`).join("")}`;
+      m.innerHTML = `<b>מוזיקה</b>${Object.entries(MUSIC.styles).map(([k, v]) => `<button role="menuitemradio" aria-checked="${MUSIC.style === k}" data-s="${k}" ${k === "songs" ? `class="songs-btn"` : ""}>${esc(v.name)}</button>`).join("")}
+        <form class="ytbox" id="ytbox" ${MUSIC.style === "songs" ? "" : "hidden"}><span class="small">מדביקים קישור לשיר או לפלייליסט מיוטיוב (ביוטיוב: שיתוף ← העתקת קישור)</span>
+          <div class="row" style="flex-wrap:nowrap"><input type="url" id="ytin" dir="ltr" placeholder="youtube.com/…" value="${esc(SONGS.saved())}"><button class="btn" id="ytgo">לנגן</button></div>
+          <a class="small" href="https://www.youtube.com/results?search_query=${encodeURIComponent("פלייליסט להיטים ישראלים מסיבה")}" target="_blank" rel="noopener">לחפש פלייליסט ביוטיוב ↗</a>
+          <span class="small err" id="yterr" hidden>זה לא נראה כמו קישור מיוטיוב.</span></form>`;
       const r = b.getBoundingClientRect(); m.style.top = r.bottom + 8 + "px"; m.style.left = Math.max(8, Math.min(innerWidth - 276, r.left - 80)) + "px";
       document.body.append(m);
       anim(m, [{ opacity: 0, transform: "translateY(-6px) scale(.97)" }, { opacity: 1, transform: "none" }], { duration: 180, easing: "ease-out" });
-      m.querySelectorAll("button").forEach((x) => (x.onclick = (ev) => { ev.stopPropagation(); MUSIC.setStyle(x.dataset.s); pickMusic(); m.querySelectorAll("button").forEach((y) => y.setAttribute("aria-checked", String(y === x))); SFX.point(); }));
+      const box = m.querySelector("#ytbox");
+      m.querySelectorAll("button[data-s]").forEach((x) => (x.onclick = (ev) => { ev.stopPropagation(); MUSIC.setStyle(x.dataset.s); pickMusic(); m.querySelectorAll("button[data-s]").forEach((y) => y.setAttribute("aria-checked", String(y === x))); SFX.point(); box.hidden = x.dataset.s !== "songs"; if (!box.hidden && !SONGS.saved()) m.querySelector("#ytin").focus(); }));
+      box.onsubmit = async (ev) => {
+        ev.preventDefault(); ev.stopPropagation(); audio();
+        const url = m.querySelector("#ytin").value, err = m.querySelector("#yterr");
+        if (!SONGS.parse(url)) { err.hidden = false; shake(m.querySelector("#ytin")); return; }
+        err.hidden = true; if (MUSIC.style !== "songs") MUSIC.setStyle("songs");
+        SFX.go(); m.remove(); await SONGS.start(url); pickMusic();
+      };
       setTimeout(() => document.addEventListener("click", function off(ev) { if (!m.contains(ev.target)) { m.remove(); document.removeEventListener("click", off); } }), 0);
     };
   }
@@ -1965,7 +2062,11 @@ ${samples}
   if (location.hash === "#qa") window.__st = (k = 300) => storyQs(PARSED.stats.people.slice(0, 10).map((p) => p.name), k).map((q) => [q.answer, q.ts, q.text, q.hook]);
   if (location.hash === "#qa") window.__qa = async (text) => { S.chatText = text; S.chatName = "qa" + Math.random(); S.out = null; try { setup(); } catch {} S.rounds = 20; S.kinds = { quote: true, finish: true, reply: true, phrase: true, word: true, when: true, stat: true, number: true, ai: false }; const st = () => {}; st.skip = new Promise(() => {}); return buildGame(text, "qa", st); };
   // ---------- screens ----------
-  function pickMusic() { if (actx && actx.state === "running") MUSIC.play(S.screen === "remote" ? "off" : S.screen === "play" ? (S.revealed ? "reveal" : "ask") : S.screen === "lobby" || S.screen === "mid" ? "lobby" : S.screen === "end" ? "end" : "menu"); }
+  function pickMusic() {
+    const m = S.screen === "remote" ? "off" : S.screen === "play" ? (S.revealed ? "reveal" : "ask") : S.screen === "lobby" || S.screen === "mid" ? "lobby" : S.screen === "end" ? "end" : "menu";
+    if (MUSIC.style === "songs") SONGS.mode(m);
+    if (actx && actx.state === "running") MUSIC.play(m);
+  }
   function render() {
     clearInterval(timer); timeouts.forEach(clearTimeout); timeouts = [];
     document.body.classList.remove("hurry");
@@ -1981,7 +2082,7 @@ ${samples}
   }
   const muteBtn = () => `<span class="row" style="gap:8px;flex-wrap:nowrap">${S.screen !== "remote" ? musicBtn() : ""}<button class="icon-btn" id="mute" aria-label="${muted ? "להפעיל צליל" : "להשתיק"}">${muted ? ICON_MUTE : ICON_SPK}</button></span>`;
   const ICON_SPK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>', ICON_MUTE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
-  function bindMute() { bindMusic(); const b = document.getElementById("mute"); if (b) b.onclick = () => { muted = !muted; store.set("muted", muted); b.innerHTML = muted ? ICON_MUTE : ICON_SPK; if (!muted) SFX.tap(); }; }
+  function bindMute() { bindMusic(); const b = document.getElementById("mute"); if (b) b.onclick = () => { muted = !muted; store.set("muted", muted); b.innerHTML = muted ? ICON_MUTE : ICON_SPK; if (!muted) SFX.tap(); pickMusic(); }; }
 
   const guideOS = () => S.guideOS || (OS === "android" ? "android" : "ios");
   const guideSteps = (os) => (os === "android"
