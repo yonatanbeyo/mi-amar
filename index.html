@@ -834,12 +834,19 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
 .opts.locked .opt.mine { opacity: 1; transform: scale(1.03); box-shadow: inset 0 5px 0 rgba(255,255,255,.35), 0 7px 0 var(--o), 0 0 0 6px #fff, 0 0 0 9px var(--o) !important; }
 .mres { text-align: center; font-family: var(--display); font-weight: 800; font-size: clamp(1.6rem, 7vw, 2.2rem); padding: 12px 16px; border-radius: 22px; background: var(--card); color: var(--ink); box-shadow: 0 5px 0 var(--line); }
 .mres.ok { background: var(--teal); color: #fff; box-shadow: 0 5px 0 var(--teal-d); } .mres.no { background: var(--pink); color: #fff; box-shadow: 0 5px 0 var(--pink-d); }
-.ytdock { position: fixed; left: 10px; bottom: 10px; z-index: 55; width: 216px; background: var(--card); border: 3px solid var(--ink2); border-radius: 18px; padding: 6px; box-shadow: 0 6px 0 var(--ink2); font-family: var(--body); color: var(--ink); }
+.ytdock { position: fixed; left: 10px; bottom: 10px; box-sizing: content-box; z-index: 55; width: 216px; background: var(--card); border: 3px solid var(--ink2); border-radius: 18px; padding: 6px; box-shadow: 0 6px 0 var(--ink2); font-family: var(--body); color: var(--ink); }
 .ythead { display: flex; align-items: center; gap: 6px; padding: 0 4px 6px; } .ythead b { flex: 1; font-weight: 800; color: var(--ink) !important; text-shadow: none !important; -webkit-text-stroke: 0 !important; }
 .ythead button { border: 0; background: var(--soft); color: var(--ink); border-radius: 10px; width: 34px; height: 30px; font-size: 1rem; cursor: pointer; }
 .ytp, .ytp iframe { width: 200px; height: 200px; border-radius: 12px; display: block; overflow: hidden; background: #000; }
 .ytdock p { margin: 6px 4px 0; color: var(--ink); }
 body.has-yt #app { padding-bottom: 280px; }
+body.yt-mini #app { min-height: 100dvh; box-sizing: border-box; padding-bottom: 80px; }
+body.yt-mini .ytdock { position: relative; left: auto; bottom: auto; margin: 0 auto 40px; }
+body.yt-mini #ytmin { display: none; }
+.ytpill { position: fixed; left: 10px; bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 55; display: flex; align-items: center; gap: 4px; background: var(--card); border: 3px solid var(--ink2); border-radius: 99px; padding: 4px 6px 4px 10px; box-shadow: 0 4px 0 var(--ink2); font-family: var(--body); color: var(--ink); max-width: calc(100vw - 20px); }
+.ytpill button { border: 0; background: var(--soft); color: var(--ink); border-radius: 99px; width: 34px; height: 34px; font-size: .95rem; cursor: pointer; }
+.ytpill .small { padding: 0 6px; font-weight: 700; color: var(--ink) !important; max-width: 52vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ytpill[hidden] { display: none; }
 .ytbox { grid-column: 1 / -1; display: grid; gap: 8px; padding: 8px 4px 2px; color: var(--ink); }
 .ytbox input { min-width: 0; flex: 1; } .ytbox a { color: var(--purple); font-weight: 700; }
 .musicmenu .songs-btn { grid-column: 1 / -1; }
@@ -1101,14 +1108,34 @@ body.has-yt #app { padding-bottom: 280px; }
       const prev = window.onYouTubeIframeAPIReady; window.onYouTubeIframeAPIReady = () => { prev && prev(); res(window.YT); };
       const s = document.createElement("script"); s.src = "https://www.youtube.com/iframe_api"; s.onerror = () => { api = null; rej(new Error("yt")); }; document.head.append(s);
     }));
-    const msg = (t) => { const m = document.getElementById("ytmsg"); if (m) { m.textContent = t || ""; m.hidden = !t; } };
+    const msg = (t) => { for (const id of ["ytmsg", "ytpmsg"]) { const m = document.getElementById(id); if (m) { m.textContent = t || ""; m.hidden = !t; } } };
+    // two sizes: the player in the corner, or "small": the player steps down below the game (out of the way, still
+    // playing; YouTube requires the player itself to stay on the page) and only a little control pill stays on screen
+    let mini = store.get("ytmini", true), pill = null, byUser = false;
+    function setMini(on) {
+      mini = on; store.set("ytmini", on);
+      document.body.classList.toggle("yt-mini", on); document.body.classList.toggle("has-yt", !on);
+      if (pill) pill.hidden = !on;
+    }
     function buildDock() {
       if (dock) return;
       dock = document.createElement("div"); dock.className = "ytdock"; dock.id = "ytdock";
-      dock.innerHTML = `<div class="ythead"><b>🎤 שירים</b><button id="ytnext" aria-label="השיר הבא">⏭</button><button id="ytx" aria-label="לסגור את השירים">✕</button></div><div class="ytp"><div id="ytp"></div></div><p id="ytmsg" class="small" hidden></p>`;
-      document.body.append(dock); document.body.classList.add("has-yt");
-      dock.querySelector("#ytnext").onclick = () => { SFX.tap(); try { player.nextVideo(); } catch {} };
+      dock.innerHTML = `<div class="ythead"><b>🎤 שירים</b><button id="ytmin" aria-label="להקטין">▁</button><button id="ytnext" aria-label="השיר הבא">⏭</button><button id="ytx" aria-label="לסגור את השירים">✕</button></div><div class="ytp"><div id="ytp"></div></div><p id="ytmsg" class="small" hidden></p>`;
+      // placed once, right after the game, and never moved again (moving it would restart the song)
+      app.after(dock);
+      pill = document.createElement("div"); pill.className = "ytpill"; pill.id = "ytpill";
+      pill.innerHTML = `<span aria-hidden="true">🎤</span><button id="ytpp" aria-label="עצירה או המשך">⏸</button><button id="ytnext2" aria-label="השיר הבא">⏭</button><button id="ytbig" aria-label="להגדיל את הנגן">⤢</button><span id="ytpmsg" class="small" hidden></span>`;
+      document.body.append(pill);
+      const next = () => { SFX.tap(); try { player.nextVideo(); } catch {} };
+      dock.querySelector("#ytnext").onclick = next; pill.querySelector("#ytnext2").onclick = next;
+      dock.querySelector("#ytmin").onclick = () => { SFX.tap(); setMini(true); };
+      pill.querySelector("#ytbig").onclick = () => { SFX.tap(); setMini(false); };
+      pill.querySelector("#ytpp").onclick = () => {
+        SFX.tap();
+        try { if (player.getPlayerState() === 1) { player.pauseVideo(); byUser = true; } else { byUser = false; player.playVideo(); } } catch {}
+      };
       dock.querySelector("#ytx").onclick = () => { SFX.tap(); MUSIC.setStyle("party"); pickMusic(); };
+      setMini(mini);
     }
     async function start(url) {
       const src = parse(url); if (!src) return false;
@@ -1121,7 +1148,7 @@ body.has-yt #app { padding-bottom: 280px; }
         width: 200, height: 200, videoId: src.v || undefined, playerVars: vars,
         events: {
           onReady: (e) => { try { if (src.list) e.target.setShuffle(true); e.target.setVolume(level); e.target.playVideo(); } catch {} apply(); },
-          onStateChange: (e) => { if (e.data === 1) { errs = 0; msg(""); } },
+          onStateChange: (e) => { if (e.data === 1) { errs = 0; msg(""); } const pp = document.getElementById("ytpp"); if (pp) pp.textContent = e.data === 1 || e.data === 3 ? "⏸" : "▶"; },
           // many official clips can't play outside YouTube: skip them, and say so if nothing plays
           onError: () => {
             errs++;
@@ -1131,16 +1158,16 @@ body.has-yt #app { padding-bottom: 280px; }
         },
       });
       clearTimeout(checkT);
-      checkT = setTimeout(() => { try { if (player && player.getPlayerState && player.getPlayerState() !== 1 && !errs) msg("הקישו על הסרטון כדי להתחיל לנגן ▶"); } catch {} }, 3500);
+      checkT = setTimeout(() => { try { if (player && player.getPlayerState && player.getPlayerState() !== 1 && !errs) msg(mini ? "הקישו ▶ כדי להתחיל" : "הקישו על הסרטון כדי להתחיל לנגן ▶"); } catch {} }, 3500);
       return true;
     }
-    function stop() { clearTimeout(checkT); try { player && player.destroy(); } catch {} player = null; dock?.remove(); dock = null; document.body.classList.remove("has-yt"); }
+    function stop() { clearTimeout(checkT); try { player && player.destroy(); } catch {} player = null; dock?.remove(); dock = null; pill?.remove(); pill = null; document.body.classList.remove("has-yt", "yt-mini"); }
     // quieter while a question is on (iPhone ignores volume, so there the song just keeps going)
     function apply() {
       if (!player || !player.getPlayerState) return;
       try {
         if (want === "off" || muted) { if (player.getPlayerState() === 1) { player.pauseVideo(); byUs = true; } return; }
-        if (byUs && player.getPlayerState() === 2) { byUs = false; player.playVideo(); }
+        if (byUs && !byUser && player.getPlayerState() === 2) { byUs = false; player.playVideo(); }
         level = want === "ask" ? 35 : 100; if (!duckT) player.setVolume(level);
       } catch {}
     }
