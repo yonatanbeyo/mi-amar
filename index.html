@@ -643,8 +643,8 @@ input[type=text] { background: var(--soft); color: var(--ink); border: 0; border
 .chip.lost { background: #ffe3ee; color: #b4235b; }
 .opts.revealed .opt.win.has-votes { opacity: 1; }
 
-.musicmenu { position: fixed; z-index: 60; background: var(--card); border: 3px solid var(--ink2); border-radius: 18px; padding: 10px; display: grid; gap: 6px; min-width: 200px; box-shadow: 0 6px 0 var(--ink2); font-family: var(--body); }
-.musicmenu b { font-weight: 800; padding: 2px 6px 4px; }
+.musicmenu { position: fixed; z-index: 60; background: var(--card); border: 3px solid var(--ink2); border-radius: 18px; padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; min-width: 260px; max-height: 72vh; overflow-y: auto; box-shadow: 0 6px 0 var(--ink2); font-family: var(--body); }
+.musicmenu b { font-weight: 800; padding: 2px 6px 4px; grid-column: 1 / -1; color: var(--ink) !important; text-shadow: none !important; -webkit-text-stroke: 0 !important; }
 .musicmenu button { text-align: start; border: 0; background: var(--soft); color: var(--ink); border-radius: 12px; padding: 10px 12px; font: 700 1rem var(--body); cursor: pointer; }
 .musicmenu button[aria-checked="true"] { background: var(--purple); color: #fff; }
 .musicmenu button[aria-checked="true"]::after { content: " ♪"; }
@@ -830,6 +830,10 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
 .answered { gap: 6px; }
 .hw b { border: 2px solid var(--o); }
 .steps li::before { border: 2px solid var(--o); }
+.opts.locked .opt { opacity: .35; transform: none; }
+.opts.locked .opt.mine { opacity: 1; transform: scale(1.03); box-shadow: inset 0 5px 0 rgba(255,255,255,.35), 0 7px 0 var(--o), 0 0 0 6px #fff, 0 0 0 9px var(--o) !important; }
+.mres { text-align: center; font-family: var(--display); font-weight: 800; font-size: clamp(1.6rem, 7vw, 2.2rem); padding: 12px 16px; border-radius: 22px; background: var(--card); color: var(--ink); box-shadow: 0 5px 0 var(--line); }
+.mres.ok { background: var(--teal); color: #fff; box-shadow: 0 5px 0 var(--teal-d); } .mres.no { background: var(--pink); color: #fff; box-shadow: 0 5px 0 var(--pink-d); }
 </style>
 </head>
 <body>
@@ -969,13 +973,22 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
       jazz: [[41, [64, 69, 72, 76]], [50, [60, 65, 69, 72]], [43, [62, 65, 70, 74]], [48, [58, 64, 67, 70]]], // Fmaj7 Dm7 Gm9 C7
       minor: [[45, [60, 64, 69]], [41, [60, 65, 69]], [43, [59, 62, 67]], [40, [59, 64, 68]]],        // Am F G E
       arcade: [[48, [60, 64, 67]], [45, [60, 64, 69]], [41, [60, 65, 69]], [43, [62, 67, 71]]],      // C Am F G
+      hijaz: [[38, [62, 66, 69]], [36, [60, 63, 67]], [43, [62, 67, 70]], [38, [62, 66, 69]]],       // D Cm Gm D (חיג'אז)
+      club: [[45, [60, 64, 69]], [41, [60, 65, 69]], [48, [60, 64, 67]], [43, [59, 62, 67]]],        // Am F C G
+      disco: [[50, [62, 65, 69, 72]], [43, [62, 65, 67, 71]], [48, [60, 64, 67, 71]], [45, [60, 64, 67, 69]]], // Dm7 G7 Cmaj7 Am7
     };
-    const SCALE = { pop: [65, 67, 69, 72, 74, 77], jazz: [64, 65, 69, 72, 74, 76], minor: [64, 67, 69, 71, 72, 76], arcade: [72, 74, 76, 79, 81, 84] };
+    const SCALE = { pop: [65, 67, 69, 72, 74, 77], jazz: [64, 65, 69, 72, 74, 76], minor: [64, 67, 69, 71, 72, 76], arcade: [72, 74, 76, 79, 81, 84], hijaz: [62, 63, 66, 67, 69, 70, 72, 74], club: [69, 72, 74, 76, 79, 81], disco: [69, 72, 74, 76, 77, 81] };
     const STYLES = {
       party: { name: "מסיבה", bpm: 112, prog: "pop", swing: 0, kick: [0, 8], kickX: [6, 10], clap: [4, 12], hat: 2, bass: [0, 3, 6, 8, 10, 11, 14], bassOct: [6, 11], bassWave: "square", bassLp: 520, bassLen: 1.6, padWave: "triangle", padSteps: [2, 6, 10, 14], padLen: 1.4, padVol: .045, leadWave: "sine", leadVol: .07, leadEvery: 3 },
       lofi: { name: "לו-פיי רגוע", bpm: 80, prog: "jazz", swing: .18, kick: [0, 7, 10], kickX: [], clap: [4, 12], clapVol: .14, hat: 2, hatVol: .6, bass: [0, 7, 10], bassOct: [], bassWave: "triangle", bassLp: 380, bassLen: 3, padWave: "sine", padSteps: [0, 8], padLen: 7, padVol: .05, leadWave: "triangle", leadVol: .05, leadEvery: 5, crackle: true },
       arcade: { name: "ארקייד 8-ביט", bpm: 140, prog: "arcade", swing: 0, kick: [0, 8], kickX: [12], clap: [4, 12], noiseSnare: true, hat: 2, bass: [0, 2, 4, 6, 8, 10, 12, 14], bassOct: [2, 6, 10, 14], bassWave: "square", bassLp: 1200, bassLen: .9, padWave: "square", padSteps: [], padLen: 1, padVol: .03, arp: true, leadWave: "square", leadVol: .05, leadEvery: 2 },
       trap: { name: "טראפ", bpm: 140, half: true, prog: "minor", swing: 0, kick: [0, 11], kickX: [3, 6], clap: [8], hat: 1, hatRoll: true, bass: [0, 11], bassOct: [], bassWave: "sine", bassLp: 900, bassLen: 6, bassGlide: true, padWave: "sawtooth", padSteps: [0], padLen: 14, padVol: .025, leadWave: "triangle", leadVol: .05, leadEvery: 4 },
+      mizrahi: { name: "מזרחית 🪘", bpm: 100, prog: "hijaz", swing: 0, kick: [], kickX: [], clap: [], hat: 4, hatVol: .5, doum: [0, 8], tek: [3, 6, 12], tekRoll: true, bass: [0, 8], bassOct: [], bassWave: "triangle", bassLp: 500, bassLen: 3, padWave: "sine", padSteps: [0], padLen: 12, padVol: .03, leadWave: "sawtooth", leadVol: .04, leadEvery: 1 },
+      mizrahiRemix: { name: "מזרחית רמיקס 🔥", bpm: 126, prog: "hijaz", swing: 0, kick: [0, 4, 8, 12], kickX: [], clap: [4, 12], clapVol: .22, hat: 4, ohat: [2, 6, 10, 14], doum: [], tek: [3, 6, 11, 14], tekRoll: true, pump: true, build: true, bass: [2, 6, 10, 14], bassOct: [6, 14], bassWave: "sawtooth", bassLp: 650, bassLen: 1.4, padWave: "sawtooth", padSteps: [0], padLen: 14, padVol: .025, leadWave: "sawtooth", leadVol: .045, leadEvery: 1 },
+      club: { name: "רמיקס מועדון", bpm: 124, prog: "club", swing: 0, kick: [0, 4, 8, 12], kickX: [], clap: [4, 12], hat: 4, ohat: [2, 6, 10, 14], pump: true, build: true, bass: [2, 6, 10, 14], bassOct: [], bassWave: "sawtooth", bassLp: 700, bassLen: 1.4, padWave: "sawtooth", padSteps: [3, 6, 11], padLen: .9, padVol: .05, leadWave: "square", leadVol: .04, leadEvery: 3 },
+      reggaeton: { name: "רגאטון", bpm: 94, prog: "minor", swing: 0, kick: [0, 4, 8, 12], kickX: [], clap: [3, 6, 11, 14], clapVol: .26, hat: 2, hatVol: .7, bass: [0, 3, 6, 8, 11, 14], bassOct: [], bassWave: "sine", bassLp: 600, bassLen: 2.6, padWave: "triangle", padSteps: [0, 8], padLen: 6, padVol: .035, leadWave: "triangle", leadVol: .055, leadEvery: 3 },
+      disco: { name: "דיסקו פאנק", bpm: 116, prog: "disco", swing: 0, kick: [0, 4, 8, 12], kickX: [], clap: [4, 12], hat: 2, ohat: [2, 6, 10, 14], bass: [0, 2, 4, 6, 8, 10, 12, 14], bassOct: [2, 6, 10, 14], bassWave: "square", bassLp: 900, bassLen: .9, padWave: "square", padSteps: [2, 7, 10], padLen: .7, padVol: .03, leadWave: "sawtooth", leadVol: .04, leadEvery: 2 },
+      dnb: { name: "דראם אנד בייס", bpm: 172, prog: "minor", swing: 0, kick: [0, 10], kickX: [], clap: [4, 12], hat: 2, hatVol: .8, bass: [0, 10], bassOct: [], bassWave: "sine", bassLp: 900, bassLen: 7, bassGlide: true, padWave: "sine", padSteps: [0], padLen: 16, padVol: .04, leadWave: "triangle", leadVol: .045, leadEvery: 4 },
       off: { name: "בלי מוזיקה" },
     };
     const MODES = { menu: { pad: 1, bass: .7, hat: .5, lead: .4 }, lobby: { kick: 1, clap: 1, hat: 1, bass: 1, pad: 1, lead: 1 }, ask: { kick: 1, hat: 1, bass: 1, pad: .6, tension: 1 }, reveal: { kick: 1, clap: 1, hat: 1, bass: 1, pad: 1 }, end: { kick: 1, clap: 1, hat: 1, bass: 1, pad: 1, lead: 1 }, off: {} };
@@ -989,7 +1002,9 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
     writeMelody();
     function bus() {
       if (L || !audio()) return L;
-      L = {}; ["kick", "clap", "hat", "bass", "pad", "lead", "tension"].forEach((k) => { const g = actx.createGain(); g.gain.value = 0; g.connect(MIX.music); L[k] = g; });
+      // bass, pads and lead go through a "pump" that ducks on every kick in the club styles (sidechain)
+      const pump = actx.createGain(); pump.gain.value = 1; pump.connect(MIX.music);
+      L = { pump }; ["kick", "clap", "hat", "bass", "pad", "lead", "tension"].forEach((k) => { const g = actx.createGain(); g.gain.value = 0; g.connect(["bass", "pad", "lead"].includes(k) ? pump : MIX.music); L[k] = g; });
       const dl = actx.createDelay(); dl.delayTime.value = .4; const fb = actx.createGain(); fb.gain.value = .3; const wet = actx.createGain(); wet.gain.value = .35;
       L.dl = dl; L.leadIn = actx.createGain(); L.leadIn.connect(L.lead); L.leadIn.connect(dl); dl.connect(fb).connect(dl); dl.connect(wet).connect(L.lead);
       return L;
@@ -1004,7 +1019,17 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
         const s = step % 64, bar = (s / 16) | 0, b = s % 16, [root, tri] = PROG[P.prog][bar];
         const t = next + (b % 2 ? P.swing * STEP : 0);
         const kicks = P.half ? P.kick : P.kick;
-        if (kicks.includes(b) || (P.kickX.includes(b) && bar % 2)) kick(t, L.kick, .8);
+        const bar8 = ((step / 16) | 0) % 8, building = P.build && bar8 === 7;
+        if ((kicks.includes(b) || (P.kickX.includes(b) && bar % 2)) && !(building && b >= 8)) {
+          kick(t, L.kick, .8);
+          if (P.pump) { const g = L.pump.gain; g.cancelScheduledValues(t); g.setValueAtTime(.32, t); g.linearRampToValueAtTime(1, t + STEP * 3.2); }
+        }
+        if (P.ohat && P.ohat.includes(b)) hat(t, L.hat, .07 * (P.hatVol || 1), true);
+        // darbuka: doum (low) and tek (high), with a little roll at the end of the loop
+        if (P.doum && P.doum.includes(b)) { const o = actx.createOscillator(), g = actx.createGain(); o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(70, t + .18); g.gain.setValueAtTime(.7, t); g.gain.exponentialRampToValueAtTime(.0001, t + .28); o.connect(g).connect(L.kick); o.start(t); o.stop(t + .3); noiseAt(t, .05, .12, "lowpass", 500, 0, L.kick); }
+        if (P.tek && (P.tek.includes(b) || (P.tekRoll && bar === 3 && b >= 13))) { noiseAt(t, .05, .28, "bandpass", 3400, 0, L.hat, 2.2); pluck(t, 880, L.hat, .05, .04, "triangle", 4000); }
+        // every 8 bars: a snare roll and a rising sweep, then the drop
+        if (building) { if (b % 2 === 0 || b >= 12) noiseAt(t, .07, .05 + .22 * (b / 16), "bandpass", 1800 + b * 60, 0, L.clap, .9); if (b === 2) noiseAt(t, 1.4, .1, "highpass", 500, 9000, L.hat); }
         if (P.clap.includes(b)) { if (P.noiseSnare) noiseAt(t, .12, .25, "bandpass", 2500, 0, L.clap, .6); else clap(t, L.clap, P.clapVol || .3); }
         if (b % P.hat === 0) hat(t, L.hat, (b % 4 === 2 ? .1 : .05) * (P.hatVol || 1), b === 14 && bar === 3);
         if (P.hatRoll && bar === 3 && b >= 12) { hat(t + STEP / 3, L.hat, .05); hat(t + 2 * STEP / 3, L.hat, .05); }
@@ -1056,7 +1081,7 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
       let m = document.getElementById("musicmenu"); if (m) { m.remove(); return; }
       m = document.createElement("div"); m.id = "musicmenu"; m.className = "musicmenu"; m.setAttribute("role", "menu");
       m.innerHTML = `<b>מוזיקה</b>${Object.entries(MUSIC.styles).map(([k, v]) => `<button role="menuitemradio" aria-checked="${MUSIC.style === k}" data-s="${k}">${esc(v.name)}</button>`).join("")}`;
-      const r = b.getBoundingClientRect(); m.style.top = r.bottom + 8 + "px"; m.style.left = Math.max(8, Math.min(innerWidth - 220, r.left - 80)) + "px";
+      const r = b.getBoundingClientRect(); m.style.top = r.bottom + 8 + "px"; m.style.left = Math.max(8, Math.min(innerWidth - 276, r.left - 80)) + "px";
       document.body.append(m);
       anim(m, [{ opacity: 0, transform: "translateY(-6px) scale(.97)" }, { opacity: 1, transform: "none" }], { duration: 180, easing: "ease-out" });
       m.querySelectorAll("button").forEach((x) => (x.onclick = (ev) => { ev.stopPropagation(); MUSIC.setStyle(x.dataset.s); pickMusic(); m.querySelectorAll("button").forEach((y) => y.setAttribute("aria-checked", String(y === x))); SFX.point(); }));
@@ -1441,24 +1466,75 @@ input[type=text], .code-in { background: #fff !important; border: var(--line3) !
   }
   function quoteQ(c, pool) { return { type: "quote", text: c.text, answer: c.author, author: c.author, ts: c.ts, hook: hookFor(c), options: smartOptions(c.author, pool, c.text), ...ctxOf(c.i) }; }
 
+  // "how did it end?": the decoys must fit the sentence as well as the real ending does.
+  // So each decoy is what someone in this chat really wrote right after the SAME word(s) the sentence stops on:
+  // "שכחתי אצלכם את ___" gets endings that followed "את" in other messages ("הכסף שלי בבית", "השיעורים של מחר")
+  let WIDX = null;
+  const wnorm = (w) => String(w).toLowerCase().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+  const endKey = (e) => e.split(/\s+/).map(wnorm).join(" ");
+  function wordIndex() {
+    if (WIDX && WIDX.src === msgs) return WIDX;
+    const map = new Map(), from = Math.max(0, msgs.length - 60000);
+    for (let i = from; i < msgs.length; i++) {
+      const m = msgs[i]; if (!m || !m.text || m.media || m.deleted || m.text.length > 240 || /[@\n]/.test(m.text)) continue;
+      const w = m.text.trim().split(/\s+/); if (w.length < 3 || w.length > 40) continue;
+      for (let p = 0; p < w.length - 2; p++) {
+        const k = wnorm(w[p]); if (!k) continue;
+        let arr = map.get(k); if (!arr) map.set(k, (arr = []));
+        if (arr.length < 500) arr.push(i * 64 + p + 1); else if (Math.random() < .2) arr[Math.floor(Math.random() * 500)] = i * 64 + p + 1;
+      }
+    }
+    return (WIDX = { src: msgs, map });
+  }
+  function endingsAfter(startW, end, skipI) {
+    const W = wordIndex(), last = wnorm(startW[startW.length - 1]), prev = startW.length > 1 ? wnorm(startW[startW.length - 2]) : "";
+    const want = end.split(/\s+/).length, seen = new Set([endKey(end)]), out = [];
+    if (!last) return out;
+    for (const code of W.map.get(last) || []) {
+      const i = Math.floor(code / 64), p = code % 64; if (Math.abs(i - skipI) < 2) continue;
+      const w = msgs[i].text.trim().split(/\s+/), rest = w.slice(p); if (rest.length < 2) continue;
+      // about as long as the real ending; stop where a sentence stops
+      let take = rest.slice(0, want + 1);
+      const stop = take.findIndex((x, j) => j >= Math.max(1, want - 2) && /[.!?…]$/.test(x));
+      if (stop >= 0) take = take.slice(0, stop + 1); else if (rest.length > want + 1) take = rest.slice(0, want);
+      const e = take.join(" "), key = endKey(e);
+      if (e.length > 90 || !key.trim() || seen.has(key) || endKey(end).includes(key) || key.includes(endKey(end)) || !clean(e)) continue;
+      seen.add(key);
+      let sc = Math.random() * 1.5;
+      if (prev && p >= 2 && wnorm(w[p - 2]) === prev) sc += 4;   // the same two words before it: fits even better
+      if (take.length === rest.length) sc += 2;                  // a real end of a message, like the answer
+      sc -= Math.abs(take.length - want) * .9;
+      if (Math.abs(e.length - end.length) > Math.max(12, end.length * .5)) sc -= 2;
+      if (/\p{Extended_Pictographic}/u.test(e) !== /\p{Extended_Pictographic}/u.test(end)) sc -= .7;
+      out.push([e, sc]);
+    }
+    return out.sort((a, b) => b[1] - a[1]);
+  }
   function finishQs(cands, pool, k) {
-    const good = cands.filter((c) => { const w = c.text.split(/\s+/).length; return w >= 7 && w <= 18 && !c.text.includes("@"); }).slice(0, 200);
-    const split = (t) => {
-      const w = t.split(/\s+/);
-      // prefer to cut right after a comma or before "ו..."/"אבל"/"כי", else a bit past the middle
-      let cut = w.findIndex((x, i) => i >= 3 && i <= w.length - 2 && (/[,،]$/.test(w[i - 1]) || /^(אבל|כי|אז|ו\S)/.test(x)));
-      if (cut < 0) cut = Math.max(3, Math.ceil(w.length * .55));
-      return [w.slice(0, cut).join(" "), w.slice(cut).join(" ")];
+    const good = cands.filter((c) => { const w = c.text.split(/\s+/).length; return w >= 7 && w <= 18 && !c.text.includes("@") && !c.text.includes("\n"); }).slice(0, 200);
+    const natural = (w) => { // the old cut: after a comma or before "ו..."/"אבל"/"כי", else a bit past the middle
+      const c = w.findIndex((x, i) => i >= 3 && i <= w.length - 2 && (/[,،]$/.test(w[i - 1]) || /^(אבל|כי|אז|ו\S)/.test(x)));
+      return c < 0 ? Math.max(3, Math.ceil(w.length * .55)) : c;
     };
     const qs = [];
-    for (const c of sample(good, k)) {
-      const [start, end] = split(c.text);
-      if (end.split(/\s+/).length < 2) continue;
-      // decoys: endings of a similar length, ideally from other people
-      const decoys = shuffle(good.filter((o) => o !== c && o.author !== c.author)).map((o) => split(o.text)[1])
-        .filter((e) => e && e !== end && e.length < 90 && Math.abs(e.length - end.length) <= Math.max(14, end.length * .6)).slice(0, 3);
-      if (decoys.length < 3) continue;
-      qs.push({ type: "finish", text: start + "…", full: c.text, hook: hookFor(c), answer: end, author: c.author, ts: c.ts, options: shuffle([end, ...decoys]), long: true, ...ctxOf(c.i) });
+    for (const c of sample(good, k * 4)) {
+      if (qs.length >= k) break;
+      const w = c.text.split(/\s+/), nat = natural(w);
+      // try every place the sentence could stop; keep the one whose word has the most convincing fake endings
+      let best = null;
+      for (let cut = Math.max(3, Math.floor(w.length * .4)); cut <= w.length - 2; cut++) {
+        const end = w.slice(cut).join(" ");
+        if (end.length > 90 || /^[,.!?]/.test(end)) continue;
+        // no two options may open with the same two words, or the odd one out gives itself away
+        const head = (e) => endKey(e).split(" ").slice(0, 2).join(" "), heads = new Set([head(end)]);
+        const dec = endingsAfter(w.slice(0, cut), end, c.i).filter((x) => x[1] > -1.5 && !heads.has(head(x[0])) && heads.add(head(x[0]))).slice(0, 3);
+        if (dec.length < 3) continue;
+        const sc = dec.reduce((a, x) => a + x[1], 0) + (cut === nat ? 1.5 : 0) - Math.max(0, w.length - cut - 7) * .6;
+        if (!best || sc > best.sc) best = { cut, end, dec, sc };
+      }
+      if (!best) continue;
+      const start = w.slice(0, best.cut).join(" ");
+      qs.push({ type: "finish", text: start + "…", full: c.text, hook: hookFor(c), answer: best.end, author: c.author, ts: c.ts, options: shuffle([best.end, ...best.dec.map((x) => x[0])]), long: true, ...ctxOf(c.i) });
     }
     return qs;
   }
@@ -2149,32 +2225,56 @@ ${samples}
     });
   }
 
+  // ----- the question screen, shared by the main screen and every phone (phones mirror it exactly) -----
+  function bubbleInner(q, revealed) {
+    const body = q.type === "reply"
+      ? `<div class="ctx" style="margin-bottom:10px;font-size:1rem"><b>${esc(q.by)}:</b> ${esc(q.text)}</div>${revealed ? esc(q.replyText) : "<span class='dim' style='font-size:1rem;color:#6b5f8f'>מי ענה על זה, ומה?</span>"}`
+      : q.type === "finish" ? esc(revealed ? q.full : q.text)
+      : esc(q.text);
+    const named = ["quote", "moment", "finish", "ai", "when", "era", "story"].includes(q.type) || q.msg;
+    const sender = !named ? "" : (revealed || q.type === "when" || q.type === "era") ? `<span class="sender" style="color:${colorOf(q.type === "ai" ? q.answer : q.author)}">${esc(q.type === "ai" ? q.answer : q.author)}</span>` : `<span class="sender hidden-name">???</span>`;
+    return `${sender}${q.type === "ai" ? `<span class="ai-tag">נכתב על ידי Claude</span><br>` : ""}${body}<span class="meta">${revealed && q.ts ? fmtDate(q.ts) : q.type === "ai" ? "הודעה מזויפת בסגנון של מישהו מכם" : q.type === "moment" ? (revealed ? `${q.author} · ${fmtDate(q.ts)}` : q.hook) : q.type === "word" ? "מי כותב את זה הכי הרבה?" : q.type === "when" ? (revealed ? `${q.author} · ${fmtDate(q.ts)}` : "באיזו שעה זה נשלח?") : q.type === "stat" || q.type === "number" ? "לפי הצ'אט שלכם" : q.hook || "הודעה מהקבוצה"}</span>`;
+  }
+  // votes: how many picked each option (shown on the reveal), or null
+  function optsHtml(q, revealed, votes, nPlayers) {
+    return q.options.map((o, i) => {
+      const v = votes ? (votes[i] || 0) : null;
+      return `<button class="opt ${q.long ? "long" : ""} ${revealed && o === q.answer ? "win" : ""} ${v ? "has-votes" : ""}" data-o="${esc(o)}" data-i="${i}">${v != null ? `<i class="votes" data-k="${v / Math.max(1, nPlayers)}"></i>${v ? `<span class="vc">${v}</span>` : ""}` : ""}${!q.long && !["finish", "when", "number", "era"].includes(q.type) ? `<i class="ini" aria-hidden="true">${esc([...String(o).trim()][0] || "?")}</i>` : ""}<span>${esc(o)}</span></button>`;
+    }).join("");
+  }
+  // the stamp with the answer and the messages around it
+  function revealHead(q) {
+    const who = q.author;
+    let ctx = "";
+    if (q.type === "moment") ctx = `${q.ctxBefore ? `<div class="context"><div class="ctx"><b>${esc(q.ctxBefore.a)}:</b> ${esc(q.ctxBefore.t)}</div><div class="ctx" style="border-color:var(--yellow)"><b>${esc(who)}:</b> ${esc(q.text)}</div></div>` : ""}${q.reveal ? `<p class="dim" style="text-align:center">${esc(q.reveal)}</p>` : ""}`;
+    else if ((q.type === "quote" || q.type === "finish") && (q.ctxBefore || q.ctxAfter)) {
+      ctx = `<div class="context">${q.ctxBefore ? `<div class="ctx"><b>${esc(q.ctxBefore.a)}:</b> ${esc(q.ctxBefore.t)}</div>` : ""}<div class="ctx" style="border-color:var(--yellow)"><b>${esc(who)}:</b> ${esc(q.full || q.text)}</div>${q.ctxAfter ? `<div class="ctx"><b>${esc(q.ctxAfter.a)}:</b> ${esc(q.ctxAfter.t)}</div>` : ""}</div>`;
+    } else if (q.type === "reply") {
+      ctx = `<div class="context"><div class="ctx"><b>${esc(q.by)}:</b> ${esc(q.text)}</div><div class="ctx" style="border-color:var(--yellow)"><b>${esc(who)}:</b> ${esc(q.replyText)}</div></div>`;
+    } else if (q.reveal) ctx = `<p class="dim" style="text-align:center">${esc(q.reveal)}</p>`;
+    const plain = q.stamp || q.type === "number" || q.type === "when" || q.type === "era";
+    const stampText = q.stamp || (plain ? q.answer : who);
+    const sub = q.type === "finish" ? "כתב את זה" : q.type === "ai" ? "Claude חיקה אותו" : "";
+    return `<div class="stamp" style="--sc:${plain ? "var(--orange)" : colorOf(stampText)}">${esc(stampText)}${plain ? "" : "!"}${sub ? `<small>${sub}</small>` : ""}</div>${ctx}`;
+  }
+
   function play() {
     const g = S.game, q = g.questions[S.idx];
     const last = S.idx === g.questions.length - 1;
     const kindTitle = q.title || (q.type === "stat" ? "מי בקבוצה…" : KIND_TITLE[q.type]);
-    const body = q.type === "reply"
-      ? `<div class="ctx" style="margin-bottom:10px;font-size:1rem"><b>${esc(q.by)}:</b> ${esc(q.text)}</div>${S.revealed ? esc(q.replyText) : "<span class='dim' style='font-size:1rem;color:#6b5f8f'>מי ענה על זה, ומה?</span>"}`
-      : q.type === "finish" ? esc(S.revealed ? q.full : q.text)
-      : esc(q.text);
     app.innerHTML = `
       <div class="top"><span class="counter">${S.idx + 1}/${g.questions.length}</span><div class="row"><button class="btn alt" id="skip" ${S.revealed ? "hidden" : ""}>דלג</button>${muteBtn()}${canFull ? `<button class="icon-btn" id="full" aria-label="מסך מלא"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>` : ""}<button class="btn alt" id="quit">סיום</button></div></div>
       ${S.players.length > 1 ? `<div class="strip" id="strip">${stripHtml()}</div>` : ""}
       <div class="timer" id="timer" aria-hidden="true" ${S.revealed ? "hidden" : ""}><i id="bar"></i></div>
       <div class="kind">${kindTitle}${last ? `<span class="x2">שאלת הגמר · ניקוד כפול</span>` : ""}</div>
       <div class="qwrap">${buddy(S.revealed ? S.bmood || "laugh" : "think", "peek", "pb")}<div class="bubble" id="bubble">${S.revealed ? "" : `<span class="typing" aria-label="מקליד"><i></i><i></i><i></i></span>`}</div></div>
-      <div class="opts ${S.revealed ? "revealed" : ""}" id="opts" ${S.revealed ? "" : "hidden"}>${q.options.map((o, i) => {
-        const v = S.multi && S.revealed ? (S.votes?.[i] || []) : null;
-        return `<button class="opt ${q.long ? "long" : ""} ${S.revealed && o === q.answer ? "win" : ""} ${v && v.length ? "has-votes" : ""}" data-o="${esc(o)}">${v ? `<i class="votes" data-k="${v.length / Math.max(1, S.players.length)}"></i>${v.length ? `<span class="vc">${v.length}</span>` : ""}` : ""}${!q.long && !["finish","when","number","era"].includes(q.type) ? `<i class="ini" aria-hidden="true">${esc([...String(o).trim()][0] || "?")}</i>` : ""}<span>${esc(o)}</span></button>`;
-      }).join("")}</div>
+      <div class="opts ${S.revealed ? "revealed" : ""}" id="opts" ${S.revealed ? "" : "hidden"}>${optsHtml(q, S.revealed, S.multi && S.revealed ? (S.votes || []).map((v) => (v || []).length) : null, S.players.length)}</div>
       ${S.multi && !S.revealed ? `<div class="answered" id="answered" hidden>${S.players.map((p) => avatar(p)).join("")}<span class="ans-count" id="ans-count"></span></div>` : ""}
       <div id="below">${S.revealed ? revealBlock(q) : ""}</div>`;
     bindMute();
     const bubble = document.getElementById("bubble");
     const fillBubble = () => {
-      const named = ["quote", "moment", "finish", "ai", "when", "era", "story"].includes(q.type) || q.msg;
-      const sender = !named ? "" : (S.revealed || q.type === "when" || q.type === "era") ? `<span class="sender" style="color:${colorOf(q.author)}">${esc(q.type === "ai" ? q.answer : q.author)}</span>` : `<span class="sender hidden-name">???</span>`;
-      bubble.innerHTML = `${sender}${q.type === "ai" ? `<span class="ai-tag">נכתב על ידי Claude</span><br>` : ""}${body}<span class="meta">${S.revealed && q.ts ? fmtDate(q.ts) : q.type === "ai" ? "הודעה מזויפת בסגנון של מישהו מכם" : q.type === "moment" ? (S.revealed ? `${q.author} · ${fmtDate(q.ts)}` : q.hook) : q.type === "word" ? "מי כותב את זה הכי הרבה?" : q.type === "when" ? (S.revealed ? `${q.author} · ${fmtDate(q.ts)}` : "באיזו שעה זה נשלח?") : q.type === "stat" || q.type === "number" ? "לפי הצ'אט שלכם" : q.hook || "הודעה מהקבוצה"}</span>`;
+      bubble.innerHTML = bubbleInner(q, S.revealed);
       bubble.classList.remove("pop"); void bubble.offsetWidth; bubble.classList.add("pop");
       if (!S.revealed) words(bubble);
     };
@@ -2262,6 +2362,8 @@ ${samples}
       if (!timeUp) anim(opts, [{ transform: "scale(1)" }, { transform: "scale(.96)" }, { transform: "scale(1.01)" }], { duration: 300, easing: EASE.out });
       const snd = document.querySelector("#bubble .sender.hidden-name");
       const names = [...new Set([...(q.options || []), ...(S.game.pool || []), ...S.players])].filter((x) => x && x !== q.author && x.length < 20);
+      // phones run the same name spin at the same moment
+      if (S.multi) { S.spin = snd && !RM ? names.slice(0, 12) : []; hostEmit(); }
       if (snd && !RM && names.length) {
         // the hidden name spins like a slot machine and slows down onto whoever really wrote it
         snd.classList.remove("hidden-name"); snd.classList.add("spin");
@@ -2271,7 +2373,7 @@ ${samples}
         later(() => { snd.classList.remove("spin"); snd.textContent = q.author; snd.style.color = colorOf(q.author); SFX.slam(); buzz(30); anim(snd, [{ transform: "scale(2.2) rotate(-6deg)" }, { transform: "scale(1)" }], { duration: 380, easing: EASE.pop }); anim(app, [{ transform: "scale(1)" }, { transform: "scale(1.025)" }, { transform: "none" }], { duration: 260, easing: "ease-out" }); shake(document.getElementById("bubble"), 6); addTrauma(.45); }, t);
         later(show, t + 520);
       } else { SFX.drum(timeUp ? .65 : .35); later(show, RM ? 0 : timeUp ? 650 : 300); }
-      function show() { S.revealing = false; S.revealed = true; if (!S.multi) S.correct = []; S.bmood = S.multi && !(S.correct || []).length ? "shock" : "laugh"; S.justRevealed = true; render(); }
+      function show() { S.spin = null; S.revealing = false; S.revealed = true; if (!S.multi) S.correct = []; S.bmood = S.multi && !(S.correct || []).length ? "shock" : "laugh"; S.justRevealed = true; render(); }
     }
   }
 
@@ -2347,18 +2449,8 @@ ${samples}
   }
 
   function revealBlock(q) {
-    const who = q.author;
-    let ctx = "";
-    if (q.type === "moment") ctx = `${q.ctxBefore ? `<div class="context"><div class="ctx"><b>${esc(q.ctxBefore.a)}:</b> ${esc(q.ctxBefore.t)}</div><div class="ctx" style="border-color:var(--yellow)"><b>${esc(who)}:</b> ${esc(q.text)}</div></div>` : ""}${q.reveal ? `<p class="dim" style="text-align:center">${esc(q.reveal)}</p>` : ""}`;
-    else if ((q.type === "quote" || q.type === "finish") && (q.ctxBefore || q.ctxAfter)) {
-      ctx = `<div class="context">${q.ctxBefore ? `<div class="ctx"><b>${esc(q.ctxBefore.a)}:</b> ${esc(q.ctxBefore.t)}</div>` : ""}<div class="ctx" style="border-color:var(--yellow)"><b>${esc(who)}:</b> ${esc(q.full || q.text)}</div>${q.ctxAfter ? `<div class="ctx"><b>${esc(q.ctxAfter.a)}:</b> ${esc(q.ctxAfter.t)}</div>` : ""}</div>`;
-    } else if (q.type === "reply") {
-      ctx = `<div class="context"><div class="ctx"><b>${esc(q.by)}:</b> ${esc(q.text)}</div><div class="ctx" style="border-color:var(--yellow)"><b>${esc(who)}:</b> ${esc(q.replyText)}</div></div>`;
-    } else if (q.reveal) ctx = `<p class="dim" style="text-align:center">${esc(q.reveal)}</p>`;
-    const stampText = q.stamp || (q.type === "number" || q.type === "when" || q.type === "era" ? q.answer : who);
-    const sub = q.type === "finish" ? "כתב את זה" : q.type === "ai" ? "Claude חיקה אותו" : "";
     const last = S.idx + 1 >= S.game.questions.length;
-    return `<div class="stamp" style="--sc:${q.stamp || q.type === "number" || q.type === "when" || q.type === "era" ? "var(--orange)" : colorOf(stampText)}">${esc(stampText)}${q.stamp || q.type === "number" || q.type === "when" || q.type === "era" ? "" : "!"}${sub ? `<small>${sub}</small>` : ""}</div>${ctx}
+    return `${revealHead(q)}
       ${S.multi ? multiResults(q) : S.players.length ? `<section class="panel"><b>מי ניחש נכון?</b><div class="chips" id="scorers">${S.players.map((p) => `<button class="chip" aria-pressed="false" data-p="${esc(p)}">${esc(p)}${S.streaks[p] >= 2 ? `<span class="streak">🔥${S.streaks[p]}</span>` : ""}</button>`).join("")}</div></section>` : ""}
       <div class="rate" id="rate"><span>איך הייתה השאלה?</span><button class="chip" data-r="up" aria-label="שאלה טובה">👍</button><button class="chip" data-r="down" aria-label="שאלה משעממת">👎</button></div>
       <button class="btn big" id="next" style="width:100%">${last ? "לתוצאות" : "השאלה הבאה"}</button>`;
@@ -2669,12 +2761,22 @@ ${samples}
     const pendNow = (p) => S.screen === "play" && S.revealed ? ((S.res || {})[p] || [0, 0])[1] : 0;
     const sc = Object.entries(S.scores || {}).map(([p, v]) => [p, Math.max(0, v + pendNow(p))]).sort((a, b) => b[1] - a[1]).slice(0, 30);
     const base = { c: S.code, ep: S.ep, names: S.players.slice(0, 30), sc, total: g.questions.length };
-    if (S.screen === "lobby") return { ...base, ph: "lobby", pool: g.pool.slice(0, 12) };
+    if (S.screen === "lobby") return { ...base, ph: "lobby", pool: g.pool.slice(0, 12), host: S.hostName || "" };
     if (S.screen === "play") {
       const q = g.questions[S.idx]; if (!q) return null;
-      const qb = { ...base, idx: S.idx, kind: q.type, title: S.idx + 1 === g.questions.length ? "שאלת הגמר · ניקוד כפול" : q.title || KIND_TITLE[q.type], text: String(qText(q)).slice(0, 300), opts: q.options.map((o) => String(o).slice(0, 80)) };
-      if (S.revealed) return { ...qb, ph: "reveal", ans: q.options.indexOf(q.answer), res: S.res || {} };
-      if (S.asking) return { ...qb, ph: "ask", left: Math.max(0, S.deadline - Date.now()), done: Object.keys(S.answers || {}).length };
+      const last = S.idx + 1 === g.questions.length;
+      const rev = S.revealed;
+      // the question itself, so every phone draws exactly the same screen. Who wrote it travels only on the reveal.
+      const cut = (x, k) => x == null ? x : String(x).slice(0, k);
+      const cx = (c) => c ? { a: cut(c.a, 30), t: cut(c.t, 140) } : null;
+      const qv = { type: q.type, title: cut(q.title, 60), text: cut(q.text, 300), hook: cut(q.hook, 90), by: cut(q.by, 40), long: q.long ? 1 : 0, msg: q.msg ? 1 : 0, options: q.options.map((o) => cut(o, 80)) };
+      if (q.type === "when" || q.type === "era") qv.author = cut(q.author, 40);
+      if (rev) Object.assign(qv, { author: cut(q.author, 40), answer: cut(q.answer, 80), ts: q.ts || 0, full: cut(q.full, 300), replyText: cut(q.replyText, 200), stamp: cut(q.stamp, 60), reveal: cut(q.reveal, 160), ctxBefore: cx(q.ctxBefore), ctxAfter: cx(q.ctxAfter) });
+      const stk = Object.fromEntries(Object.entries(S.streaks || {}).filter(([, v]) => v >= 2).slice(0, 30));
+      const qb = { ...base, idx: S.idx, kind: q.type, last: last ? 1 : 0, title: q.title || (q.type === "stat" ? "מי בקבוצה…" : KIND_TITLE[q.type]), q: qv, stk, text: cut(qText(q), 300), opts: q.options.map((o) => cut(o, 80)) };
+      if (rev) return { ...qb, ph: "reveal", ans: q.options.indexOf(q.answer), res: S.res || {}, win: (S.correct || []).slice(0, 30), vo: (S.votes || []).map((v) => (v || []).length) };
+      if (S.revealing) return { ...qb, ph: "spin", spin: S.spin || [], fin: cut(q.type === "ai" ? q.answer : q.author, 40), who: Object.keys(S.answers || {}).slice(0, 30) };
+      if (S.asking) return { ...qb, ph: "ask", left: Math.max(0, S.deadline - Date.now()), done: Object.keys(S.answers || {}).length, who: Object.keys(S.answers || {}).slice(0, 30) };
       return { ...qb, ph: "wait" };
     }
     if (S.screen === "mid") return { ...base, ph: "mid", idx: S.idx };
@@ -2685,7 +2787,16 @@ ${samples}
   function hostEmit() {
     if (!room || !S.multi) return;
     const st = hostState(); if (!st) return;
-    if (new Blob([JSON.stringify(st)]).size > 3800) { st.text = String(st.text || "").slice(0, 100); if (st.opts) st.opts = st.opts.map((o) => o.slice(0, 36)); st.sc = st.sc.slice(0, 12); st.names = st.names.slice(0, 12); }
+    // the database takes up to 6000 characters per state: trim the extras first, the question last
+    const fits = () => JSON.stringify(st).length < 5600;
+    const trims = [
+      () => { delete st.text; delete st.opts; },
+      () => { if (st.q) { st.q.ctxBefore = null; st.q.ctxAfter = null; } },
+      () => { st.sc = st.sc.slice(0, 12); st.names = st.names.slice(0, 12); st.stk = {}; if (st.who) st.who = st.who.filter((x) => st.names.includes(x)); if (st.win) st.win = st.win.slice(0, 12); },
+      () => { if (st.q) { st.q.reveal = null; st.q.hook = (st.q.hook || "").slice(0, 40); st.q.replyText = (st.q.replyText || "").slice(0, 100); } },
+      () => { if (st.q) { st.q.text = st.q.text.slice(0, 140); st.q.full = st.q.full ? st.q.full.slice(0, 140) : st.q.full; st.q.options = st.q.options.map((o) => o.slice(0, 36)); if (st.q.answer) st.q.answer = st.q.answer.slice(0, 36); } },
+    ];
+    for (const t of trims) { if (fits()) break; t(); }
     const json = JSON.stringify({ ...st, left: 0 });
     if (json === R.lastSent && NET.mode !== "local") return; // nothing changed: no write
     R.lastSent = json;
@@ -2866,14 +2977,29 @@ ${samples}
     render();
     return true;
   }
+  const PLAY_PH = ["wait", "ask", "spin", "reveal"];
   function onState(msg) {
     if (S.screen !== "remote" || msg.sameTab) return;
     const d = msg.data; if (!d || typeof d !== "object" || d.c !== S.rc) return;
     R.host = msg.peer; R.st = d; R.seen = Date.now();
     const key = `${d.ep}|${d.ph}|${d.idx ?? ""}`;
     if (d.ph === "ask" && R.askKey !== key) { R.askKey = key; R.deadline = Date.now() + Math.min(60000, Math.max(0, +d.left || 0)); }
-    if (key !== R.key && S.rname) { R.key = key; S.enter = true; render(); }
-    else remoteUpdate();
+    if (key === R.key || !S.rname) { remoteUpdate(); return; }
+    const prev = R.shown; R.key = key; R.shown = d;
+    const inPlay = PLAY_PH.includes(d.ph), wasPlay = prev && prev.ep === d.ep && PLAY_PH.includes(prev.ph);
+    // the phone moves exactly like the main screen: same question, same spin, same reveal
+    if (inPlay && wasPlay && prev.idx === d.idx) { if (d.ph === "spin" && document.getElementById("opts")) remoteSpin(d); else render(); }
+    else if (inPlay && wasPlay) wipe(String((d.idx | 0) + 1), d.last ? "שאלת הגמר · ניקוד כפול" : d.title || "", () => render(), d.kind);
+    else { S.enter = true; render(); }
+    if (d.ph === "wait") remoteIntro(d);
+  }
+  // the countdown before the first question and the "new kind of question" card, same as on the main screen
+  function remoteIntro(d) {
+    if (R.kep !== d.ep) { R.kep = d.ep; R.kinds = {}; }
+    const steps = [];
+    if (d.idx === 0 && R.cd !== d.ep) { R.cd = d.ep; steps.push(countdown); }
+    if (d.kind && !R.kinds[d.kind]) { R.kinds[d.kind] = true; steps.push(() => introCard(d.kind)); }
+    if (steps.length) R.ovq = (R.ovq || Promise.resolve()).then(async () => { for (const f of steps) { if (R.st && R.st.ep === d.ep && R.st.idx === d.idx && R.st.ph !== "reveal") await f(); } }).catch(() => {});
   }
   function myRank(d) { const i = (d.sc || []).findIndex(([p]) => p === S.rname); return i < 0 ? null : { pos: i + 1, pts: d.sc[i][1], of: d.sc.length }; }
   const rankLine = (d) => { const r = myRank(d); return r ? `<p class="rank">מקום <b>${r.pos}</b> מתוך ${r.of} · ${n(r.pts)} נק'</p>` : ""; };
@@ -2895,39 +3021,42 @@ ${samples}
   function remote() {
     clearInterval(rtimer);
     const d = R.st;
-    const top = `<div class="top"><button class="btn alt" id="leave">יציאה</button><span class="dim small">${S.rname ? `${avatar(S.rname)} ` : ""}קוד ${esc(S.rc)}</span>${muteBtn()}</div><div id="rnotice"></div>`;
+    const inPlay = S.rname && d && PLAY_PH.includes(d.ph);
+    const leaveBtn = `<button class="btn alt" id="leave">יציאה</button>`;
+    const top = inPlay
+      ? `<div class="top"><span class="counter">${(d.idx | 0) + 1}/${d.total | 0}</span><div class="row" style="flex-wrap:nowrap">${muteBtn()}${leaveBtn}</div></div><div id="rnotice"></div>`
+      : `<div class="top">${leaveBtn}<span class="dim small">${S.rname ? `${avatar(S.rname)} ` : ""}קוד ${esc(S.rc)}</span>${muteBtn()}</div><div id="rnotice"></div>`;
     let body = "";
     if (!S.rname) {
       body = `<h2>מי אתה?</h2><p class="dim">בוחרים את השם שלך, או כותבים כינוי.</p>
         <div class="chips" id="rpool">${poolChips()}</div>
         <div class="row"><input type="text" id="rn" maxlength="20" placeholder="השם שלך" autocomplete="nickname" value="${esc(store.get("rname", myName) || "")}"><button class="btn" id="rgo">נכנסים</button></div>`;
     } else if (!d) {
-      body = `<div class="rcard miss">${buddy("think")}<div class="rbig">מתחבר…<small>מחכה למסך הראשי <span class="typing"><i></i><i></i><i></i></span></small></div></div>`;
+      body = `<div class="rcard miss">${buddy("think")}<div class="rbig">מתחבר…<small>מחכה למשחק <span class="typing"><i></i><i></i><i></i></span></small></div></div>`;
     } else if (d.ph === "lobby") {
-      body = `<div class="rcard ok">${buddy("party")}<div class="rbig">אתה בפנים<small>מחכים שהמשחק יתחיל. תסתכלו על המסך הגדול.</small></div></div>
-        <div class="lobby-players" id="rnames">${namesHtml(d)}</div>`;
-    } else if (d.ph === "wait") {
-      body = `<div class="top"><span class="counter">${(d.idx | 0) + 1}/${d.total | 0}</span></div><div class="kind">${esc(d.title || "")}</div>
-        <div class="rcard miss">${buddy("think")}<div class="rbig" style="font-size:3rem">מסתכלים על המסך<small>השאלה עולה <span class="typing"><i></i><i></i><i></i></span></small></div></div>`;
-    } else if (d.ph === "ask") {
-      const mine = S.pick && S.pick.k === R.askKey ? S.pick.c : null;
-      body = `<div class="top"><span class="counter">${(d.idx | 0) + 1}/${d.total | 0}</span><span class="dim small" id="rdone">${d.done | 0}/${(d.names || []).length} ענו</span></div>
-        <div class="timer" id="rtimer"><i id="rbar"></i></div>
-        <div class="kind" style="font-size:clamp(1.8rem,8vw,2.6rem)">${esc(d.title || "")}</div>
-        <div class="bubble small-b" id="rq">${esc(d.text || "")}</div>
-        <button class="betbtn" id="bet" aria-pressed="${!!(S.bet && S.bet.k === R.askKey)}" ${mine != null ? "disabled" : ""}><b>🎲 בטוח ב-100%?</b><span>צדקת: ניקוד כפול · טעית: ‎-${BET_LOSS}</span></button>
-        <div class="pad ${mine != null ? "locked" : ""}" id="pad">${(d.opts || []).slice(0, 4).map((o, i) => `<button class="opt ${mine === i ? "mine" : ""}" data-i="${i}"><i class="shp" aria-hidden="true">${SHAPES[i]}</i><span>${esc(o)}</span></button>`).join("")}</div>
-        <p class="note" id="rlock" style="text-align:center">${mine != null ? "ננעל! מחכים לכולם" : "מהר! תשובה מהירה שווה יותר"}</p>`;
-    } else if (d.ph === "reveal") {
-      const r = (d.res || {})[S.rname], ans = (d.opts || [])[d.ans];
-      const cls = !r || r[2] ? "miss" : r[0] ? "ok" : "no";
-      const big = cls === "ok" ? `צדקת!<small>+${n(r[1])} נקודות${r[3] ? " · ההימור הכפיל 🎲" : ""}</small>` : cls === "no" ? (r[3] ? `הימרת ונפלת 💥<small>‎-${BET_LOSS} · התשובה: ${esc(ans || "")}</small>` : `לא הפעם<small>התשובה: ${esc(ans || "")}</small>`) : `פספסת<small>התשובה: ${esc(ans || "")}</small>`;
-      body = `<div class="top"><span class="counter">${(d.idx | 0) + 1}/${d.total | 0}</span></div><div class="rcard ${cls}" id="rres">${buddy(cls === "ok" ? "laugh" : cls === "no" ? "shock" : "sweat")}<div class="rbig">${big}</div></div>${rankLine(d)}`;
+      const k = (d.names || []).length;
+      body = `<div style="display:grid;gap:8px;text-align:center">${buddy("party", "lobby-buddy")}<span class="dim"><span class="live-dot"></span>המשחק פתוח להצטרפות</span><h2>כולם לטלפונים</h2></div>
+        <section class="panel qr-card">
+          <div class="qr" aria-label="קוד QR להצטרפות">${C.qr(joinURL(S.rc))}</div>
+          <div class="qr-side">
+            <div class="dim small">סורקים עם המצלמה, או נכנסים ל-</div>
+            <div class="site" dir="ltr">${esc(siteURL().replace(/^https?:\/\//, "").replace(/\/$/, ""))}</div>
+            <div class="dim small">ומקלידים את הקוד</div>
+            <div class="code">${esc(S.rc)}</div>
+            <button class="btn alt" id="share-link">לשלוח קישור בוואטסאפ</button>
+          </div>
+        </section>
+        <div class="lobby-players" id="rnames">${namesHtml(d)}</div>
+        <button class="btn big" id="rwait" disabled style="width:100%">${lobbyWait(d)}</button>
+        <p class="note" style="text-align:center">אתה בפנים בתור <b>${esc(S.rname)}</b>. כשהמשחק מתחיל, השאלות והתשובות מופיעות כאן.</p>`;
+    } else if (inPlay) {
+      body = mirrorPlay(d);
     } else if (d.ph === "drum") {
       body = `<div class="rcard miss">${buddy("sweat")}<div class="rbig" style="font-size:2.4rem">מכריזים על המנצחים…</div></div>`;
       if (R.showFor !== d.ep && Array.isArray(d.pod) && d.pod.length) { R.showFor = d.ep; later(() => podiumShow(d.pod), 50); }
     } else if (d.ph === "mid") {
-      body = `<h2>תמונת מצב</h2>${rankLine(d)}${boardHtml((d.sc || []).slice(0, 8))}<p class="waiting">ממשיכים מהמסך הגדול</p>`;
+      const rows = d.sc || [];
+      body = `${buddy("laugh", "end-buddy")}<h2>${rows[0] && rows[0][1] > 0 ? `${esc(rows[0][0])} מוביל/ה` : "תמונת מצב"}</h2>${rankLine(d)}${boardHtml(rows.slice(0, 12))}`;
     } else if (d.ph === "end") {
       const r = myRank(d), won = r && r.pos === 1 && r.pts > 0;
       const rows = d.sc || [], top3 = rows.slice(0, 3);
@@ -2942,7 +3071,12 @@ ${samples}
     }
     app.innerHTML = top + body;
     bindMute(); remoteNotice();
-    document.getElementById("leave").onclick = () => { SFX.tap(); if (room) { room.close().catch(() => {}); room = null; } keepAwake(false); history.replaceState(null, "", location.pathname); S = { screen: "home" }; render(); };
+    const lv = document.getElementById("leave");
+    lv.onclick = () => {
+      // during the game a stray tap must not throw you out: tap twice
+      if (inPlay && !lv.classList.contains("armed")) { lv.classList.add("armed"); lv.textContent = "לצאת? הקישו שוב"; SFX.tap(); buzz(20); setTimeout(() => { if (lv.isConnected) { lv.classList.remove("armed"); lv.textContent = "יציאה"; } }, 2600); return; }
+      SFX.tap(); if (room) { room.close().catch(() => {}); room = null; } keepAwake(false); history.replaceState(null, "", location.pathname); S = { screen: "home" }; render();
+    };
     if (!S.rname) {
       const go = () => pickName(document.getElementById("rn").value);
       document.getElementById("rgo").onclick = go;
@@ -2951,8 +3085,106 @@ ${samples}
       return;
     }
     if (!d) return;
-    if (d.ph === "ask") bindPad(d);
-    if (d.ph === "reveal" || d.ph === "end") resultFx(d);
+    if (d.ph === "lobby") {
+      document.getElementById("share-link").onclick = async () => {
+        SFX.tap(); const url = joinURL(S.rc), text = `בואו לשחק "מי אמר את זה?" על הצ'אט שלנו 🤔 נכנסים מכאן: ${url}`;
+        if (navigator.share) { try { await navigator.share({ text }); } catch {} return; }
+        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+      };
+    }
+    if (inPlay) bindMirror(d);
+    if (d.ph === "end") resultFx(d);
+  }
+  const lobbyWait = (d) => { const k = (d.names || []).length; return `מחכים ש${d.host ? esc(d.host) : "מי שפתח"} יתחיל · ${k} ${k === 1 ? "שחקן" : "שחקנים"}`; };
+  // the scoreboard strip at the top, from the scores the main screen sent
+  function stripFrom(d) {
+    const rows = d.sc || [], top = rows.length ? rows[0][1] : 0, stk = d.stk || {};
+    return rows.map(([p, v]) => `<span class="sp ${top > 0 && v === top ? "lead" : ""}" data-sp="${esc(p)}" ${p === S.rname ? `style="outline:3px solid var(--yellow);outline-offset:-3px"` : ""}>${esc(p)}${stk[p] >= 2 ? "🔥" : ""}<b>${n(v)}</b></span>`).join("");
+  }
+  const answeredHtml = (d) => `${(d.names || []).map((p) => avatar(p)).join("")}<span class="ans-count" id="ans-count"></span>`;
+  function markWho(d) {
+    const box = document.getElementById("answered"); if (!box) return;
+    const who = new Set(d.who || []);
+    box.querySelectorAll(".av").forEach((a) => { const was = a.classList.contains("in"), now = who.has(a.dataset.av); a.classList.toggle("in", now); if (now && !was && R.whoInit) anim(a, [{ transform: "scale(1)" }, { transform: "scale(1.35) translateY(-6px)", offset: .4 }, { transform: "none" }], { duration: 420, easing: EASE.pop }); });
+    const c = document.getElementById("ans-count"); if (c) c.textContent = `${who.size}/${(d.names || []).length}`;
+    R.whoInit = true;
+  }
+  // the same question screen the main screen shows, with the answers under your finger
+  function mirrorPlay(d) {
+    const q = d.q || { type: d.kind, title: d.title, text: d.text || "", options: d.opts || [] };
+    const ph = d.ph, revealed = ph === "reveal";
+    const nP = (d.names || []).length;
+    const mine = S.pick && S.pick.k === R.askKey ? S.pick.c : null;
+    const res = (d.res || {})[S.rname];
+    const mood0 = revealed ? (res && res[0] ? "laugh" : "shock") : "think";
+    let below = "";
+    if (ph === "ask") below = `<button class="betbtn" id="bet" aria-pressed="${!!(S.bet && S.bet.k === R.askKey)}" ${mine != null ? "disabled" : ""}><b>🎲 ${esc(S.rname)}, בטוח ב-100%?</b><span>צדקת: ניקוד כפול · טעית: ‎-${BET_LOSS}</span></button>
+      <p class="note" id="rlock" style="text-align:center">${mine != null ? "ננעל! מחכים לכולם" : "מי שעונה מהר יותר מקבל יותר נקודות."}</p>`;
+    else if (ph === "spin") below = `<p class="note" id="rlock" style="text-align:center">חושפים…</p>`;
+    else if (revealed) {
+      const cls = !res || res[2] ? "miss" : res[0] ? "ok" : "no";
+      const txt = cls === "ok" ? `צדקת! +${n(res[1])}${res[3] ? " · ההימור הכפיל 🎲" : ""}` : cls === "no" ? (res[3] ? `הימרת ונפלת 💥 ‎-${BET_LOSS}` : "לא הפעם") : "לא ענית בזמן";
+      below = `<div class="mres ${cls}" id="mres">${txt}</div>${revealHead(q)}${remoteResults(d)}${rankLine(d)}`;
+    }
+    return `${nP > 1 ? `<div class="strip" id="strip">${stripFrom(d)}</div>` : ""}
+      <div class="timer" id="rtimer" aria-hidden="true" ${ph === "ask" ? "" : "hidden"}><i id="rbar"></i></div>
+      <div class="kind">${esc(d.title || "")}${d.last ? `<span class="x2">שאלת הגמר · ניקוד כפול</span>` : ""}</div>
+      <div class="qwrap">${buddy(mood0, "peek", "pb")}<div class="bubble ${ph === "wait" ? "" : "pop"}" id="bubble">${ph === "wait" ? `<span class="typing" aria-label="מקליד"><i></i><i></i><i></i></span>` : bubbleInner(q, revealed)}</div></div>
+      <div class="opts ${revealed ? "revealed" : ""} ${!revealed && (ph !== "ask" || mine != null) ? "locked" : ""}" id="opts" ${ph === "wait" ? "hidden" : ""}>${optsHtml(q, revealed, revealed ? d.vo || [] : null, nP)}</div>
+      ${ph === "ask" || ph === "spin" ? `<div class="answered" id="answered">${answeredHtml(d)}</div>` : ""}
+      <div id="below">${below}</div>`;
+  }
+  function remoteResults(d) {
+    const names = d.names || [], res = d.res || {};
+    if (!names.length) return "";
+    const win = (d.win && d.win.length ? d.win : names.filter((p) => res[p] && res[p][0]));
+    const lost = names.filter((p) => res[p] && res[p][3] && !res[p][0]);
+    return `<section class="panel"><div class="row" style="justify-content:space-between"><b>${win.length ? `${win.length} מתוך ${names.length} צדקו` : "אף אחד לא צדק"}</b>${win.length > 1 ? `<span class="small dim">⚡ הכי מהיר: ${esc(win[0])}</span>` : ""}</div>
+      ${win.length ? `<div class="chips" id="winners">${win.map((p) => `<span class="chip on" data-p="${esc(p)}">${res[p] && res[p][3] ? "🎲 " : ""}${esc(p)}&nbsp;<span class="small">+${n((res[p] || [])[1] || 0)}</span></span>`).join("")}</div>` : ""}${lost.length ? `<div class="chips" id="losers">${lost.map((p) => `<span class="chip lost">💥 ${esc(p)} הימר ונפל&nbsp;<span class="small">-${BET_LOSS}</span></span>`).join("")}</div>` : ""}</section>`;
+  }
+  function bindMirror(d) {
+    const q = d.q || { type: d.kind, options: d.opts || [] };
+    const opts = document.getElementById("opts"), bubble = document.getElementById("bubble");
+    const mine = S.pick && S.pick.k === R.askKey ? S.pick.c : null;
+    if (opts && mine != null && d.ph !== "reveal") opts.children[mine]?.classList.add("mine");
+    if (d.ph === "ask" || d.ph === "spin") { R.whoInit = false; markWho(d); }
+    if (d.ph === "ask") {
+      if (bubble && mine == null) words(bubble);
+      if (mine == null) [...opts.children].forEach((b, i) => anim(b, [{ opacity: 0, transform: "scale(.7) translateY(20px)" }, { opacity: 1, transform: "none" }], { duration: 320, delay: 120 + i * 60, easing: EASE.pop, fill: "backwards" }));
+      bindPad(d);
+    }
+    if (d.ph === "reveal") {
+      if (opts && d.ans >= 0 && !opts.querySelector(".win")) opts.children[d.ans]?.classList.add("win");
+      choreo(q);
+      opts.querySelectorAll(".votes").forEach((v, i) => { const k = +v.dataset.k || 0; v.style.transform = `scaleX(${k})`; anim(v, [{ transform: "scaleX(0)" }, { transform: `scaleX(${k})` }], { duration: 700, delay: 450 + i * 70, easing: EASE.out, fill: "backwards" }); });
+      [...app.querySelectorAll("#winners .chip")].forEach((c, i) => { if (!RM) c.style.opacity = "0"; later(() => { c.style.opacity = ""; anim(c, [{ transform: "scale(.3)", opacity: 0 }, { transform: "scale(1.12)", opacity: 1, offset: .6 }, { transform: "none", opacity: 1 }], { duration: 380, easing: EASE.out }); SFX.coin(i); }, (RM ? 0 : 1150) + i * 280); });
+      const box = document.getElementById("mres"), r = (d.res || {})[S.rname];
+      if (box) {
+        if (!RM) box.style.opacity = "0";
+        later(() => {
+          box.style.opacity = "";
+          anim(box, [{ transform: "scale(2) rotate(-6deg)", opacity: 0 }, { transform: "scale(.95)", opacity: 1, offset: .6 }, { transform: "none", opacity: 1 }], { duration: 480, easing: EASE.out });
+          if (r && r[0]) { buzz([40, 30, 80]); const c = center(box); confetti(60, c.x, c.y, .6); } else { SFX.wrong(); buzz([80, 60, 120]); shake(box, 10); }
+        }, RM ? 0 : 900);
+      }
+    }
+  }
+  // the name in the bubble spins like a slot machine at the same moment as on the main screen
+  function remoteSpin(d) {
+    clearInterval(rtimer);
+    document.getElementById("opts")?.classList.add("locked");
+    document.getElementById("rtimer")?.setAttribute("hidden", "");
+    document.body.classList.remove("hurry"); document.querySelector(".tnum")?.remove();
+    const lk = document.getElementById("rlock"); if (lk) lk.textContent = "חושפים…";
+    document.getElementById("bet")?.remove();
+    markWho(d); mood(document.getElementById("pb"), "shock");
+    const snd = document.querySelector("#bubble .sender.hidden-name"), names = (d.spin || []).filter(Boolean);
+    if (!snd || !names.length || RM) { SFX.drum(.5); return; }
+    snd.classList.remove("hidden-name"); snd.classList.add("spin");
+    let t = 80;
+    for (let i = 0; i < 12; i++) { const nm = names[i % names.length]; t += 38 + i * i * 1.3; later(() => { snd.textContent = nm; snd.style.color = colorOf(nm); SFX.tick(); }, t); }
+    SFX.drum(t / 1000 + .1); t += 200;
+    later(() => { snd.classList.remove("spin"); snd.textContent = d.fin || "?"; snd.style.color = colorOf(d.fin || ""); SFX.slam(); buzz(30); anim(snd, [{ transform: "scale(2.2) rotate(-6deg)" }, { transform: "scale(1)" }], { duration: 380, easing: EASE.pop }); shake(document.getElementById("bubble"), 6); addTrauma(.45); }, t);
   }
   const namesHtml = (d) => (d.names || []).map((p) => `<span class="lp" ${p === S.rname ? `style="border-color:var(--accent)"` : ""}>${avatar(p)}<span>${esc(p)}${p === S.rname ? " (אתה)" : ""}</span></span>`).join("");
   const poolChips = () => { const d = R.st, taken = new Set(d?.names || []); return (d?.pool || []).filter((p) => !taken.has(p)).map((p) => `<button class="chip" data-p="${esc(p)}">${esc(p)}</button>`).join(""); };
@@ -2960,13 +3192,22 @@ ${samples}
   function remoteUpdate() {
     const d = R.st; if (!d) return;
     if (!S.rname) { const box = document.getElementById("rpool"); if (box) { const h = poolChips(); if (box.innerHTML !== h) { box.innerHTML = h; bindPool(); } } return; }
-    if (d.ph === "lobby") { const box = document.getElementById("rnames"); if (box) { const h = namesHtml(d); if (box.innerHTML !== h) box.innerHTML = h; } }
-    if (d.ph === "ask") { const el = document.getElementById("rdone"); if (el) el.textContent = `${d.done | 0}/${(d.names || []).length} ענו`; }
+    if (d.ph === "lobby") {
+      const box = document.getElementById("rnames"); if (box) { const h = namesHtml(d); if (box.innerHTML !== h) box.innerHTML = h; }
+      const w = document.getElementById("rwait"); if (w) w.textContent = lobbyWait(d).replace(/&quot;|&amp;|&lt;|&gt;|&#39;/g, (m) => ({ "&quot;": '"', "&amp;": "&", "&lt;": "<", "&gt;": ">", "&#39;": "'" })[m]);
+    }
+    if (PLAY_PH.includes(d.ph)) {
+      const strip = document.getElementById("strip"); if (strip) { const h = stripFrom(d); if (strip.innerHTML !== h) strip.innerHTML = h; }
+      if (d.ph === "ask" || d.ph === "spin") {
+        const box = document.getElementById("answered");
+        // someone joined mid-question: add their face
+        if (box && box.querySelectorAll(".av").length !== (d.names || []).length) { box.innerHTML = answeredHtml(d); R.whoInit = false; }
+        markWho(d);
+      }
+    }
   }
   function bindPad(d) {
-    const pad = document.getElementById("pad"), bar = document.getElementById("rbar"), total = Math.max(1, (+d.left || 1)), key = R.askKey;
-    words(document.getElementById("rq"));
-    if (!pad.classList.contains("locked")) [...pad.children].forEach((b, i) => anim(b, [{ opacity: 0, transform: "scale(.7) translateY(20px)" }, { opacity: 1, transform: "none" }], { duration: 320, delay: 120 + i * 60, easing: EASE.pop, fill: "backwards" }));
+    const pad = document.getElementById("opts"), bar = document.getElementById("rbar"), tbox = document.getElementById("rtimer"), total = Math.max(1, (+d.left || 1)), key = R.askKey;
     const bb = document.getElementById("bet");
     if (bb) bb.onclick = () => {
       if (pad.classList.contains("locked")) return;
@@ -2978,17 +3219,23 @@ ${samples}
       const left = Math.max(0, R.deadline - Date.now()), k = Math.min(1, left / Math.max(total, TIMER_MULTI * 1000));
       if (bar) bar.style.transform = `scaleX(${k})`;
       const sec = Math.ceil(left / 1000);
-      if (sec <= 3 && sec < lastSec && sec > 0 && !pad.classList.contains("locked")) { SFX.tick(); buzz(10); }
+      if (sec <= 5 && sec < lastSec && sec > 0) {
+        if (!pad.classList.contains("locked")) { SFX.tick(); buzz(10); }
+        tbox?.classList.add("hurry");
+        if (sec <= 3) { document.body.classList.add("hurry"); mood(document.getElementById("pb"), "sweat"); }
+        let tn = document.querySelector(".tnum"); if (!tn) { tn = document.createElement("div"); tn.className = "tnum"; tn.setAttribute("aria-hidden", "true"); document.body.append(tn); }
+        tn.textContent = sec; anim(tn, [{ transform: "scale(1.5)", opacity: 0 }, { transform: "scale(1)", opacity: .16 }], { duration: 300, easing: EASE.out });
+      }
       lastSec = sec;
-      if (left <= 0) { clearInterval(rtimer); if (!pad.classList.contains("locked")) { pad.classList.add("locked"); document.getElementById("rlock").textContent = "נגמר הזמן"; } }
+      if (left <= 0) { clearInterval(rtimer); document.body.classList.remove("hurry"); document.querySelector(".tnum")?.remove(); if (!pad.classList.contains("locked")) { pad.classList.add("locked"); document.getElementById("rlock").textContent = "נגמר הזמן"; if (bb) bb.disabled = true; } }
     };
     tick(); rtimer = setInterval(tick, 100);
-    pad.querySelectorAll(".opt").forEach((b) => (b.onclick = () => {
+    pad.querySelectorAll(".opt").forEach((b) => (b.onpointerdown = () => { if (!pad.classList.contains("locked")) SFX.tap(); }, b.onclick = () => {
       if (pad.classList.contains("locked") || R.askKey !== key || R.deadline <= Date.now()) return;
       const c = +b.dataset.i; audio();
       S.pick = { k: key, c };
       const bet = !!(S.bet && S.bet.k === key); if (room) room.presence({ p: { c: S.rc, n: S.rname, a: [d.ep, d.idx, c, bet ? 1 : 0] } }).catch(() => {});
-      const bb = document.getElementById("bet"); if (bb) bb.disabled = true;
+      if (bb) { bb.disabled = true; bb.querySelector("b").textContent = `✓ ענית${bet ? " · 🎲 הימרת" : ""}`; }
       pad.classList.add("locked"); b.classList.add("mine");
       SFX.pop(); buzz(30);
       anim(b, [{ transform: "scale(.9)" }, { transform: "scale(1.08)", offset: .5 }, { transform: "scale(1.03)" }], { duration: 360, easing: EASE.pop });
