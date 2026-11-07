@@ -79,7 +79,9 @@ function firebaseNet(cfg: Record<string, string>): Net {
     mode: "firebase",
     bump(key) {
       if (!/^[a-z_]{1,24}$/.test(key)) return;
-      uid().then(() => Promise.all([`stats/total/${key}`, `stats/days/${today()}/${key}`].map((p) => runTransaction(ref(db, p), (v) => (typeof v === "number" ? v : 0) + 1)))).catch(() => {});
+      const hh = String(new Date().getHours()).padStart(2, "0"), paths = [`stats/total/${key}`, `stats/days/${today()}/${key}`];
+      if (!key.startsWith("r_")) paths.push(`stats/days/${today()}/h${hh}_${key}`);
+      uid().then(() => Promise.all(paths.map((p) => runTransaction(ref(db, p), (v) => (typeof v === "number" ? v : 0) + 1)))).catch(() => {});
     },
     async readStats() { try { const s = await get(ref(db, "stats")); return (s.val() || { total: {}, days: {} }) as Stats; } catch { return null; } },
     async host(code) {

@@ -37,24 +37,44 @@ h1 span { color: var(--yellow); }
 .row b { font-variant-numeric: tabular-nums; text-align: left; }
 .cards .card:first-child { grid-column: 1 / -1; }
 button { font: inherit; background: transparent; color: var(--text); border: 2px solid var(--line); border-radius: 12px; padding: 8px 14px; cursor: pointer; justify-self: start; }
+.filters { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; display: grid; gap: 12px; }
+.quick { display: flex; flex-wrap: wrap; gap: 8px; }
+.quick button { padding: 6px 12px; border-radius: 99px; font-size: .9rem; }
+.quick button.on { background: var(--yellow); color: #17112e; border-color: var(--yellow); }
+.range { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+.range label { display: grid; gap: 4px; font-size: .85rem; color: var(--dim); }
+.range input, .range select { font: inherit; background: #221a44; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 8px; min-height: 40px; color-scheme: dark; }
+.bars.h24 { direction: ltr; grid-template-columns: repeat(24, minmax(0,1fr)); gap: 2px; }
 </style>
 </head>
 <body>
 <main>
   <h1>מי אמר <span>את זה?</span> · נתונים</h1>
   <p class="dim" id="upd">טוען…</p>
+  <section class="filters">
+    <div class="quick" id="quick"><button data-q="today">היום</button><button data-q="yday">אתמול</button><button data-q="7">7 ימים</button><button data-q="since">מאז 4.11</button><button data-q="all">הכל</button></div>
+    <div class="range">
+      <label>מתאריך<input type="date" id="dFrom"></label><label>עד תאריך<input type="date" id="dTo"></label>
+      <label>משעה<select id="hFrom"></select></label><label>עד שעה<select id="hTo"></select></label>
+    </div>
+    <p class="dim" id="note" style="margin:0"></p>
+  </section>
   <div class="cards" id="cards"></div>
   <section class="chart">
-    <b>משחקים ושחקנים ב-14 הימים האחרונים</b>
+    <b id="daysTitle">משחקים ושחקנים לפי יום</b>
     <div class="legend"><span><i style="background:var(--pink)"></i>משחקים שהתחילו</span><span>המספר מעל: שחקנים שהצטרפו</span></div>
     <div class="bars" id="bars"></div>
+  </section>
+  <section class="chart">
+    <b>כניסות לפי שעה</b>
+    <div class="legend"><span><i style="background:var(--sky)"></i>כניסות לאתר</span><span>המספר מעל: משחקים שהתחילו</span></div>
+    <div class="bars h24" id="hours"></div>
   </section>
   <section class="chart"><b>איזה שאלות אהבו (👍 מתוך כל הדירוגים)</b><div class="rows" id="rates"></div></section>
   <section class="chart"><b>מאיפה הגיעו</b><div class="rows" id="src"></div></section>
   <section class="chart"><b>מכשירים</b><div class="rows" id="dev"></div></section>
   <section class="chart"><b>מדינות (לפי אזור הזמן בטלפון)</b><div class="rows" id="geo"></div></section>
   <button id="again">רענון</button>
-  <p class="dim" id="since" style="font-weight:700"></p>
   <p class="dim">הנתונים נספרים מרגע שהמונה הופעל. לא נשמר כאן שום דבר מהצ'אטים ושום פרט מזהה, רק מספרים. טיפ: בביו של טיקטוק שימו mi-amar.pages.dev/?ref=tiktok ובאינסטגרם ?ref=instagram, כדי לראות בדיוק מאיפה כל אחד הגיע.</p>
 </main>
 <script src="config.js"></script>
@@ -65,23 +85,54 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
   const n = (x) => Number(x || 0).toLocaleString("he-IL");
   const key = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const LABELS = [["visit", "כניסות לאתר", ""], ["started", "משחקים שהתחילו", "כל המצבים"], ["players", "שחקנים שהצטרפו מטלפון", ""], ["finished", "משחקים שהגיעו עד הסוף", ""], ["games", "לובים שנפתחו", "מצב טלפונים"]];
+  const $ = (id) => document.getElementById(id), pad = (h) => String(h).padStart(2, "0"), HOURLY_SINCE = "2026-11-07";
+  ["hFrom", "hTo"].forEach((id, j) => { $(id).innerHTML = Array.from({ length: 24 }, (_, h) => `<option value="${h}">${pad(h)}:${j ? "59" : "00"}</option>`).join(""); });
+  $("hTo").value = 23;
+  let S = null, Q = "since";
+  const setQuick = (q) => { Q = q; const d = new Date(), y = new Date(); y.setDate(y.getDate() - 1); const w = new Date(); w.setDate(w.getDate() - 6);
+    const from = { today: key(d), yday: key(y), 7: key(w), since: "2026-11-04", all: "2020-01-01" }[q], to = q === "yday" ? key(y) : key(d);
+    $("dFrom").value = from; $("dTo").value = to; $("hFrom").value = 0; $("hTo").value = 23; render(); };
+  $("quick").onclick = (e) => { const q = e.target.dataset && e.target.dataset.q; if (q) setQuick(q); };
+  ["dFrom", "dTo", "hFrom", "hTo"].forEach((id) => { $(id).onchange = () => { Q = ""; render(); }; });
   async function load() {
-    const s = await net.readStats();
-    if (!s) { document.getElementById("upd").innerHTML = '<span class="err">לא הצלחתי לקרוא את הנתונים.</span>'; return; }
-    const days = s.days || {}, td = days[key(new Date())] || {}, ALL = /[?&]all=1/.test(location.search), SINCE = "2026-11-04";
-    let t = s.total || {};
-    if (!ALL) { const sum = {}; Object.entries(days).forEach(([d, o]) => { if (d >= SINCE) Object.entries(o).forEach(([k, v]) => { if (!k.startsWith("r_")) sum[k] = (sum[k] || 0) + (v || 0); }); });
-      Object.entries(s.total || {}).forEach(([k, v]) => { if (k.startsWith("r_")) sum[k] = v; }); t = sum; }
-    document.getElementById("since").innerHTML = ALL ? 'מציג את כל הזמנים · <a href="stats.html">רק מאז 4.11</a>' : 'סופר מאז 4.11 (העלאת הסרטונים). הדירוגים 👍/👎 נשארים מכל הזמנים · <a href="stats.html?all=1">הצג את כל הזמנים</a>';
+    S = await net.readStats();
+    if (!S) { $("upd").innerHTML = '<span class="err">לא הצלחתי לקרוא את הנתונים.</span>'; return; }
+    if (!$("dFrom").value) setQuick("since"); else render();
+    $("upd").textContent = "עודכן עכשיו · " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+  }
+  function render() {
+    if (!S) return;
+    document.querySelectorAll("#quick button").forEach((b) => b.classList.toggle("on", b.dataset.q === Q));
+    const s = S, days = s.days || {}, td = days[key(new Date())] || {};
+    let from = $("dFrom").value || "2020-01-01", to = $("dTo").value || key(new Date()); if (from > to) [from, to] = [to, from];
+    const hf = +$("hFrom").value, ht = +$("hTo").value, allHours = hf === 0 && ht === 23;
+    const inH = (h) => (hf <= ht ? h >= hf && h <= ht : h >= hf || h <= ht);
+    const t = {}, hourVisits = Array(24).fill(0), hourGames = Array(24).fill(0);
+    const isH = /^h(\d\d)_(.+)$/;
+    for (const [d, o] of Object.entries(days)) {
+      if (d < from || d > to) continue;
+      for (const [k, v] of Object.entries(o)) {
+        const m = isH.exec(k);
+        if (m) { const h = +m[1]; if (m[2] === "visit") hourVisits[h] += v || 0; if (m[2] === "started" || m[2] === "single") hourGames[h] += v || 0; if (!allHours && inH(h)) t[m[2]] = (t[m[2]] || 0) + (v || 0); }
+        else if (allHours && !k.startsWith("r_")) t[k] = (t[k] || 0) + (v || 0);
+      }
+    }
+    Object.entries(s.total || {}).forEach(([k, v]) => { if (k.startsWith("r_")) t[k] = v; });
+    const fmt = (x) => x.split("-").reverse().slice(0, 2).join(".");
+    $("note").textContent = (from === to ? `יום ${fmt(from)}` : `${fmt(from)} עד ${fmt(to)}`) + (allHours ? " · כל השעות" : ` · בין ${pad(hf)}:00 ל-${pad(ht)}:59`) + ". נתונים לפי שעה נאספים מ-7.11. הדירוגים 👍/👎 תמיד מכל הזמנים.";
     const started = (o) => (o.started || 0) + (o.single || 0);
-    document.getElementById("cards").innerHTML = LABELS.map(([k, label, note]) => {
+    $("cards").innerHTML = LABELS.map(([k, label, note]) => {
       const total = k === "started" ? started(t) : t[k], today = k === "started" ? started(td) : td[k];
       return `<div class="card"><b>${n(total)}</b><span>${label}${note ? ` · ${note}` : ""}</span><small>היום: ${n(today)}</small></div>`;
     }).join("");
-    const list = [];
-    for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); const o = days[key(d)] || {}; list.push({ d, g: started(o), p: o.players || 0 }); }
+    const list = []; const end = new Date(to + "T12:00"), start = new Date(from + "T12:00");
+    for (let d = new Date(Math.max(start, end - 30 * 864e5)); d <= end; d.setDate(d.getDate() + 1)) { const o = days[key(d)] || {}; list.push({ d: new Date(d), g: started(o), p: o.players || 0 }); }
+    $("daysTitle").textContent = `משחקים ושחקנים לפי יום (${list.length} ימים)`;
+    $("bars").style.gridTemplateColumns = `repeat(${list.length}, minmax(0,1fr))`;
     const max = Math.max(1, ...list.map((x) => x.g));
-    document.getElementById("bars").innerHTML = list.map((x) => `<div class="bar" title="${x.d.toLocaleDateString("he-IL")}"><u>${x.p ? n(x.p) : ""}</u><i style="height:${(x.g / max) * 120}px"></i><em>${x.d.getDate()}</em></div>`).join("");
+    $("bars").innerHTML = list.map((x) => `<div class="bar" title="${x.d.toLocaleDateString("he-IL")}"><u>${x.p ? n(x.p) : ""}</u><i style="height:${(x.g / max) * 120}px"></i><em>${x.d.getDate()}</em></div>`).join("");
+    const hmax = Math.max(1, ...hourVisits);
+    $("hours").innerHTML = hourVisits.map((v, h) => `<div class="bar" title="${pad(h)}:00 · ${v} כניסות · ${hourGames[h]} משחקים" style="opacity:${inH(h) ? 1 : .3}"><u>${hourGames[h] || ""}</u><i style="height:${(v / hmax) * 120}px;background:var(--sky)"></i><em>${h % 3 ? "" : pad(h)}</em></div>`).join("");
     const NAMES = { src_tiktok: "טיקטוק", src_instagram: "אינסטגרם", src_whatsapp: "וואטסאפ", src_facebook: "פייסבוק", src_google: "גוגל", src_x: "X / טוויטר", src_qr: "QR / קישור משחק", src_direct: "ישירות", src_other: "אתרים אחרים",
       dev_ios: "אייפון", dev_android: "אנדרואיד", dev_desktop: "מחשב", geo_il: "ישראל", geo_am: "אמריקה", geo_eu: "אירופה", geo_other: "אחר", geo_unknown: "לא ידוע" };
     const rows = (prefix, el) => {
@@ -95,7 +146,6 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
       const r = {}; for (const [k, v] of Object.entries(s.total || {})) { const m = /^r_(.+)_(up|down)$/.exec(k); if (m) { (r[m[1]] ||= { up: 0, down: 0 })[m[2]] = v; } }
       const list = Object.entries(r).map(([k, x]) => [k, x.up, x.up + x.down]).sort((a, b) => b[1] / b[2] - a[1] / a[2]);
       document.getElementById("rates").innerHTML = list.length ? list.map(([k, up, all]) => `<div class="row"><span>${KN[k] || k}</span><span class="track"><i style="width:${(up / all) * 100}%"></i></span><b>${Math.round((up / all) * 100)}% · ${n(all)}</b></div>`).join("") : '<p class="dim">עוד אין דירוגים. הם מופיעים אחרי שמשחקים ולוחצים 👍/👎 בסוף שאלה</p>'; }
-    document.getElementById("upd").textContent = "עודכן עכשיו · " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
   }
   document.getElementById("again").onclick = load;
   load();
