@@ -45,12 +45,36 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
 .range label { display: grid; gap: 4px; font-size: .85rem; color: var(--dim); }
 .range input, .range select { font: inherit; background: #221a44; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 8px; min-height: 40px; color-scheme: dark; }
 .bars.h24 { direction: ltr; grid-template-columns: repeat(24, minmax(0,1fr)); gap: 2px; }
+.live { background: linear-gradient(135deg, rgba(63,224,176,.16), rgba(95,180,255,.10)); border: 1px solid #2f7a68; border-radius: 18px; padding: 14px 16px; display: grid; gap: 10px; }
+.live h2 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 0 rgba(63,224,176,.7); animation: pulse 1.6s infinite; }
+@keyframes pulse { 70% { box-shadow: 0 0 0 10px rgba(63,224,176,0); } 100% { box-shadow: 0 0 0 0 rgba(63,224,176,0); } }
+@media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+.livegrid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+.livegrid div { background: rgba(0,0,0,.18); border-radius: 12px; padding: 10px 12px; display: grid; }
+.livegrid b { font-family: Karantina, sans-serif; font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.livegrid span { color: var(--dim); font-size: .82rem; }
+.livegrid .big { grid-column: 1 / -1; }
+.ins { display: grid; gap: 8px; }
+.ins div { display: flex; justify-content: space-between; gap: 10px; font-size: .92rem; border-bottom: 1px dashed var(--line); padding-bottom: 6px; }
+.ins b { font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
 <main>
   <h1>מי אמר <span>את זה?</span> · נתונים</h1>
   <p class="dim" id="upd">טוען…</p>
+  <section class="live" aria-live="polite">
+    <h2><span class="dot"></span>עכשיו, בזמן אמת</h2>
+    <div class="livegrid">
+      <div class="big"><b id="lvPeople">–</b><span>אנשים משחקים עכשיו</span></div>
+      <div><b id="lvGames">–</b><span>משחקים פעילים</span></div>
+      <div><b id="lvLobby">–</b><span>לובים שמחכים לשחקנים</span></div>
+      <div><b id="lvPhones">–</b><span>טלפונים מחוברים למשחק</span></div>
+      <div><b id="lvSite">–</b><span>מסתכלים באתר (עוד לא משחקים)</span></div>
+    </div>
+    <p class="dim" id="lvNote" style="margin:0">מתחבר…</p>
+  </section>
   <section class="filters">
     <div class="quick" id="quick"><button data-q="today">היום</button><button data-q="yday">אתמול</button><button data-q="7">7 ימים</button><button data-q="since">מאז 4.11</button><button data-q="all">הכל</button></div>
     <div class="range">
@@ -70,6 +94,7 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
     <div class="legend"><span><i style="background:var(--sky)"></i>כניסות לאתר</span><span>המספר מעל: משחקים שהתחילו</span></div>
     <div class="bars h24" id="hours"></div>
   </section>
+  <section class="chart"><b>תובנות לטווח שבחרת</b><div class="ins" id="ins"></div></section>
   <section class="chart"><b>איזה שאלות אהבו (👍 מתוך כל הדירוגים)</b><div class="rows" id="rates"></div></section>
   <section class="chart"><b>מאיפה הגיעו</b><div class="rows" id="src"></div></section>
   <section class="chart"><b>מכשירים</b><div class="rows" id="dev"></div></section>
@@ -133,6 +158,19 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
     $("bars").innerHTML = list.map((x) => `<div class="bar" title="${x.d.toLocaleDateString("he-IL")}"><u>${x.p ? n(x.p) : ""}</u><i style="height:${(x.g / max) * 120}px"></i><em>${x.d.getDate()}</em></div>`).join("");
     const hmax = Math.max(1, ...hourVisits);
     $("hours").innerHTML = hourVisits.map((v, h) => `<div class="bar" title="${pad(h)}:00 · ${v} כניסות · ${hourGames[h]} משחקים" style="opacity:${inH(h) ? 1 : .3}"><u>${hourGames[h] || ""}</u><i style="height:${(v / hmax) * 120}px;background:var(--sky)"></i><em>${h % 3 ? "" : pad(h)}</em></div>`).join("");
+    { const v = t.visit || 0, st = started(t), fin = t.finished || 0, lob = t.games || 0, pl = t.players || 0, pct = (a, b) => (b ? Math.round((a / b) * 100) + "%" : "–");
+      const peakH = hourVisits.indexOf(Math.max(...hourVisits)), hasH = hourVisits.some((x) => x);
+      const y = new Date(); y.setDate(y.getDate() - 1); const yd = days[key(y)] || {};
+      const srcs = Object.entries(t).filter(([k]) => k.startsWith("src_")).sort((a, b) => b[1] - a[1]);
+      const items = [
+        ["מתוך מי שנכנס, כמה התחיל לשחק", pct(st, v)],
+        ["מתוך מי שהתחיל, כמה סיים משחק", pct(fin, st)],
+        ["ממוצע שחקנים בכל לובי (מצב טלפונים)", lob ? (pl / lob).toFixed(1) : "–"],
+        ["כניסות היום לעומת אתמול", `${n(td.visit)} / ${n(yd.visit)}`],
+        ["השעה הכי עמוסה", hasH ? `${pad(peakH)}:00` : "–"],
+        ["מקור התנועה המוביל", srcs.length ? (({ src_tiktok: "טיקטוק", src_instagram: "אינסטגרם", src_whatsapp: "וואטסאפ", src_direct: "ישירות", src_google: "גוגל", src_qr: "QR / קישור משחק" })[srcs[0][0]] || srcs[0][0].slice(4)) + ` (${n(srcs[0][1])})` : "–"],
+      ];
+      $("ins").innerHTML = items.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join(""); }
     const NAMES = { src_tiktok: "טיקטוק", src_instagram: "אינסטגרם", src_whatsapp: "וואטסאפ", src_facebook: "פייסבוק", src_google: "גוגל", src_x: "X / טוויטר", src_qr: "QR / קישור משחק", src_direct: "ישירות", src_other: "אתרים אחרים",
       dev_ios: "אייפון", dev_android: "אנדרואיד", dev_desktop: "מחשב", geo_il: "ישראל", geo_am: "אמריקה", geo_eu: "אירופה", geo_other: "אחר", geo_unknown: "לא ידוע" };
     const rows = (prefix, el) => {
@@ -147,6 +185,20 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
       const list = Object.entries(r).map(([k, x]) => [k, x.up, x.up + x.down]).sort((a, b) => b[1] / b[2] - a[1] / a[2]);
       document.getElementById("rates").innerHTML = list.length ? list.map(([k, up, all]) => `<div class="row"><span>${KN[k] || k}</span><span class="track"><i style="width:${(up / all) * 100}%"></i></span><b>${Math.round((up / all) * 100)}% · ${n(all)}</b></div>`).join("") : '<p class="dim">עוד אין דירוגים. הם מופיעים אחרי שמשחקים ולוחצים 👍/👎 בסוף שאלה</p>'; }
   }
+
+  // live: who is here right now (presence entries refreshed every minute while the page is open)
+  { let rows = [];
+    const draw = () => {
+      const now = Date.now(), fresh = rows.filter((r) => now - r.t < 150000);
+      const c = (st) => fresh.filter((r) => r.s === st);
+      const single = c("single"), host = c("host"), phones = c("phone");
+      const people = single.reduce((a, r) => a + (r.n || 1), 0) + host.length + phones.length;
+      $("lvPeople").textContent = n(people); $("lvGames").textContent = n(single.length + host.length);
+      $("lvLobby").textContent = n(c("lobby").length); $("lvPhones").textContent = n(phones.length); $("lvSite").textContent = n(c("site").length);
+      $("lvNote").textContent = `סה"כ ${n(fresh.length)} מכשירים באתר כרגע · מתעדכן לבד · ${new Date().toLocaleTimeString("he-IL")}`;
+    };
+    net.watchLive((r) => { rows = r; draw(); });
+    setInterval(draw, 5000); }
   document.getElementById("again").onclick = load;
   load();
 })();

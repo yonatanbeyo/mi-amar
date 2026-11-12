@@ -40,6 +40,16 @@
           }
         }
       }
+    },
+    "live": {
+      ".read": true,
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['s','n','t']) && newData.child('s').isString() && newData.child('s').val().length < 12 && newData.child('n').isNumber() && newData.child('n').val() >= 1 && newData.child('n').val() <= 30 && newData.child('t').val() <= now + 60000",
+        "$other": {
+          ".validate": "$other === 's' || $other === 'n' || $other === 't'"
+        }
+      }
     }
   }
 }

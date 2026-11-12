@@ -23,7 +23,11 @@ export type Stats = { total: Record<string, number>; days: Record<string, Record
 export type Net = { mode: "firebase" | "local"; host(code: string): Promise<GameRoom | null>; join(code: string): Promise<GameRoom | null>;
   /** count an event (games, started, players, finished, single): total + today. Never throws. */
   bump(key: string): void;
-  readStats(): Promise<Stats | null> };
+  readStats(): Promise<Stats | null>;
+  /** live presence: what this device is doing right now (site/lobby/host/single/phone) and how many people are at it */
+  live(state: string, n?: number): void;
+  /** stats page: everyone online right now, updated in real time */
+  watchLive(fn: (rows: { s: string; n: number; t: number }[]) => void): () => void };
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 const mkPeer = (peer: string, presence: Record<string, unknown>, mine: boolean): Peer => ({ peer, presence, isMe: mine, sameTab: mine, kind: "viewer", guest: false, by: null, updatedAt: Date.now() });
@@ -38,6 +42,9 @@ function firebaseNet(cfg: Record<string, string>): Net {
   const auth = getAuth(app), db = getDatabase(app);
   let uidP: Promise<string> | null = null;
   const uid = () => (uidP ||= signInAnonymously(auth).then((c) => c.user.uid));
+  let liveState = "", liveN = 1, liveKey = "", liveArmed = false, liveTimer: ReturnType<typeof setInterval> | null = null;
+  const pushLive = () => { uid().then((me) => { const r = ref(db, `live/${me}`); if (!liveArmed) { liveArmed = true; onDisconnect(r).remove().catch(() => {}); } return set(r, { s: liveState, n: Math.max(1, Math.min(30, liveN | 0)), t: serverTimestamp() }); }).catch(() => {});
+    if (!liveTimer) liveTimer = setInterval(() => { if (liveState && document.visibilityState === "visible") pushLive(); }, 60000); };
 
   function wrap(code: string, me: string, isHost: boolean): GameRoom {
     const base = `games/${code}`;
@@ -82,6 +89,15 @@ function firebaseNet(cfg: Record<string, string>): Net {
       const hh = String(new Date().getHours()).padStart(2, "0"), paths = [`stats/total/${key}`, `stats/days/${today()}/${key}`];
       if (!key.startsWith("r_")) paths.push(`stats/days/${today()}/h${hh}_${key}`);
       uid().then(() => Promise.all(paths.map((p) => runTransaction(ref(db, p), (v) => (typeof v === "number" ? v : 0) + 1)))).catch(() => {});
+    },
+    live(state, n = 1) {
+      liveState = state; liveN = n;
+      const k = state + ":" + n;
+      if (k === liveKey) return;
+      liveKey = k; pushLive();
+    },
+    watchLive(fn) {
+      return onValue(ref(db, "live"), (snap) => { const v = snap.val() || {}; fn(Object.values(v).filter((x: any) => x && typeof x.t === "number") as { s: string; n: number; t: number }[]); }, () => fn([]));
     },
     async readStats() { try { const s = await get(ref(db, "stats")); return (s.val() || { total: {}, days: {} }) as Stats; } catch { return null; } },
     async host(code) {
@@ -133,6 +149,8 @@ function localNet(): Net {
   return {
     mode: "local",
     bump() {},
+    live() {},
+    watchLive(fn) { fn([]); return () => {}; },
     async readStats() { return null; },
     async host(code) { hosting.add(code); return wrap(code, true); },
     async join(code) {

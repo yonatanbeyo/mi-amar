@@ -2276,6 +2276,7 @@ ${samples}
     if (S.enter) { S.enter = false; enter(); }
     if (S.multi) hostEmit();
     snapshot();
+    try { const sc = S.screen; NET.live(sc === "remote" ? "phone" : sc === "lobby" ? "lobby" : (sc === "play" || sc === "mid" || sc === "end") ? (S.multi ? "host" : "single") : "site", sc === "play" || sc === "mid" ? Math.max(1, (S.players || []).length) : 1); } catch {}
   }
   const muteBtn = () => `<span class="row" style="gap:8px;flex-wrap:nowrap">${S.screen !== "remote" ? musicBtn() : ""}<button class="icon-btn" id="mute" aria-label="${muted ? "להפעיל צליל" : "להשתיק"}">${muted ? ICON_MUTE : ICON_SPK}</button></span>`;
   const ICON_SPK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>', ICON_MUTE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
