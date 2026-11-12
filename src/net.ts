@@ -27,7 +27,7 @@ export type Net = { mode: "firebase" | "local"; host(code: string): Promise<Game
   /** live presence: what this device is doing right now (site/lobby/host/single/phone) and how many people are at it */
   live(state: string, n?: number): void;
   /** stats page: everyone online right now, updated in real time */
-  watchLive(fn: (rows: { s: string; n: number; t: number }[]) => void): () => void };
+  watchLive(fn: (rows: { s: string; n: number; t: number }[], denied?: boolean) => void): () => void };
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 const mkPeer = (peer: string, presence: Record<string, unknown>, mine: boolean): Peer => ({ peer, presence, isMe: mine, sameTab: mine, kind: "viewer", guest: false, by: null, updatedAt: Date.now() });
@@ -97,7 +97,7 @@ function firebaseNet(cfg: Record<string, string>): Net {
       liveKey = k; pushLive();
     },
     watchLive(fn) {
-      return onValue(ref(db, "live"), (snap) => { const v = snap.val() || {}; fn(Object.values(v).filter((x: any) => x && typeof x.t === "number") as { s: string; n: number; t: number }[]); }, () => fn([]));
+      return onValue(ref(db, "live"), (snap) => { const v = snap.val() || {}; fn(Object.values(v).filter((x: any) => x && typeof x.t === "number") as { s: string; n: number; t: number }[]); }, () => fn([], true));
     },
     async readStats() { try { const s = await get(ref(db, "stats")); return (s.val() || { total: {}, days: {} }) as Stats; } catch { return null; } },
     async host(code) {

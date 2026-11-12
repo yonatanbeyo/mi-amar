@@ -195,9 +195,11 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
       const people = single.reduce((a, r) => a + (r.n || 1), 0) + host.length + phones.length;
       $("lvPeople").textContent = n(people); $("lvGames").textContent = n(single.length + host.length);
       $("lvLobby").textContent = n(c("lobby").length); $("lvPhones").textContent = n(phones.length); $("lvSite").textContent = n(c("site").length);
+      if (denied) { $("lvNote").textContent = "⚠️ Firebase חוסם את המונה: החוקים החדשים עוד לא נשמרו (Realtime Database ← Rules ← Publish)."; return; }
       $("lvNote").textContent = `סה"כ ${n(fresh.length)} מכשירים באתר כרגע · מתעדכן לבד · ${new Date().toLocaleTimeString("he-IL")}`;
     };
-    net.watchLive((r) => { rows = r; draw(); });
+    let denied = false;
+    net.watchLive((r, d) => { rows = r; denied = !!d; draw(); });
     setInterval(draw, 5000); }
   document.getElementById("again").onclick = load;
   load();
