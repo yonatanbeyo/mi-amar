@@ -74,6 +74,7 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
       <div><b id="lvSite">–</b><span>מסתכלים באתר (עוד לא משחקים)</span></div>
     </div>
     <p class="dim" id="lvNote" style="margin:0">מתחבר…</p>
+    <button id="lvTest" type="button">🧪 בדיקה: תספור גם אותי</button>
   </section>
   <section class="filters">
     <div class="quick" id="quick"><button data-q="today">היום</button><button data-q="yday">אתמול</button><button data-q="7">7 ימים</button><button data-q="since">מאז 4.11</button><button data-q="all">הכל</button></div>
@@ -200,7 +201,8 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
     };
     let denied = false;
     net.watchLive((r, d) => { rows = r; denied = !!d; draw(); });
-    setInterval(draw, 5000); }
+    setInterval(draw, 5000);
+    $("lvTest").onclick = () => { net.live("site"); $("lvTest").textContent = "✓ נספרת. תוך כמה שניות \"מסתכלים באתר\" יעלה ב-1"; $("lvTest").disabled = true; }; }
   document.getElementById("again").onclick = load;
   load();
 })();
