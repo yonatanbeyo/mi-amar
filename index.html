@@ -2322,6 +2322,7 @@ ${samples}
       <input type="file" id="file" accept=".zip,.txt,application/zip,text/plain" hidden>
       ${err ? `<p class="err" role="alert">${esc(err)}</p>` : ""}
       <div class="row"><button class="btn alt" id="demo">לנסות עם צ'אט לדוגמה</button></div>
+      ${PREM.showcaseHtml()}
       <section class="how">
         <div class="hw"><b>1</b><strong>מייצאים</strong><span>את הצ'אט מוואטסאפ, בלי מדיה</span></div>
         <div class="hw"><b>2</b><strong>סורקים</strong><span>כל אחד נכנס מהטלפון, בלי אפליקציה</span></div>
@@ -2343,6 +2344,7 @@ ${samples}
     anim(tq, [{ opacity: 0, transform: "rotate(-40deg) scale(2.2)" }, { opacity: 1, transform: "rotate(-4deg) scale(.95)", offset: .7 }, { opacity: 1, transform: "rotate(-8deg)" }], { duration: 700, easing: EASE.out, fill: "backwards", delay: 380 });
     const file = document.getElementById("file");
     document.getElementById("pick").onclick = () => { audio(); file.click(); };
+    { const g = document.getElementById("pmx-go"); if (g) g.onclick = () => { audio(); SFX.tap(); try { NET.bump("pm_home"); } catch {} file.click(); }; }
     file.onchange = async () => {
       const f = file.files[0]; if (!f) return;
       audio();
@@ -2395,6 +2397,7 @@ ${samples}
         <button aria-pressed="${!!S.wantMulti}" data-m="1"><b>כל אחד מהטלפון</b><span class="small dim">השאלות על המסך הזה, כל אחד עונה מהטלפון שלו, והניקוד נספר לבד</span></button>
         <button aria-pressed="${!S.wantMulti}" data-m="0"><b>מסך אחד</b><span class="small dim">כולם צועקים תשובה, ואתם מסמנים מי צדק</span></button>
       </div>` : ""}
+      ${premPanel()}
       <section class="panel">
         <b>מי בקבוצה עכשיו?</b>
         <p class="dim small">רק מי שמסומן יופיע בשאלות ובתשובות. מי שיצא מהקבוצה לא מופיע כאן בכלל${(S.gone || []).length ? ` (${(S.gone || []).map(esc).join(", ")})` : ""}. אפשר לסמן ולבטל בלחיצה.</p>
@@ -2415,7 +2418,6 @@ ${samples}
         <b>סוגי שאלות</b>
         <div class="toggles">${Object.entries(KINDS).map(([k, label]) => `<label class="tog"><input type="checkbox" id="k-${k}" data-k="${k}" ${S.kinds[k] ? "checked" : ""}><span>${label}</span></label>`).join("")}</div>
       </section>
-      ${premPanel()}
       <p class="err" id="setup-err" role="alert" ${S.err ? "" : "hidden"}>${esc(S.err || "")}</p>
       <button class="btn big" id="start">מתחילים</button>
       ${FINE ? `<p class="kbd-hint">על מחשב או טלוויזיה: <kbd>רווח</kbd> חושף וממשיך, <kbd>1</kbd>–<kbd>4</kbd> בוחרים תשובה, <kbd>M</kbd> משתיק, <kbd>F</kbd> מסך מלא.</p>` : ""}`;
@@ -3061,20 +3063,12 @@ ${samples}
     PREM.pushManifest(); if (S.multi) hostEmit();
   }
   const mediaLine = (k) => [["audio", "הקלטות"], ["image", "תמונות"], ["sticker", "סטיקרים"], ["video", "סרטונים"], ["gif", "גיפים"]].filter(([x]) => k[x]).map(([x, t]) => `${n(k[x])} ${t}`).join(", ");
-  function premPanel() {
-    const on = PREM.isOn(), mc = PREM.mediaCount(), k = PREM.mediaByKind(), yr = PREM.wrappedYear();
-    return `<section class="panel prem">
-      <div class="row" style="justify-content:space-between"><b>${on ? "⭐ פרימיום פתוח לקבוצה הזאת" : "⭐ פרימיום"}</b>${on ? "" : `<button class="btn" id="pm-buy">לפתוח ב־14.90 ₪</button>`}</div>
-      <button class="panel drop" id="pm-wrap"><strong>🎁 הסיכום של ${yr}</strong><span class="dim small">${on ? "כל השקופיות, בלי סימן מים" : "כמו הסיכום של ספוטיפיי, רק על הקבוצה. 3 שקופיות ראשונות בחינם"}</span></button>
-      ${mc ? `<div class="row" style="justify-content:space-between;flex-wrap:nowrap;gap:10px"><span><b>🎙️ סבב המדיה</b><br><span class="dim small">${mediaLine(k)}${on ? "" : ". בחינם: שאלה אחת לטעימה"}</span></span><button class="btn alt" id="pm-rev" style="white-space:nowrap;flex:none">לעבור על המדיה</button></div>`
-        : `<p class="dim small">🎙️ רוצים גם את סבב המדיה (של מי הקול? מי שלח את התמונה?) מייצאים את הצ'אט <b>כולל מדיה</b> ומעלים שוב.</p>`}
-      ${on ? "" : `<p class="dim small">💳 איך זה עובד: משלמים 14.90 ₪ בביט, פעם אחת לצ'אט, ונפתח לכל מי שמשחק איתו. בלי מנוי, בלי כרטיס אשראי. המשחק הרגיל ו־3 השקופיות הראשונות של הסיכום נשארים בחינם.</p>`}
-    </section>`;
-  }
+  function premPanel() { return PREM.teaserHtml(); }
   function bindPrem() {
     const b = document.getElementById("pm-buy"); if (b) b.onclick = () => { SFX.tap(); PREM.buy("setup"); };
     const w = document.getElementById("pm-wrap"); if (w) w.onclick = () => { audio(); SFX.tap(); PREM.openWrapped(); };
     const r = document.getElementById("pm-rev"); if (r) r.onclick = () => { SFX.tap(); PREM.review(); };
+    PREM.bindTeaser();
   }
   const canMulti = () => true;
   const siteURL = () => location.origin + location.pathname;
