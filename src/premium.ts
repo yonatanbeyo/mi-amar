@@ -327,16 +327,26 @@ function drawBuy() {
   root.innerHTML = `<div class="pm-sheet">
     <div class="pm-head"><b>פותחים את הפרימיום 🔓</b><button class="pm-x" id="pm-close" aria-label="סגירה">✕</button></div>
     <ul class="pm-list"><li>🎁 הסיכום המלא של השנה, בלי סימן מים</li><li>🎙️ סבב המדיה: הקלטות, תמונות, סטיקרים וסרטונים</li><li>🎓 תעודה מצחיקה לכל שחקן, מוכנה לסטורי</li></ul>
-    <div class="pm-price"><b>${PRICE} ₪</b><span>פעם אחת, ונפתח לכל מי שמשחק עם הצ'אט הזה</span></div>
-    <div class="pm-step"><span class="pm-n">1</span><div><b>משלמים בביט ${PRICE} ₪</b><a class="pm-btn bit" href="${BIT_URL}" target="_blank" rel="noopener" id="pm-bit">לתשלום בביט</a>
-      <details class="pm-more"><summary>משלמים מטלפון אחר? סורקים את הקוד</summary><div class="pm-qr">${P.opts?.qr(BIT_URL) || ""}</div><p class="pm-dim">או מעבירים למספר <b dir="ltr">${BIT_NUM}</b></p></details></div></div>
-    <div class="pm-step"><span class="pm-n">2</span><div><b>כותבים בהערה של ההעברה את הקוד:</b><div class="pm-code"><span dir="ltr" id="pm-code">${code}</span><button id="pm-copy">העתקה</button></div><p class="pm-dim">ככה אני יודע שהתשלום שלכם ופותח לכם את הקבוצה.</p></div></div>
+    <div class="pm-price"><b>${PRICE} ₪</b><span>פעם אחת לכל הקבוצה. בלי מנוי, בלי כרטיס אשראי.</span></div>
+    <h4 class="pm-h">איך משלמים? 3 צעדים, דקה אחת</h4>
+    <div class="pm-step"><span class="pm-n">1</span><div><b>זה הקוד שלכם:</b><div class="pm-code"><span dir="ltr" id="pm-code">${code}</span><button id="pm-copy">העתקה</button></div></div></div>
+    <div class="pm-step"><span class="pm-n">2</span><div><b>משלמים בביט, ובהערה מדביקים את הקוד</b>
+      <div class="pm-mock" aria-hidden="true"><div><small>סכום</small><b dir="ltr">${PRICE} ₪</b></div><div><small>הערה</small><b dir="ltr">${code}</b></div></div>
+      <a class="pm-btn bit" href="${BIT_URL}" target="_blank" rel="noopener" id="pm-bit">לתשלום בביט (הקוד יועתק לבד)</a>
+      <details class="pm-more"><summary>משלמים מטלפון אחר? סורקים את הקוד</summary><div class="pm-qr">${P.opts?.qr(BIT_URL) || ""}</div><p class="pm-dim">או מעבירים בביט למספר <b dir="ltr">${BIT_NUM}</b></p></details></div></div>
+    <div class="pm-step"><span class="pm-n">3</span><div><b>חוזרים לכאן ולוחצים "שילמתי"</b><span class="pm-dim">אני בודק שהתשלום הגיע ופותח לכם. בדרך כלל זה לוקח כמה דקות, ובלילה עד כמה שעות.</span></div></div>
     <label class="pm-terms"><input type="checkbox" id="pm-ok"><span>קראתי ואני מסכים/ה ל<a href="terms.html" target="_blank" rel="noopener">תקנון הרכישה</a></span></label>
     <button class="pm-btn big" id="pm-paid" disabled>שילמתי ✓</button>
-    <p class="pm-err" id="pm-err" hidden></p></div>`;
+    <p class="pm-err" id="pm-err" hidden></p>
+    <details class="pm-faq"><summary>שאלות</summary>
+      <p><b>זה בטוח?</b> כן. משלמים בביט הרגיל שלכם, והאתר לא רואה שום פרט תשלום.</p>
+      <p><b>למי זה נפתח?</b> לצ'אט הזה, לכל מי שמשחק איתו, גם בטלפונים של החברים.</p>
+      <p><b>שכחתי לכתוב את הקוד בהערה.</b> לא נורא, שלחו את הקוד בהודעה לאותו מספר של ביט.</p>
+      <p><b>ומה אם זה לא נפתח?</b> אם זה לא נפתח תוך 48 שעות, מחזירים לכם את הכסף.</p></details></div>`;
   root.querySelector<HTMLButtonElement>("#pm-close")!.onclick = () => closeBuy();
-  root.querySelector<HTMLAnchorElement>("#pm-bit")!.onclick = () => { try { P.opts?.net?.bump("pm_bit"); } catch {} };
-  root.querySelector<HTMLButtonElement>("#pm-copy")!.onclick = async (e) => { const b = e.currentTarget as HTMLButtonElement; try { await navigator.clipboard.writeText(code); b.textContent = "הועתק ✓"; } catch { b.textContent = code; } };
+  const copy = async () => { try { await navigator.clipboard.writeText(code); return true; } catch { return false; } };
+  root.querySelector<HTMLAnchorElement>("#pm-bit")!.onclick = () => { copy().then((ok) => { if (ok) toast(`הקוד ${code} הועתק. מדביקים אותו בהערה בביט 👍`); }); try { P.opts?.net?.bump("pm_bit"); } catch {} };
+  root.querySelector<HTMLButtonElement>("#pm-copy")!.onclick = async (e) => { const b = e.currentTarget as HTMLButtonElement; b.textContent = (await copy()) ? "הועתק ✓" : code; };
   const chk = root.querySelector<HTMLInputElement>("#pm-ok")!, paid = root.querySelector<HTMLButtonElement>("#pm-paid")!;
   chk.onchange = () => { paid.disabled = !chk.checked; };
   paid.onclick = async () => {
@@ -358,13 +368,15 @@ async function claim() {
 }
 function drawWait() {
   const root = buyRoot!; const code = codeFor(P.key);
-  root.innerHTML = `<div class="pm-sheet"><div class="pm-head"><b>מחכים לאישור</b><button class="pm-x" id="pm-close" aria-label="סגירה">✕</button></div>
-    <div class="pm-done">${budSvg("think", 110)}<h3>קיבלנו! בודקים את התשלום</h3>
-    <p>זה לוקח בדרך כלל כמה דקות. אפשר לסגור את החלון ולהמשיך לשחק, והפרימיום ייפתח לבד, גם באמצע משחק.</p>
-    <p class="pm-dim">הקוד שלכם: <b dir="ltr">${code}</b>. אם שכחתם לכתוב אותו בהערה, שלחו אותו בהודעה למספר של הביט.</p>
-    <span class="pm-dots"><i></i><i></i><i></i></span></div>
-    <button class="pm-btn alt" id="pm-again">לא שילמתי עדיין, לחזור לפרטי התשלום</button></div>`;
+  root.innerHTML = `<div class="pm-sheet"><div class="pm-head"><b>קיבלתי! 🙌</b><button class="pm-x" id="pm-close" aria-label="סגירה">✕</button></div>
+    <div class="pm-done">${budSvg("think", 100)}<h3>בודק את התשלום שלכם</h3></div>
+    <ol class="pm-wait"><li class="done">✓ שלחתם את הבקשה עם הקוד <b dir="ltr">${code}</b></li><li class="now"><span class="pm-dots"><i></i><i></i><i></i></span> אני בודק בביט שהתשלום הגיע</li><li>🔓 הפרימיום נפתח לבד, גם באמצע משחק</li></ol>
+    <p class="pm-dim">בדרך כלל זה לוקח כמה דקות, ובלילה עד כמה שעות. אפשר לסגור את החלון ולהמשיך לשחק, לא צריך לחכות פה.</p>
+    <p class="pm-dim">שכחתם לכתוב את הקוד בהערה? שלחו אותו בהודעה לאותו מספר של ביט.</p>
+    <button class="pm-btn" id="pm-play">סגור, ממשיכים לשחק</button>
+    <button class="pm-btn alt" id="pm-again">עוד לא שילמתי, חזרה לפרטי התשלום</button></div>`;
   root.querySelector<HTMLButtonElement>("#pm-close")!.onclick = () => closeBuy();
+  root.querySelector<HTMLButtonElement>("#pm-play")!.onclick = () => closeBuy();
   root.querySelector<HTMLButtonElement>("#pm-again")!.onclick = () => drawBuy();
 }
 
@@ -553,7 +565,7 @@ function build() {
     <div class="peek r" style="--d:.6s">${[["#ffa928", "👑"], ["#2a1f55", "🌙"], ["#ff3d7f", "💍"], ["#3fe0b0", "🕵️"], ["#5fb4ff", "⚡"], ["#ffd23f", "😭"]].map(([c, e]) => `<div style="background:${c}">${e}</div>`).join("")}</div>
     <p class="sub r" style="--d:.8s">עוד המון שקופיות: מלך הסטיקרים, הזוג של הקבוצה, ההודעה של 3 בלילה, מי נעלם, ועוד.</p>
     <div class="st s w r" style="--d:1s;--c:var(--pw-yellow)">${PRICE} ₪</div>
-    <p class="small r" style="--d:1.05s">משלמים פעם אחת, וזה נפתח לכל הקבוצה.<br>כולל גם את סבב המדיה ואת התעודות.</p>
+    <p class="small r" style="--d:1.05s">פעם אחת לכל הקבוצה, בביט. בלי מנוי ובלי כרטיס אשראי.<br>כולל גם את סבב המדיה ואת התעודות.</p>
     <button class="pw-btn r" style="--d:1.2s" id="punlock">לפתוח לכולם 🔓</button>`,
     enter() { later(() => sfx("lock"), 900); W.root.querySelector("#punlock").onclick = (e: Event) => { e.stopPropagation(); buy("wrapped"); }; } });
   const premium: any[] = [];
@@ -1104,6 +1116,11 @@ function css() {
 .pm-code{display:flex;align-items:center;gap:10px;background:#fff;border:3px dashed #1d1636;border-radius:14px;padding:8px 12px}
 .pm-code span{font-family:Karantina,sans-serif;font-size:2.6rem;letter-spacing:4px;flex:1;text-align:center;line-height:1}
 .pm-code button{border:3px solid #1d1636;background:#ffd23f;border-radius:10px;padding:6px 10px;font-family:inherit;font-weight:700;cursor:pointer;color:#1d1636}
+.pm-h{font-size:1.05rem;margin-top:4px}
+.pm-mock{display:grid;grid-template-columns:1fr 1fr;gap:8px}.pm-mock div{background:#fff;border:2.5px solid #1d1636;border-radius:12px;padding:6px 10px;display:grid}.pm-mock small{font-size:.75rem;color:#5a4a8a}.pm-mock b{font-size:1.15rem}
+.pm-step>div>.pm-dim{display:block}
+.pm-faq summary{cursor:pointer;font-weight:700;color:#5a4a8a}.pm-faq p{font-size:.9rem;line-height:1.5;margin-top:8px}
+.pm-wait{list-style:none;display:grid;gap:8px;font-weight:700}.pm-wait li{background:#fff;border:2.5px solid #1d1636;border-radius:12px;padding:8px 12px;display:flex;gap:8px;align-items:center;opacity:.55}.pm-wait li.done{opacity:1;background:#d8f8ec}.pm-wait li.now{opacity:1;background:#fff8d6}
 .pm-terms{display:flex;gap:8px;align-items:center;font-size:.95rem;font-weight:700}
 .pm-terms input{width:22px;height:22px;accent-color:#7b5cff}
 .pm-terms a{color:#7b5cff}
