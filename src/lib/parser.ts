@@ -9,6 +9,7 @@ export type Message = {
   deleted: boolean;
   edited?: boolean;
   kind?: string; // media kind: image | sticker | audio | video | gif | doc | contact
+  file?: string; // attachment file name, when the export includes media ("<מצורף: 0001-PHOTO-….jpg>")
 };
 
 const BIDI = /[‎‏‪-‮⁦-⁩﻿]/g;
@@ -25,6 +26,10 @@ const DELETED_RE =
   /^(this message was deleted|you deleted this message|ההודעה נמחקה|ההודעה הזו נמחקה|מחקת את ההודעה הזו|הודעה זו נמחקה)\.?$/i;
 // newer exports: "סטיקר הושמט", "סרטון הווידאו הושמט", "כרטיס איש קשר הושמט"; a caption can come before it
 const MEDIA_TAIL_RE = /(?:^|\s)(הערת הווידאו לא נכללה בשיתוף|הודעה קולית לא נכללה בשיתוף|.{0,12}לא נכלל(?:ה)? בשיתוף|התמונה הושמטה|סטיקר הושמט|המדבקה הושמטה|השמע הושמט|GIF הושמט|ה-gif הושמט|סרטון הווידאו הושמט|הווידאו הושמט|הסרטון הושמט|מסמך הושמט|המסמך הושמט|כרטיס איש קשר הושמט|image omitted|sticker omitted|audio omitted|video omitted|GIF omitted|document omitted|Contact card omitted)$/i;
+// attachment file names (iOS: 00001234-PHOTO-2026-…jpg, Android: IMG-2026…-WA0001.jpg / PTT-… / VID-… / STK-…)
+const FILE_KIND: [RegExp, string][] = [[/STICKER|^STK-|\.webp$/i, "sticker"], [/GIF/i, "gif"], [/PHOTO|^IMG-|\.(jpe?g|png|heic)$/i, "image"], [/AUDIO|^PTT-|^AUD-|\.(opus|m4a|mp3|aac|ogg)$/i, "audio"], [/VIDEO|^VID-|\.(mp4|mov|3gp)$/i, "video"], [/\.(pdf|docx?|xlsx?|pptx?)$/i, "doc"], [/\.vcf$/i, "contact"]];
+const FILE_RE = /<?(?:מצורף|attached):\s*([^<>]+?)>?\s*$/i;
+const ANDROID_FILE_RE = /^(\S+\.\w{2,4})\s+\((?:file attached|קובץ מצורף|הקובץ מצורף)\)/i;
 const MEDIA_KIND: [RegExp, string][] = [[/תמונה|image/i, "image"], [/סטיקר|מדבקה|sticker/i, "sticker"], [/שמע|audio/i, "audio"], [/gif/i, "gif"], [/וידאו|סרטון|video/i, "video"], [/מסמך|document/i, "doc"], [/קשר|contact/i, "contact"]];
 // event-ish lines that are not anyone talking
 const NOISE_RE = /^(סקר:|poll:|שיחת וידאו שלא נענתה|שיחה קולית שלא נענתה|missed (voice|video) call|מיקום:|location:|הודעה הוצמדה על ידי|הצמדְ?ת הודעה|קוד האבטחה עם|ההודעה נמחקה על ידי|להצטרפות לקבוצה שלי|open this link to join)/i;
@@ -90,15 +95,18 @@ export function parseWhatsApp(input: string): Message[] {
 
     if (NOISE_RE.test(text)) continue;
     const tail = MEDIA_TAIL_RE.exec(text);
-    const media = MEDIA_RE.test(text) || /<attached: /i.test(text) || !!tail;
-    const kind = media ? (MEDIA_KIND.find(([re]) => re.test(tail ? tail[1] : text)) || [null, "other"])[1] : undefined;
+    const andFile = ANDROID_FILE_RE.exec(text);
+    const media = MEDIA_RE.test(text) || /<attached: /i.test(text) || !!tail || !!andFile;
+    const fm = media ? FILE_RE.exec(text) : null;
+    const file = fm ? fm[1].trim() : andFile ? andFile[1] : undefined;
+    const kind = !media ? undefined : file ? (FILE_KIND.find(([re]) => re.test(file)) || [null, "other"])[1] : (MEDIA_KIND.find(([re]) => re.test(tail ? tail[1] : text)) || [null, "other"])[1];
     const deleted = DELETED_RE.test(text);
     // group events: marked by WhatsApp, or the classic encryption notice in any locale
     if (!media && (r.wrapped || (r.mark && isSystemText(text)) || /end-to-end encrypted|מוצפנות מקצה לקצה/i.test(text))) { sys.add(author); continue; }
     if (r.mark && !media) marked.set(author, (marked.get(author) || 0) + 1);
     total.set(author, (total.get(author) || 0) + 1);
     const edited = /<(ההודעה נערכה|This message was edited)>\s*$/i.test(text);
-    out.push({ ts: isNaN(ts) ? null : ts, author, text: media || deleted ? "" : text.replace(/\s*<(ההודעה נערכה|This message was edited)>\s*$/i, "").trim(), media, deleted, kind, edited });
+    out.push({ ts: isNaN(ts) ? null : ts, author, text: media || deleted ? "" : text.replace(/\s*<(ההודעה נערכה|This message was edited)>\s*$/i, "").trim(), media, deleted, kind, edited, ...(file ? { file } : {}) });
   }
   // A "person" who only ever posts WhatsApp-marked event lines is the group itself, not a member.
   const fake = new Set([...sys].filter((a) => !total.has(a) || (marked.get(a) || 0) >= (total.get(a) || 0)));

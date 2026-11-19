@@ -20,6 +20,14 @@
             ".validate": "newData.isString() && newData.val().length < 400"
           }
         },
+        "x": {
+          "$to": {
+            "$id": {
+              ".write": "auth != null && ((!data.exists() && newData.child('f').val() === auth.uid && root.child('games/' + $code + '/host').exists()) || (auth.uid === $to && !newData.exists()))",
+              ".validate": "newData.hasChildren(['f','d']) && newData.child('f').isString() && newData.child('d').isString() && newData.child('d').val().length < 20000"
+            }
+          }
+        },
         "$other": {
           ".validate": false
         }
@@ -49,6 +57,38 @@
         "$other": {
           ".validate": "$other === 's' || $other === 'n' || $other === 't'"
         }
+      }
+    },
+    "pay": {
+      ".read": "auth != null && auth.token.email === 'yonatan.beyo@gmail.com' && auth.token.email_verified === true",
+      "$code": {
+        ".write": "auth != null && ((!data.exists() && newData.child('s').val() === 'wait') || (auth != null && auth.token.email === 'yonatan.beyo@gmail.com' && auth.token.email_verified === true))",
+        ".validate": "$code.matches(/^[0-9]{6}$/) && newData.hasChildren(['c','s','t'])",
+        "c": {
+          ".validate": "newData.isString() && newData.val().matches(/^[0-9a-f]{20}$/)"
+        },
+        "s": {
+          ".validate": "newData.val() === 'wait' || newData.val() === 'ok' || newData.val() === 'no'"
+        },
+        "t": {
+          ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+        },
+        "a": {
+          ".validate": "newData.isNumber()"
+        },
+        "r": {
+          ".validate": "newData.isBoolean()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "unlocks": {
+      "$key": {
+        ".read": true,
+        ".write": "auth != null && auth.token.email === 'yonatan.beyo@gmail.com' && auth.token.email_verified === true",
+        ".validate": "$key.matches(/^[0-9a-f]{20}$/) && newData.hasChildren(['code','t'])"
       }
     }
   }

@@ -1452,8 +1452,9 @@ body.yt-mini #ytmin { display: none; }
     when: "מתי זה נשלח? (בוקר, ערב או 3 בלילה)",
     stat: "מי בקבוצה הכי…",
     number: "כמה פעמים?",
+    media: "סבב המדיה: של מי הקול? מי שלח את התמונה?",
   };
-  const KIND_TITLE = { fake: "אמיתי או מזויף? 🕵️", vs: "מי יותר? ⚔️", first: "מה היה קודם? ⏳", story: "הסיפור של הקבוצה 📖", legend: "מי אמר את זה ראשון?", day: "היום הכי משוגע", era: "מתי זה היה?", moment: "הרגע של הקבוצה", word: "של מי המילה?", when: "מתי זה נשלח?", quote: "מי אמר את זה?", finish: "איך זה נגמר?", reply: "מי ענה על זה?", phrase: "של מי הביטוי?", stat: "מי בקבוצה…", number: "כמה פעמים?", ai: "מי היה כותב את זה?" };
+  const KIND_TITLE = { media: "סבב המדיה", fake: "אמיתי או מזויף? 🕵️", vs: "מי יותר? ⚔️", first: "מה היה קודם? ⏳", story: "הסיפור של הקבוצה 📖", legend: "מי אמר את זה ראשון?", day: "היום הכי משוגע", era: "מתי זה היה?", moment: "הרגע של הקבוצה", word: "של מי המילה?", when: "מתי זה נשלח?", quote: "מי אמר את זה?", finish: "איך זה נגמר?", reply: "מי ענה על זה?", phrase: "של מי הביטוי?", stat: "מי בקבוצה…", number: "כמה פעמים?", ai: "מי היה כותב את זה?" };
 
   let S = { screen: "home" };
   let msgs = [];
@@ -2241,6 +2242,10 @@ ${samples}
         let j = left.findIndex((q) => (!pk || (q.title || q.type) !== (pk.title || pk.type)) && !(pk && pk2 && q.answer === pk.answer && q.answer === pk2.answer));
         if (j < 0) j = 0; out.push(left.splice(j, 1)[0]); }
       qs = out; }
+    if (kinds.media !== false) {
+      const mq = PREM.mediaQs(pool, total, S.seenQ).map((q) => ({ ...q, options: smartOptions(q.answer, pool, "") }));
+      if (mq.length) { qs = qs.slice(0, Math.max(1, qs.length - mq.length)); const step = Math.max(1, Math.floor((qs.length + mq.length) / mq.length)); mq.forEach((q, i) => qs.splice(Math.min(qs.length, 1 + i * step), 0, q)); }
+    }
     qs.push(fin);
     qs.forEach((q) => S.seenQ.add(qkey(q)));
 
@@ -2285,8 +2290,8 @@ ${samples}
 
   const guideOS = () => S.guideOS || (OS === "android" ? "android" : "ios");
   const guideSteps = (os) => (os === "android"
-    ? ["פותחים את הקבוצה בוואטסאפ", "לוחצים על <b>⋮</b> למעלה ← <b>עוד</b> ← <b>ייצוא צ'אט</b>", "בוחרים <b>ללא מדיה</b>", "שומרים בקבצים, וחוזרים לכאן ללחוץ על <b>להעלות צ'אט</b>"]
-    : ["פותחים את הקבוצה בוואטסאפ ולוחצים על <b>השם שלה</b> למעלה", "גוללים למטה ובוחרים <b>ייצוא צ'אט</b>", "בוחרים <b>ללא מדיה</b>", "בוחרים <b>שמירה בקבצים</b>, וחוזרים לכאן ללחוץ על <b>להעלות צ'אט</b>"]
+    ? ["פותחים את הקבוצה בוואטסאפ", "לוחצים על <b>⋮</b> למעלה ← <b>עוד</b> ← <b>ייצוא צ'אט</b>", "בוחרים <b>ללא מדיה</b>, או <b>כולל מדיה</b> בשביל סבב המדיה", "שומרים בקבצים, וחוזרים לכאן ללחוץ על <b>להעלות צ'אט</b>"]
+    : ["פותחים את הקבוצה בוואטסאפ ולוחצים על <b>השם שלה</b> למעלה", "גוללים למטה ובוחרים <b>ייצוא צ'אט</b>", "בוחרים <b>ללא מדיה</b>, או <b>כולל מדיה</b> בשביל סבב המדיה", "בוחרים <b>שמירה בקבצים</b>, וחוזרים לכאן ללחוץ על <b>להעלות צ'אט</b>"]
   ).map((t) => `<li><span>${t}</span></li>`).join("");
   // a full-screen "working on it" card with Bubbi; loading(null) hides it
   const paint = (ms = 0) => new Promise((r) => requestAnimationFrame(() => setTimeout(r, Math.max(30, ms))));
@@ -2313,7 +2318,7 @@ ${samples}
       <div id="join-slot" style="display:grid;gap:10px"></div>
       <div class="ticker" aria-hidden="true"><div>${[...TICK, ...TICK].map((t) => `<span>${esc(t)}</span>`).join("")}</div></div>
       <h2 class="sec">פותחים משחק</h2>
-      <button class="panel drop" id="pick"><strong>להעלות צ'אט</strong><span class="dim small">קובץ ZIP או ‎.txt שמייצאים מקבוצה בוואטסאפ, ללא מדיה</span></button>
+      <button class="panel drop" id="pick"><strong>להעלות צ'אט</strong><span class="dim small">קובץ ZIP או ‎.txt שמייצאים מקבוצה בוואטסאפ</span></button>
       <input type="file" id="file" accept=".zip,.txt,application/zip,text/plain" hidden>
       ${err ? `<p class="err" role="alert">${esc(err)}</p>` : ""}
       <div class="row"><button class="btn alt" id="demo">לנסות עם צ'אט לדוגמה</button></div>
@@ -2328,7 +2333,7 @@ ${samples}
         </div>
         <ol class="steps" id="steps">${guideSteps(guideOS())}</ol>
       </section>
-      <p class="note">הצ'אט נקרא בתוך המכשיר שלך ולא נשמר בשום מקום. בזמן משחק רק השאלות עצמן עוברות לטלפונים של החברים, ונמחקות כשסוגרים את המשחק. משחקים רק עם צ'אט של קבוצה שאתם חלק ממנה.</p>
+      <p class="note">הצ'אט נקרא בתוך המכשיר שלך ולא נשמר בשום מקום. בזמן משחק רק השאלות עצמן עוברות לטלפונים של החברים, ונמחקות כשסוגרים את המשחק. תמונות והקלטות של סבב המדיה עוברות ישר מהמסך לטלפונים, בלי לעבור בשרת. משחקים רק עם צ'אט של קבוצה שאתם חלק ממנה.</p>
       <footer class="foot">מי אמר את זה? · משחק מסיבה לקבוצות</footer>`;
     bindMute();
     fillJoin();
@@ -2345,7 +2350,7 @@ ${samples}
         // big chats take a few seconds: show what is happening instead of a frozen screen
         loading("פותח את הקובץ…", f.size > 2e6 ? `${(f.size / 1e6).toFixed(0)}MB של צ'אט. זה ייקח כמה שניות` : "");
         await paint();
-        const text = await C.readChatFile(f);
+        const text = await PREM.readChat(f);
         loading("קורא את ההודעות…", "סופר מי כתב מה ומתי"); await paint();
         // a wrong file (a photo, the wrong zip, a one-on-one chat) should say so here, not leave an empty setup screen
         let people = 0, total = 0; try { const P = parsedFor(text); people = P.stats.people.filter((p) => p.messages >= 3).length; total = P.msgs.length; } catch {}
@@ -2360,13 +2365,14 @@ ${samples}
       const st = document.getElementById("steps"); st.innerHTML = guideSteps(S.guideOS);
       [...st.children].forEach((li, i) => anim(li, [{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], { duration: 220, delay: i * 40, easing: EASE.out, fill: "backwards" }));
     }));
-    document.getElementById("demo").onclick = () => { audio(); SFX.tap(); S.chatText = DEMO; S.chatName = "צ'אט לדוגמה"; S.players = null; S.screen = "setup"; render(); };
+    document.getElementById("demo").onclick = () => { audio(); SFX.tap(); PREM.setFile(null); S.chatText = DEMO; S.chatName = "צ'אט לדוגמה"; S.players = null; S.screen = "setup"; render(); };
   }
 
   function setup() {
     let everyone = [], quiet = [];
     try {
       const PP = parsedFor(S.chatText), all = PP.msgs;
+      PREM.useChat(all, S.chatName);
       everyone = PP.stats.people.filter((p) => p.messages >= 3).slice(0, 14).map((p) => p.name);
       // WhatsApp exports sometimes miss the "X left" line. Someone who was only around briefly and has been silent
       // for a long time is most likely not in the group anymore: start them unticked (the host can tick them back)
@@ -2378,7 +2384,7 @@ ${samples}
     if (!S.out || S.outFor !== S.chatName) { S.outFor = S.chatName; let left = []; try { left = C.departedMembers(S.chatText); } catch {} S.out = everyone.filter((n) => left.includes(n) || quiet.includes(n)); S.quiet = quiet.filter((n) => !left.includes(n)); S.gone = everyone.filter((n) => left.includes(n)); }
     const preview = everyone.filter((p) => !S.out.includes(p)).slice(0, 10);
     S.rounds = S.rounds || store.get("rounds", 10);
-    S.kinds = S.kinds || { quote: true, finish: true, reply: true, phrase: true, word: true, when: true, stat: true, number: true, ai: true, ...store.get("kinds", {}) };
+    S.kinds = S.kinds || { quote: true, finish: true, reply: true, phrase: true, word: true, when: true, stat: true, number: true, ai: true, media: true, ...store.get("kinds", {}) };
     if (!S.players || S.multi) S.players = preview.slice(0, 6);
     if (S.wantMulti == null) S.wantMulti = store.get("multi", true);
     if (S.multi) stopHosting();
@@ -2409,12 +2415,14 @@ ${samples}
         <b>סוגי שאלות</b>
         <div class="toggles">${Object.entries(KINDS).map(([k, label]) => `<label class="tog"><input type="checkbox" id="k-${k}" data-k="${k}" ${S.kinds[k] ? "checked" : ""}><span>${label}</span></label>`).join("")}</div>
       </section>
+      ${premPanel()}
       <p class="err" id="setup-err" role="alert" ${S.err ? "" : "hidden"}>${esc(S.err || "")}</p>
       <button class="btn big" id="start">מתחילים</button>
       ${FINE ? `<p class="kbd-hint">על מחשב או טלוויזיה: <kbd>רווח</kbd> חושף וממשיך, <kbd>1</kbd>–<kbd>4</kbd> בוחרים תשובה, <kbd>M</kbd> משתיק, <kbd>F</kbd> מסך מלא.</p>` : ""}`;
     S.err = "";
     bindMute();
     document.getElementById("back").onclick = () => { S.screen = "home"; render(); };
+    bindPrem();
     app.querySelectorAll("#members .chip").forEach((b) => (b.onclick = () => {
       SFX.tap(); const p = b.dataset.m, nowIn = S.out.includes(p);
       S.out = nowIn ? S.out.filter((x) => x !== p) : [...S.out, p];
@@ -2490,6 +2498,7 @@ ${samples}
   }
 
   const INTRO = {
+    media: ["סבב המדיה 🎙️", "הקלטה, תמונה, סטיקר או סרטון מהקבוצה. מי שלח?"],
     quote: ["מי אמר את זה?", "הודעה אמיתית מהקבוצה. מי כתב אותה?"],
     finish: ["השלם את המשפט", "חצי הודעה. בחרו איך היא באמת נגמרה."],
     reply: ["מי ענה על זה?", "הודעה מהקבוצה. מי ענה עליה?"],
@@ -2530,6 +2539,7 @@ ${samples}
 
   // ----- the question screen, shared by the main screen and every phone (phones mirror it exactly) -----
   function bubbleInner(q, revealed) {
+    if (q.type === "media") return `${revealed && q.author ? `<span class="sender" style="color:${colorOf(q.author)}">${esc(q.author)}</span>` : `<span class="sender hidden-name">???</span>`}${PREM.mediaHtml(q)}<span class="meta">${revealed && q.ts ? fmtDate(q.ts) : esc(q.hook || "")}</span>`;
     const body = q.type === "reply"
       ? `<div class="ctx" style="margin-bottom:10px;font-size:1rem"><b>${esc(q.by)}:</b> ${esc(q.text)}</div>${revealed ? esc(q.replyText) : "<span class='dim' style='font-size:1rem;color:#6b5f8f'>מי ענה על זה, ומה?</span>"}`
       : q.type === "finish" ? esc(revealed ? q.full : q.text)
@@ -2979,6 +2989,9 @@ ${samples}
       ${g.bestQuote ? `<div class="bubble small-b pop">${esc(g.bestQuote.text)}<span class="meta">הציטוט של הערב · ${esc(g.bestQuote.author)} · ${g.bestQuote.laughs} צחוקים אחריו</span></div>` : ""}
       <h2 style="font-size:2.2rem">פרסי הקבוצה</h2>
       <div class="awards">${g.awards.map(([k, v, d]) => `<div class="award"><span class="dim small">${k}</span><b>${esc(v)}</b><span class="small">${esc(d)}</span></div>`).join("")}</div>
+      ${S.chatText && PREM.hasWrapped() ? `<section class="panel prem-end"><div class="row" style="justify-content:center">
+        <button class="btn" id="pm-cert">🎓 תעודה לכל שחקן${PREM.isOn() ? "" : " 🔒"}</button><button class="btn alt" id="pm-wrap2">🎁 הסיכום של ${PREM.wrappedYear()}</button></div>
+        ${PREM.isOn() ? "" : `<p class="dim small" style="text-align:center">התעודות, הסיכום המלא וסבב המדיה נפתחים בפרימיום, פעם אחת ב־14.90 ₪ לכל הקבוצה.</p>`}</section>` : ""}
       <section class="panel story" id="story" hidden>
         <b>תמונה לסטורי</b>
         <img id="story-img" alt="תמונת סיכום של המשחק: הפודיום והציטוט של הערב">
@@ -3010,6 +3023,8 @@ ${samples}
         [[.25, .25], [.75, .2], [.5, .35], [.2, .5], [.8, .45]].forEach(([fxX, fxY], i) => later(() => confetti(70, innerWidth * fxX, innerHeight * fxY, .8), (RM ? 0 : 800) + i * 260));
       }, RM ? 0 : 1300);
     }
+    { const c = document.getElementById("pm-cert"); if (c) c.onclick = () => { SFX.tap(); PREM.certificates(S.players || [], S.scores || {}, "end"); };
+      const w = document.getElementById("pm-wrap2"); if (w) w.onclick = () => { SFX.tap(); PREM.openWrapped(); }; }
     document.getElementById("again").onclick = () => { SFX.tap(); if (S.multi) stopHosting(); S.screen = S.chatText ? "setup" : "home"; render(); };
     document.getElementById("home").onclick = () => { keepAwake(false); if (S.multi) stopHosting(); S = { screen: "home" }; render(); };
     document.getElementById("copy").onclick = async () => {
@@ -3026,6 +3041,41 @@ ${samples}
   const R = { hosts: [], st: null, host: null, key: "", askKey: "", deadline: 0, active: new Set() };
   let room = null, myName = "", beat = null, rtimer = null;
   const NET = C.createNet(window.MIAMAR_FIREBASE);
+  // ---------- premium: year summary, media round, certificates, payment (all in src/premium.ts) ----------
+  const PREM = window.Premium;
+  PREM.init({ buddy: BUDDY_SVG, qr: C.qr, net: NET, music: { pause: () => { try { MUSIC.play("off"); } catch {} }, resume: () => { try { pickMusic(); } catch {} } } });
+  PREM.on((e) => setTimeout(() => {
+    if (e === "unlock") {
+      PREM.toast("🔓 הפרימיום נפתח לכל הקבוצה!"); try { SFX.win(); buzz([40, 30, 40]); } catch {}
+      premiumMidGame();
+    }
+    if (S.screen === "setup" && !overlay.dataset.loading) { const y = scrollY; render(); scrollTo(0, y); }
+  }, 0));
+  // bought in the middle of a game: the next questions turn into the media round
+  function premiumMidGame() {
+    const g = S.game; if (!g || !["play", "mid"].includes(S.screen) || (S.kinds && S.kinds.media === false)) return;
+    const from = S.idx + 2, last = g.questions.length - 1; if (last - from < 1) return;
+    const have = new Set(g.questions.map((q) => q.key).filter(Boolean));
+    const mq = PREM.mediaQs(g.pool, g.questions.length).filter((q) => !have.has(q.key)).map((q) => ({ ...q, options: smartOptions(q.answer, g.pool, "") }));
+    let pos = from; for (const q of mq) { if (pos >= last) break; g.questions[pos] = q; pos += 2; }
+    PREM.pushManifest(); if (S.multi) hostEmit();
+  }
+  const mediaLine = (k) => [["audio", "הקלטות"], ["image", "תמונות"], ["sticker", "סטיקרים"], ["video", "סרטונים"], ["gif", "גיפים"]].filter(([x]) => k[x]).map(([x, t]) => `${n(k[x])} ${t}`).join(", ");
+  function premPanel() {
+    const on = PREM.isOn(), mc = PREM.mediaCount(), k = PREM.mediaByKind(), yr = PREM.wrappedYear();
+    return `<section class="panel prem">
+      <div class="row" style="justify-content:space-between"><b>${on ? "⭐ פרימיום פתוח לקבוצה הזאת" : "⭐ פרימיום"}</b>${on ? "" : `<button class="btn" id="pm-buy">לפתוח ב־14.90 ₪</button>`}</div>
+      <button class="panel drop" id="pm-wrap"><strong>🎁 הסיכום של ${yr}</strong><span class="dim small">${on ? "כל השקופיות, בלי סימן מים" : "כמו הסיכום של ספוטיפיי, רק על הקבוצה. 3 שקופיות ראשונות בחינם"}</span></button>
+      ${mc ? `<div class="row" style="justify-content:space-between;flex-wrap:nowrap;gap:10px"><span><b>🎙️ סבב המדיה</b><br><span class="dim small">${mediaLine(k)}${on ? "" : ". בחינם: שאלה אחת לטעימה"}</span></span><button class="btn alt" id="pm-rev" style="white-space:nowrap;flex:none">לעבור על המדיה</button></div>`
+        : `<p class="dim small">🎙️ רוצים גם את סבב המדיה (של מי הקול? מי שלח את התמונה?) מייצאים את הצ'אט <b>כולל מדיה</b> ומעלים שוב.</p>`}
+      ${on ? "" : `<p class="dim small">משלמים פעם אחת לצ'אט, ונפתח לכל מי שמשחק איתו: הסיכום המלא, סבב המדיה ותעודה לכל שחקן.</p>`}
+    </section>`;
+  }
+  function bindPrem() {
+    const b = document.getElementById("pm-buy"); if (b) b.onclick = () => { SFX.tap(); PREM.buy("setup"); };
+    const w = document.getElementById("pm-wrap"); if (w) w.onclick = () => { audio(); SFX.tap(); PREM.openWrapped(); };
+    const r = document.getElementById("pm-rev"); if (r) r.onclick = () => { SFX.tap(); PREM.review(); };
+  }
   const canMulti = () => true;
   const siteURL = () => location.origin + location.pathname;
   const joinURL = (code) => `${siteURL()}?c=${code}`;
@@ -3048,6 +3098,7 @@ ${samples}
   }
   function attachHost(r) {
     room = r; r.onPeers(onPeers); startBeat();
+    PREM.hostRoom(r, () => (S.game ? S.game.questions.filter((q) => q.type === "media").map((q) => q.mf) : []));
   }
   // after a refresh the host takes its game back (same code, same anonymous account)
   async function resumeHost() {
@@ -3063,7 +3114,7 @@ ${samples}
     // on the reveal, phones already see the points of this question (the host adds them for real on "next")
     const pendNow = (p) => S.screen === "play" && S.revealed ? ((S.res || {})[p] || [0, 0])[1] : 0;
     const sc = Object.entries(S.scores || {}).map(([p, v]) => [p, Math.max(0, v + pendNow(p))]).sort((a, b) => b[1] - a[1]).slice(0, 30);
-    const base = { c: S.code, ep: S.ep, names: S.players.slice(0, 30), sc, total: g.questions.length };
+    const base = { c: S.code, ep: S.ep, names: S.players.slice(0, 30), sc, total: g.questions.length, md: g.questions.some((q) => q.type === "media") ? 1 : 0 };
     if (S.screen === "lobby") return { ...base, ph: "lobby", pool: g.pool.slice(0, 12), host: S.hostName || "" };
     if (S.screen === "play") {
       const q = g.questions[S.idx]; if (!q) return null;
@@ -3074,6 +3125,7 @@ ${samples}
       const cx = (c) => c ? { a: cut(c.a, 30), t: cut(c.t, 140) } : null;
       const qv = { type: q.type, title: cut(q.title, 60), text: cut(q.text, 300), hook: cut(q.hook, 90), by: cut(q.by, 40), long: q.long ? 1 : 0, msg: q.msg ? 1 : 0, options: q.options.map((o) => cut(o, 80)) };
       if (q.type === "when" || q.type === "era") qv.author = cut(q.author, 40);
+      if (q.type === "media") Object.assign(qv, { mf: cut(q.mf, 120), mk: q.mk });
       if (rev) Object.assign(qv, { author: cut(q.author, 40), answer: cut(q.answer, 80), ts: q.ts || 0, full: cut(q.full, 300), replyText: cut(q.replyText, 200), stamp: cut(q.stamp, 60), reveal: cut(q.reveal, 160), ctxBefore: cx(q.ctxBefore), ctxAfter: cx(q.ctxAfter) });
       const stk = Object.fromEntries(Object.entries(S.streaks || {}).filter(([, v]) => v >= 2).slice(0, 30));
       const qb = { ...base, idx: S.idx, kind: q.type, last: last ? 1 : 0, title: q.title || (q.type === "stat" ? "מי בקבוצה…" : KIND_TITLE[q.type]), q: qv, stk, text: cut(qText(q), 300), opts: q.options.map((o) => cut(o, 80)) };
@@ -3271,7 +3323,7 @@ ${samples}
     try { r = await NET.join(code); } catch (e) { console.error(e); }
     if (!r) return false;
     if (room && room !== r) room.close().catch(() => {});
-    room = r; r.on("st", onState);
+    room = r; r.on("st", onState); PREM.phoneReset();
     keepAwake(true);
     history.replaceState(null, "", `?c=${code}`);
     S = { screen: "remote", rc: code, rname: keepName || null, enter: true };
@@ -3285,6 +3337,7 @@ ${samples}
     if (S.screen !== "remote" || msg.sameTab) return;
     const d = msg.data; if (!d || typeof d !== "object" || d.c !== S.rc) return;
     R.host = msg.peer; R.st = d; R.seen = Date.now();
+    PREM.phoneState(room, d);
     const key = `${d.ep}|${d.ph}|${d.idx ?? ""}`;
     if (d.ph === "ask" && R.askKey !== key) { R.askKey = key; R.deadline = Date.now() + Math.min(60000, Math.max(0, +d.left || 0)); }
     if (key === R.key || !S.rname) { remoteUpdate(); return; }

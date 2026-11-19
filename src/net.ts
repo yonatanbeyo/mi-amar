@@ -6,7 +6,7 @@
 // Two backends: Firebase Realtime Database (production) and a BroadcastChannel one (same-browser test mode).
 import { initializeApp } from "firebase/app";
 import { getAuth, signInAnonymously } from "firebase/auth";
-import { getDatabase, ref, set, get, onValue, onDisconnect, remove, runTransaction, serverTimestamp } from "firebase/database";
+import { getDatabase, ref, set, get, onValue, onDisconnect, remove, runTransaction, serverTimestamp, push, onChildAdded } from "firebase/database";
 
 type Peer = { peer: string; presence: Record<string, unknown>; isMe: boolean; sameTab: boolean; kind: "viewer"; guest: false; by: null; updatedAt: number };
 type Change = { peers: Peer[]; joined: Peer[]; left: Peer[]; updated: Peer[] };
@@ -18,6 +18,12 @@ export type GameRoom = {
   onPeers(fn: (c: Change) => void): () => void;
   peers(): Peer[];
   close(destroy?: boolean): Promise<void>;
+  /** my id and the host's id (phones talk to the host directly for media) */
+  me: string;
+  hostId: string;
+  /** small signalling messages to one device (used to set up a direct phone-to-phone link) */
+  sig(to: string, data: unknown): Promise<void>;
+  onSig(fn: (from: string, data: unknown) => void): () => void;
 };
 export type Stats = { total: Record<string, number>; days: Record<string, Record<string, number>> };
 export type Net = { mode: "firebase" | "local"; host(code: string): Promise<GameRoom | null>; join(code: string): Promise<GameRoom | null>;
@@ -27,7 +33,9 @@ export type Net = { mode: "firebase" | "local"; host(code: string): Promise<Game
   /** live presence: what this device is doing right now (site/lobby/host/single/phone) and how many people are at it */
   live(state: string, n?: number): void;
   /** stats page: everyone online right now, updated in real time */
-  watchLive(fn: (rows: { s: string; n: number; t: number }[], denied?: boolean) => void): () => void };
+  watchLive(fn: (rows: { s: string; n: number; t: number }[], denied?: boolean) => void): () => void;
+  /** this device's anonymous id (signs in on first use) */
+  uid(): Promise<string> };
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 
 const mkPeer = (peer: string, presence: Record<string, unknown>, mine: boolean): Peer => ({ peer, presence, isMe: mine, sameTab: mine, kind: "viewer", guest: false, by: null, updatedAt: Date.now() });
@@ -46,7 +54,7 @@ function firebaseNet(cfg: Record<string, string>): Net {
   const pushLive = () => { uid().then((me) => { const r = ref(db, `live/${me}`); if (!liveArmed) { liveArmed = true; onDisconnect(r).remove().catch(() => {}); } return set(r, { s: liveState, n: Math.max(1, Math.min(30, liveN | 0)), t: serverTimestamp() }); }).catch(() => {});
     if (!liveTimer) liveTimer = setInterval(() => { if (liveState && document.visibilityState === "visible") pushLive(); }, 60000); };
 
-  function wrap(code: string, me: string, isHost: boolean): GameRoom {
+  function wrap(code: string, me: string, isHost: boolean, hostId: string): GameRoom {
     const base = `games/${code}`;
     let peers: Peer[] = [mkPeer(me, {}, true)];
     let myPres: Record<string, unknown> = {};
@@ -76,6 +84,12 @@ function firebaseNet(cfg: Record<string, string>): Net {
         offs.push(off); return off;
       },
       peers: () => peers,
+      me, hostId,
+      async sig(to, data) { await set(push(ref(db, `${base}/x/${to}`)), { f: me, d: JSON.stringify(data) }); },
+      onSig(fn) {
+        const off = onChildAdded(ref(db, `${base}/x/${me}`), (s) => { const v = s.val(); remove(s.ref).catch(() => {}); if (v && typeof v.f === "string") { const d = parse(v.d); if (d) fn(v.f, d); } });
+        offs.push(off); return off;
+      },
       async close(destroy) {
         offs.splice(0).forEach((f) => f());
         try { if (isHost && destroy) await remove(ref(db, base)); else if (!isHost) await remove(ref(db, `${base}/p/${me}`)); } catch {}
@@ -84,6 +98,7 @@ function firebaseNet(cfg: Record<string, string>): Net {
   }
   return {
     mode: "firebase",
+    uid,
     bump(key) {
       if (!/^[a-z_]{1,24}$/.test(key)) return;
       const hh = String(new Date().getHours()).padStart(2, "0"), paths = [`stats/total/${key}`, `stats/days/${today()}/${key}`];
@@ -106,13 +121,13 @@ function firebaseNet(cfg: Record<string, string>): Net {
       const res = await runTransaction(ref(db, `games/${code}/host`), (cur) => (cur == null || cur === me ? me : undefined));
       if (!res.committed) return null;
       await set(ref(db, `games/${code}/t`), serverTimestamp());
-      return wrap(code, me, true);
+      return wrap(code, me, true, me);
     },
     async join(code) {
       const me = await uid();
       const h = await get(ref(db, `games/${code}/host`));
       if (!h.exists()) return null;
-      return wrap(code, me, false);
+      return wrap(code, me, false, String(h.val()));
     },
   };
 }
@@ -133,7 +148,13 @@ function localNet(): Net {
       if (m.t === "bye") { const p = peers.get(m.peer); if (p) { peers.delete(m.peer); fire([], [p]); } }
       if (m.t === "st") onT.forEach((f) => f({ data: m.data, peer: m.peer, sameTab: false }));
       if (m.t === "ping" && isHost) bc.postMessage({ t: "pong" });
+      if (m.t === "sig" && m.to === me) onS.forEach((f) => f(m.from, m.data));
+      if (m.t === "host?" && isHost) bc.postMessage({ t: "hostid", id: me });
+      if (m.t === "hostid") hostId = m.id;
     };
+    let hostId = isHost ? me : "";
+    const onS: ((from: string, data: unknown) => void)[] = [];
+    if (!isHost) setTimeout(() => bc.postMessage({ t: "host?" }), 40);
     addEventListener("pagehide", () => bc.postMessage({ t: "bye", peer: me }));
     setTimeout(() => { bc.postMessage({ t: "pres", peer: me, presence: peers.get(me)!.presence }); fire([...peers.values()]); }, 30);
     return {
@@ -143,11 +164,15 @@ function localNet(): Net {
       on(_t, fn) { onT.push(fn); return () => {}; },
       onPeers(fn) { onP.push(fn); return () => {}; },
       peers: () => [...peers.values()],
+      me, get hostId() { return hostId; },
+      async sig(to, data) { bc.postMessage({ t: "sig", to, from: me, data }); },
+      onSig(fn) { onS.push(fn); return () => {}; },
       async close() { bc.postMessage({ t: "bye", peer: me }); bc.close(); },
     };
   }
   return {
     mode: "local",
+    async uid() { return me; },
     bump() {},
     live() {},
     watchLive(fn) { fn([]); return () => {}; },
