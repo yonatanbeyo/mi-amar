@@ -30,7 +30,7 @@ function draw() {
   $("#rec").innerHTML = `🧾 יש ${noRec.length} תשלומים שעוד לא הוצאת עליהם קבלה. <a href="${MORNING}" target="_blank" rel="noopener">להוצאת קבלה במורנינג</a>, ואז מסמנים כאן "הוצאתי קבלה".`;
   const list = rows.filter(([, v]) => filter === "all" || (filter === "rec" ? v.s === "ok" && !v.r : v.s === filter)).sort((a, b) => (b[1].t || 0) - (a[1].t || 0));
   document.querySelectorAll<HTMLButtonElement>("#tabs button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.f === filter)));
-  $("#list").innerHTML = list.length ? list.map(([code, v]) => `<div class="row ${v.s}">
+  $("#list").innerHTML = list.length ? list.map(([code, v]) => `<div class="row st-${v.s}">
       <div class="main"><b class="code" dir="ltr">${esc(code)}</b><span class="dim">${when(v.t)} · ${ago(v.t)}</span><span class="dim small">קבוצה ${esc(String(v.c).slice(0, 6))}</span></div>
       <div class="acts">${v.s === "wait" ? `<button class="ok" data-ok="${esc(code)}">אשר ✓</button><button class="no" data-no="${esc(code)}">דחייה</button>`
         : v.s === "ok" ? `<span class="tag ok">אושר ${when(v.a)}</span><label class="rc"><input type="checkbox" data-r="${esc(code)}" ${v.r ? "checked" : ""}> הוצאתי קבלה</label>`
