@@ -10,7 +10,7 @@ const PRICE = "14.90";
 const BIT_URL = "https://www.bitpay.co.il/app/me/826990EF-07DF-40B2-B8AE-9A7737DEE4ED";
 const BIT_NUM = "058-646-3236";
 // email to the owner on every "I paid" (web3forms.com: the key is public by design and only routes mail to the owner)
-const MAIL_KEY = "";
+const MAIL_KEY = "af3e3f5d-a5df-452b-aae5-f0bfe9c6a60e";
 const ICE = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun.cloudflare.com:3478" }] };
 const DAY = 864e5;
 
