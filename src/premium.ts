@@ -196,6 +196,8 @@ function refillWaiting(id: string) { document.querySelectorAll<HTMLElement>(`.mq
 
 // ---------------------------------------------------------------- phone-to-phone media (the server only introduces the phones)
 export function hostRoom(room: any, manifest: () => string[]) {
+  P.sentFiles = new Map<string, string>(); P.peerNames = new Map<string, string>();
+  if (room && room.onPeers) room.onPeers((c: any) => { (c.peers || []).forEach((pe: any) => { const n = pe && !pe.isMe && pe.presence && pe.presence.p && pe.presence.p.n; if (n) P.peerNames.set(pe.peer, String(n)); }); sendFiles(); });
   P.room = room; P.manifest = manifest; P.pcs.forEach((pc: RTCPeerConnection) => pc.close()); P.pcs = new Map(); P.chans = new Set();
   if (!room || !room.onSig || typeof RTCPeerConnection === "undefined") return;
   room.onSig(async (from: string, d: any) => {
@@ -241,6 +243,7 @@ async function sendFile(ch: RTCDataChannel, id: string) {
 }
 /** phones: called with every game state; opens the link the first time the game has media */
 export function phoneState(room: any, d: any) {
+  if (room && room.onSig && P.fileRoom !== room) { P.fileRoom = room; room.onSig((from: string, m: any) => { if (m && m.t === "file" && from === room.hostId) gotFile(m); }); }
   if (!d || !d.md || P.phone.started || !room || !room.sig || typeof RTCPeerConnection === "undefined") return;
   P.room = room; P.phone.started = true; P.phone.failed = false;
   phoneLink(room).catch(() => { P.phone.failed = true; document.querySelectorAll<HTMLElement>(".mq[data-wait]").forEach((el) => drawMedia(el)); });
@@ -269,7 +272,7 @@ async function phoneLink(room: any) {
   ch.send(JSON.stringify({ t: "hi" })); // ask for the list again, in case the first one came too early
   setInterval(() => { if (ch.readyState === "open" && !P.phone.busy && P.phone.want.some((x: string) => !P.urls.has(x))) next(); }, 3000);
 }
-export function phoneReset() { try { P.phone.ch?.close(); } catch {} P.phone = { started: false, failed: false, ch: null, want: [], busy: false }; }
+export function phoneReset() { try { P.phone.ch?.close(); } catch {} P.phone = { started: false, failed: false, ch: null, want: [], busy: false }; P.myFile = null; document.querySelector(".pmf-fab")?.remove(); }
 
 // ---------------------------------------------------------------- review the media before the game
 export function review(done?: () => void) {
@@ -1030,7 +1033,8 @@ export function teaserHtml() {
     <h3 class="pmx-t">הכל פתוח. תהנו 🎉</h3>
     <button class="pmx-cta" id="pm-wrap">🎁 לראות את הסיכום של ${wrappedYear()}</button>
     ${mc ? `<button class="pmx-free" id="pm-rev">🎙️ לעבור על המדיה של סבב המדיה (${fmt(mc)})</button>` : `<p class="pmx-sub">רוצים גם את סבב המדיה? מייצאים את הצ'אט כולל מדיה ומעלים שוב.</p>`}
-    <p class="pmx-sub">🎓 התעודות מחכות בסוף המשחק.</p></section>`;
+    <button class="pmx-free" id="pm-files">📁 התיקים הסודיים של כל אחד</button>
+    <p class="pmx-sub">🎓 התעודות מחכות בסוף המשחק. בזמן משחק, כל שחקן מקבל את התיק שלו לטלפון.</p></section>`;
   const D = hasWrapped() ? P.wrapped : null, rows: string[] = [];
   if (D) {
     if (D.mention) rows.push(`<li>👀 <span>מישהו בקבוצה מזכיר את השם של ${blur(plainName(D.mention.to))} יותר מכל אחד אחר. ${fmt(D.mention.n)} פעמים.</span></li>`);
@@ -1055,6 +1059,7 @@ export function teaserHtml() {
     <h3 class="pmx-t">בובי מצא <span class="pmx-n" data-to="${secrets}">0</span> סודות<span>בצ'אט שלכם 👀</span></h3>
     ${rows.length ? `<ul class="pmx-secrets">${rows.slice(0, 5).join("")}</ul>` : ""}
     ${media}
+    <p class="pmx-certline">📁 ולכל אחד מחכה <b>תיק סודי</b>: מי מזכיר אותו, מי מתעלם ממנו וההודעה הכי מביכה שלו. <button class="pmx-link" id="pm-files" style="display:inline">להציץ בכריכה</button></p>
     <p class="pmx-certline">🎓 וכל שחקן מקבל תעודה. למשל: <b>"${pick(titles)}"</b></p>
     <button class="pmx-cta" id="pm-buy">לגלות הכל ב־${PRICE} ₪ ✨</button>
     <span class="pmx-sub">פעם אחת לכל הקבוצה. בלי מנוי, בלי כרטיס אשראי. משלמים בביט.</span>
@@ -1064,11 +1069,211 @@ export function teaserHtml() {
 }
 /** after the teaser is on screen: blurred thumbnails of the group's own photos and stickers */
 export function bindTeaser() {
+  const fb = document.getElementById("pm-files"); if (fb && !fb.dataset.on) { fb.dataset.on = "1"; fb.onclick = () => files("setup"); }
   document.querySelectorAll<HTMLElement>(".pmx-th[data-f]:not([data-on])").forEach(async (el) => { el.dataset.on = "1"; const u = await urlOf(el.dataset.f!); if (u) el.style.backgroundImage = `url("${u}")`; });
   // short clips from the group play blurred and silent: you can tell it's them, you can't tell what happens
   document.querySelectorAll<HTMLElement>(".pmx-th[data-v]:not([data-on])").forEach(async (el) => { el.dataset.on = "1"; const u = await urlOf(el.dataset.v!); if (!u) return; const v = document.createElement("video"); v.src = u; v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true; v.setAttribute("playsinline", ""); el.prepend(v); v.play().catch(() => {}); });
   document.querySelectorAll<HTMLElement>(".pmx-n:not([data-on])").forEach((el) => { el.dataset.on = "1"; const to = +el.dataset.to! || 0, t0 = performance.now(); (function f(t: number) { const k = Math.min(1, (t - t0) / 1400); el.textContent = String(Math.round(to * (1 - Math.pow(1 - k, 3)))); if (k < 1) requestAnimationFrame(f); })(t0); });
 }
+
+// ---------------------------------------------------------------- the personal file: a classified dossier for every player
+function dossierFor(name: string) {
+  const all = P.msgs.filter((m: Message) => m.ts);
+  if (!all.some((m: Message) => m.author === name)) return null;
+  const C = () => new Map<string, number>(), inc = (mp: Map<string, number>, k: string, v = 1) => mp.set(k, (mp.get(k) || 0) + v);
+  const top = (mp: Map<string, number>, asc = false) => [...mp].sort((a, b) => asc ? a[1] - b[1] : b[1] - a[1]);
+  const by = C(); all.forEach((m: Message) => inc(by, m.author));
+  const people = top(by), rank = people.findIndex((p) => p[0] === name) + 1;
+  const first = (n: string) => { const w = plainName(n).split(/\s+/)[0]; return w && w.length >= 2 ? w : ""; };
+  const rx = (w: string) => new RegExp(`(^|[^\u05d0-\u05ea])[והבלמש]?${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\u05d0-\u05ea])`, "g");
+  const me = first(name), meRx = me ? rx(me) : null;
+  const mentionedBy = C(), mentions = C(), others = people.map((p) => p[0]).filter((n) => n !== name);
+  const otherRx = new Map(others.map((n) => [n, first(n)] as [string, string]).filter(([, w]) => w).map(([n, w]) => [n, rx(w)] as [string, RegExp]));
+  const repTo = new Map<string, number[]>(), pair = C(), replyCount = C(); let ghosts = 0, qs = 0;
+  let night: any = null; const words = C(), emo = C(), hours = new Array(24).fill(0); let deleted = 0, edited = 0, mine = 0;
+  const wordsAll = C();
+  all.forEach((m: Message, i: number) => {
+    const t = m.text || "", nx = all[i + 1], pv = all[i - 1];
+    for (const w of t.match(/[\u05d0-\u05ea]{3,}/g) || []) inc(wordsAll, w);
+    if (m.author !== name) { if (meRx && t && (t.match(meRx) || []).length) inc(mentionedBy, m.author, (t.match(meRx) || []).length);
+      if (pv && pv.author === name && m.ts! - pv.ts! < 10 * 60e3) { inc(replyCount, m.author); let a = repTo.get(m.author); if (!a) repTo.set(m.author, (a = [])); a.push((m.ts! - pv.ts!) / 1000); }
+      if (pv && pv.author === name && m.ts! - pv.ts! < 120e3) inc(pair, m.author);
+      return; }
+    mine++; const h = new Date(m.ts!).getHours(); hours[h]++;
+    if (m.deleted) deleted++; if (m.edited) edited++;
+    if (pv && pv.author !== name && m.ts! - pv.ts! < 120e3) inc(pair, pv.author);
+    if (!t) return;
+    otherRx.forEach((r, n) => { const k = (t.match(r) || []).length; if (k) inc(mentions, n, k); });
+    if (/\?\s*$/.test(t)) { qs++; if (!nx || nx.ts! - m.ts! > 3600e3) ghosts++; }
+    if (h >= 1 && h < 5 && t.length >= 8 && (!night || Math.abs(h - 3) < Math.abs(new Date(night.ts).getHours() - 3))) night = { t: t.slice(0, 110), ts: m.ts };
+    for (const w of t.match(/[\u05d0-\u05ea]{3,}/g) || []) if (!STOP.has(w)) inc(words, w);
+    for (const e of t.match(EMO) || []) inc(emo, e);
+  });
+  const med = (a: number[]) => a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)];
+  const fastest = [...repTo].filter(([, a]) => a.length >= 5).map(([n, a]) => [n, med(a)] as [string, number]).sort((a, b) => a[1] - b[1])[0] || null;
+  // who answers you a lot less than they answer everyone else
+  const total = all.length, ignorer = others.filter((n) => (by.get(n) || 0) >= Math.max(20, total * .04)).map((n) => [n, replyCount.get(n) || 0, (replyCount.get(n) || 0) / ((by.get(n) || 1) / total)] as [string, number, number]).sort((a, b) => a[2] - b[2])[0] || null;
+  const word = top(words).filter(([w]) => !first(w)).map(([w, n]) => [w, n, n / (wordsAll.get(w) || n)] as [string, number, number]).filter((x) => x[1] >= 4).sort((a, b) => b[2] * Math.log(b[1] + 1) - a[2] * Math.log(a[1] + 1))[0] || null;
+  const peak = hours.indexOf(Math.max(...hours));
+  const verdict = certTitles([name]).get(name)!;
+  const no = String(1000 + (([...name].reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7) >>> 0) % 9000));
+  return { name, no, msgs: mine, rank, of: people.length, mentionedBy: top(mentionedBy)[0] || null, mentions: top(mentions)[0] || null, fastest, ignorer: ignorer && ignorer[0] !== fastest?.[0] ? [ignorer[0], ignorer[1]] : null,
+    bestie: top(pair)[0] || null, ghosts, qs, night, deleted, edited, peak, word: word ? [word[0], word[1]] : null, emoji: top(emo)[0] || null, verdict, group: P.name || "" };
+}
+const fileSecrets = (f: any) => ["mentionedBy", "fastest", "ignorer", "bestie", "mentions", "night"].filter((k) => f[k]).length + 2;
+
+/** host: pick a player and open their file (also from the end screen) */
+export function files(from = "setup") {
+  if (!P.msgs.length) { P.opts?.toast?.("צריך להעלות את הצ'אט בשביל התיקים"); return; }
+  try { P.opts?.net?.bump("files_open"); } catch {}
+  const names = [...P.msgs.reduce((mp: Map<string, number>, m: Message) => mp.set(m.author, (mp.get(m.author) || 0) + 1), new Map<string, number>())].sort((a, b) => b[1] - a[1]).slice(0, 16).map((x) => x[0]);
+  const root = layer("pm-pick");
+  root.innerHTML = `<div class="pm-sheet"><div class="pm-head"><b>📁 של מי התיק?</b><button class="pm-x" aria-label="סגירה">✕</button></div>
+    <p class="pm-dim">${P.on ? "בוחרים שם, ובובי פותח את התיק הסודי. כדאי שבעל התיק יחזיק את הטלפון 😈" : "לכל אחד בקבוצה מחכה תיק סודי. בחינם רואים רק את הכריכה."}</p>
+    <div class="pmf-names">${names.map((n) => `<button data-n="${esc(n)}">🗂️ ${esc(plainName(n))}</button>`).join("")}</div></div>`;
+  root.querySelector<HTMLButtonElement>(".pm-x")!.onclick = () => root.remove();
+  root.querySelectorAll<HTMLButtonElement>("[data-n]").forEach((b) => (b.onclick = () => { const f = dossierFor(b.dataset.n!); root.remove(); if (f) openFile(P.on ? f : { locked: 1, name: f.name, no: f.no, n: fileSecrets(f), group: f.group }); }));
+}
+// host side of the phones: everyone in the game gets their own file privately
+function sendFiles() {
+  const room = P.room; if (!room || !room.sig || !P.msgs.length || !P.peerNames) return;
+  P.peerNames.forEach((n: string, uid: string) => {
+    const state = (P.on ? "on" : "lock") + ":" + n; if (P.sentFiles.get(uid) === state) return;
+    const f = dossierFor(n); if (!f) return; P.sentFiles.set(uid, state);
+    room.sig(uid, { t: "file", f: P.on ? f : { locked: 1, name: f.name, no: f.no, n: fileSecrets(f), group: f.group } }).catch(() => P.sentFiles.delete(uid));
+  });
+}
+on((e) => { if (e === "unlock") sendFiles(); });
+function gotFile(m: any) {
+  const f = m.f; if (!f || typeof f.name !== "string") return;
+  const was = P.myFile; P.myFile = f;
+  let fab = document.querySelector<HTMLButtonElement>(".pmf-fab");
+  if (!fab) { fab = document.createElement("button"); fab.className = "pmf-fab"; document.body.append(fab); fab.onclick = () => openFile(P.myFile); }
+  fab.innerHTML = f.locked ? `📁 התיק הסודי שלך <span>🔒</span>` : `📁 התיק הסודי שלך <span>חדש!</span>`;
+  if (!was || (was.locked && !f.locked)) { fab.classList.remove("pop"); void fab.offsetWidth; fab.classList.add("pop"); try { navigator.vibrate && navigator.vibrate([30, 40, 30]); } catch {} }
+}
+
+let F: any = null;
+function openFile(f: any) {
+  if (!f) return;
+  try { P.opts?.net?.bump(f.locked ? "file_locked" : "file_open"); } catch {}
+  P.opts?.music?.pause();
+  const host = layer("pmf"), sr = host.attachShadow({ mode: "open" });
+  F = { host, sr, ac: null as any, muted: false };
+  const name = esc(plainName(f.name)), sec: [string, string, string, string][] = []; // icon, title, body, quip
+  if (!f.locked) {
+    if (f.mentionedBy) sec.push(["👁️", "מי מזכיר אותך הכי הרבה", `<b>${esc(plainName(f.mentionedBy[0]))}</b> כתב את השם שלך <b>${fmt(f.mentionedBy[1])}</b> פעמים.`, "מישהו פה חושב עליך הרבה 😳"]);
+    if (f.fastest) sec.push(["🏃", "מי רץ לענות לך", `<b>${esc(plainName(f.fastest[0]))}</b> עונה לך תוך <b>${fmt(Math.max(1, Math.round(f.fastest[1])))}</b> שניות.`, "זה כבר מתחיל להיות חשוד."]);
+    if (f.ignorer) sec.push(["🧊", "מי מתעלם ממך", `<b>${esc(plainName(f.ignorer[0]))}</b> ענה לך רק <b>${fmt(f.ignorer[1])}</b> פעמים כל השנה. לאחרים הוא עונה הרבה יותר.`, "אולי תשאל אותו למה 🙃"]);
+    if (f.bestie) sec.push(["🤝", "הבסטי שלך בצ'אט", `את/ה ו<b>${esc(plainName(f.bestie[0]))}</b> עניתם אחד לשני תוך שתי דקות <b>${fmt(f.bestie[1])}</b> פעמים.`, "תקנו כבר צמידי חברות."]);
+    if (f.mentions) sec.push(["🔭", "על מי את/ה מדבר/ת הכי הרבה", `<b>${esc(plainName(f.mentions[0]))}</b>. כתבת את השם שלו <b>${fmt(f.mentions[1])}</b> פעמים.`, "אנחנו רואים אותך 👀"]);
+    if (f.night) sec.push(["🌙", "ההודעה הכי מביכה שלך", `<span class="q">״${esc(f.night.t)}״</span><span class="tm">נשלח ב־${new Date(f.night.ts).toTimeString().slice(0, 5)} בלילה</span>`, "מה עבר לך בראש?"]);
+    sec.push(["📊", "המספרים שלך", `<span class="nums"><i><b>${fmt(f.msgs)}</b>הודעות</i><i><b>#${f.rank}</b>בחפרנות מתוך ${f.of}</i><i><b>${String(f.peak).padStart(2, "0")}:00</b>השעה שלך</i>${f.ghosts ? `<i><b>${fmt(f.ghosts)}</b>שאלות שאף אחד לא ענה</i>` : ""}${f.word ? `<i><b>${esc(f.word[0])}</b>המילה שלך</i>` : ""}${f.emoji ? `<i><b>${f.emoji[0]}</b>האימוג'י שלך</i>` : ""}${f.deleted ? `<i><b>${fmt(f.deleted)}</b>הודעות שמחקת</i>` : ""}</span>`, f.deleted ? "ולא, לא שכחנו את מה שמחקת." : "הנתונים לא משקרים."]);
+    sec.push(["⚖️", "פסק הדין של בובי", `<span class="vd">${f.verdict.e} ${esc(f.verdict.t)}</span><span class="vr">${esc(f.verdict.r)}</span>`, "אין ערעורים."]);
+  }
+  sr.innerHTML = `<style>${FCSS}</style><div class="ph"><div class="top"><button class="ib" id="mu" aria-label="השתקה">🔊</button><button class="ib" id="x" aria-label="סגירה">✕</button></div>
+    <div class="scroll" id="sc"><div class="folder">
+      <div class="tab">תיק מס׳ ${esc(f.no)}</div>
+      <div class="stamp s1">סודי ביותר</div>
+      <div class="cover"><small>${esc(f.group || "הקבוצה")} · ארכיון בובי</small><h1>התיק הסודי של</h1><h2>${name}</h2>
+        <div class="bud">${budSvg(f.locked ? "think" : "shock", 96)}</div>
+        <p class="lead">${f.locked ? `בובי אסף <b>${fmt(f.n)}</b> סודות עליך מתוך הצ'אט.` : `בובי עבר על כל ההודעות שלך. כל. ההודעות.`}</p></div>
+      ${f.locked ? `<div class="locked">${Array.from({ length: Math.min(6, f.n) }, (_, i) => `<div class="card red"><span class="ic">🔒</span><div><div class="bar w${i % 3}"></div><div class="bar w${(i + 1) % 3}"></div></div></div>`).join("")}
+        <div class="lk"><b>🔒 התיק נעול</b><p>מי מזכיר אותך הכי הרבה, מי מתעלם ממך, ההודעה הכי מביכה שלך ופסק הדין של בובי. הכל פה, מתחת לפסים השחורים.</p><p class="sm">התיק נפתח כשמישהו בקבוצה פותח את הפרימיום (14.90 ₪ פעם אחת לכל הקבוצה).${P.key ? "" : " תגידו למי שפתח את המשחק 😉"}</p>${P.key ? `<button class="cta" id="buy">לפתוח את כל התיקים ✨</button>` : ""}</div></div>`
+      : `${sec.map((x, i) => `<div class="card" data-i="${i}"><div class="hd"><span class="ic">${x[0]}</span><b>${x[1]}</b></div><div class="bd">${x[2]}<em>${x[3]}</em></div><div class="redact"><span>מסווג</span><small>הקישו כדי לחשוף</small></div></div>`).join("")}
+        <div class="end" hidden><div class="stamp s2">נחשף!</div><button class="cta" id="save">📲 שמירה לסטורי</button><button class="ghost" id="again">לראות תיק של מישהו אחר</button></div>`}
+    </div></div></div>`;
+  const $ = (q: string) => sr.querySelector(q) as HTMLElement;
+  $("#x").onclick = closeFile;
+  $("#mu").onclick = (e: any) => { F.muted = !F.muted; e.currentTarget.textContent = F.muted ? "🔇" : "🔊"; };
+  const buyB = sr.querySelector<HTMLButtonElement>("#buy"); if (buyB) buyB.onclick = () => { closeFile(); buy("file"); };
+  const tone = (k: string) => { try { if (F.muted) return; if (!F.ac) F.ac = new (window.AudioContext || (window as any).webkitAudioContext)(); const ac = F.ac, t = ac.currentTime;
+    const o = (type: OscillatorType, f: number, d: number, v: number, f2?: number, at = 0) => { const g = ac.createGain(), x = ac.createOscillator(); x.type = type; x.frequency.setValueAtTime(f, t + at); if (f2) x.frequency.exponentialRampToValueAtTime(f2, t + at + d); g.gain.setValueAtTime(v, t + at); g.gain.exponentialRampToValueAtTime(.0001, t + at + d); x.connect(g); g.connect(ac.destination); x.start(t + at); x.stop(t + at + d + .05); };
+    if (k === "rip") { for (let i = 0; i < 6; i++) o("square", 1400 - i * 150, .03, .05, undefined, i * .025); o("sine", 180, .25, .4, 60, .12); }
+    if (k === "stamp") { o("sine", 120, .35, .9, 40); o("square", 70, .12, .15); }
+    if (k === "type") o("square", 2200 + Math.random() * 400, .02, .04); } catch {} };
+  setTimeout(() => { tone("stamp"); try { navigator.vibrate && navigator.vibrate(40); } catch {} }, 450);
+  if (f.locked) return;
+  let next = 0;
+  const reveal = (i: number) => {
+    const c = sr.querySelector<HTMLElement>(`.card[data-i="${i}"]`); if (!c || c.classList.contains("open")) return;
+    c.classList.add("open"); tone("rip"); try { navigator.vibrate && navigator.vibrate(25); } catch {}
+    for (let k = 0; k < 8; k++) setTimeout(() => tone("type"), 250 + k * 45);
+    next = Math.max(next, i + 1);
+    setTimeout(() => { const n2 = sr.querySelector<HTMLElement>(`.card[data-i="${next}"]`); if (n2) n2.scrollIntoView({ behavior: "smooth", block: "center" }); else { const end = $(".end"); end.hidden = false; end.scrollIntoView({ behavior: "smooth", block: "center" }); setTimeout(() => tone("stamp"), 250); } }, 900);
+  };
+  sr.querySelectorAll<HTMLElement>(".card").forEach((c) => (c.onclick = () => reveal(+c.dataset.i!)));
+  $("#save").onclick = () => saveFile(f);
+  $("#again").onclick = () => { closeFile(); files(); };
+}
+function closeFile() { if (!F) return; try { F.ac && F.ac.close(); } catch {} F.host.remove(); F = null; P.opts?.music?.resume(); }
+async function saveFile(f: any) {
+  await fonts(); const cv = document.createElement("canvas"); cv.width = 1080; cv.height = 1920; const c = cv.getContext("2d")!;
+  c.fillStyle = "#1d1636"; c.fillRect(0, 0, 1080, 1920); dots(c, "#ffffff14");
+  c.fillStyle = "#c9a66b"; rr(c, 120, 130, 330, 110, 30); c.fill();
+  c.fillStyle = "#0e0a1f"; rr(c, 80, 222, 920, 1580, 40); c.fill(); c.fillStyle = "#e9d3a2"; rr(c, 80, 200, 920, 1580, 40); c.fill(); c.lineWidth = 8; c.strokeStyle = "#1d1636"; c.stroke();
+  textLine(c, `תיק מס׳ ${f.no}`, 285, 172, 38, "#3a2a0a", 700, 300);
+  stickerText(c, "התיק הסודי של", 540, 330, 96, "#1d1636", "#e9d3a2", "#e9d3a2", 860);
+  stickerText(c, plainName(f.name), 540, 470, 150, "#c81e3c", "#fff", "#1d1636", 860);
+  const lines: [string, string][] = [];
+  if (f.mentionedBy) lines.push(["👁️", `${plainName(f.mentionedBy[0])} הזכיר אותי ${fmt(f.mentionedBy[1])} פעמים`]);
+  if (f.fastest) lines.push(["🏃", `${plainName(f.fastest[0])} עונה לי תוך ${fmt(Math.max(1, Math.round(f.fastest[1])))} שניות`]);
+  if (f.ignorer) lines.push(["🧊", `${plainName(f.ignorer[0])} מתעלם ממני`]);
+  if (f.bestie) lines.push(["🤝", `הבסטי שלי בצ'אט: ${plainName(f.bestie[0])}`]);
+  lines.slice(0, 4).forEach(([e, t], i) => { const y = 640 + i * 190; c.fillStyle = "#fff8e6"; rr(c, 150, y, 780, 150, 26); c.fill(); c.lineWidth = 5; c.strokeStyle = "#1d1636"; c.stroke();
+    c.font = '70px "Apple Color Emoji","Segoe UI Emoji",sans-serif'; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(e, 860, y + 75); textLine(c, t, 500, y + 75 - 22, 44, "#1d1636", 700, 600); });
+  const vy = 640 + Math.min(4, lines.length) * 190 + 30;
+  textLine(c, "פסק הדין של בובי:", 540, vy, 40, "#5a4a2a", 700);
+  stickerText(c, `${f.verdict.t}`, 540, vy + 95, 100, "#7b5cff", "#fff", "#1d1636", 860);
+  c.save(); c.translate(770, 1610); c.rotate(-.2); c.strokeStyle = "#c81e3c"; c.lineWidth = 10; rr(c, -190, -70, 380, 140, 18); c.stroke(); c.fillStyle = "#c81e3c"; c.font = '700 110px Karantina, sans-serif'; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("סודי ביותר", 0, 8); c.restore();
+  const bud = await budImage("shock"); c.drawImage(bud, 160, 1490, 220, 256);
+  textLine(c, "מה כתוב בתיק שלך? mi-amar.co.il", 540, 1860, 34, "#ffd23f", 700, 900);
+  await share(cv, `התיק-של-${plainName(f.name)}.png`, "התיק הסודי שלי");
+}
+const FCSS = BUD_CSS_FILE();
+function BUD_CSS_FILE() { return `.buddy{display:inline-block;width:var(--bs,96px);aspect-ratio:172/200;flex:none}.buddy svg{width:100%;height:100%;display:block;overflow:visible}.buddy [data-m]{display:none}
+.buddy.m-think [data-m~="think"],.buddy.m-shock [data-m~="shock"]{display:inline}.buddy .bd{animation:bob 2.4s ease-in-out infinite alternate;transform-origin:50% 90%;transform-box:view-box}@keyframes bob{to{transform:translateY(-5px)}}
+*{box-sizing:border-box;margin:0;padding:0}
+.ph{position:fixed;inset:0;background:radial-gradient(120% 70% at 50% 0%,#3b2a8f,#0e0a1f 70%);font-family:"Varela Round",system-ui,sans-serif;color:#1d1636;direction:rtl}
+.ph::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,#ffffff06 0 2px,transparent 2px 4px);pointer-events:none;animation:scan 8s linear infinite}
+@keyframes scan{to{background-position:0 200px}}
+.top{position:absolute;top:12px;inset-inline:12px;display:flex;justify-content:space-between;z-index:5}
+.ib{width:40px;height:40px;border-radius:50%;border:0;background:#ffffff22;color:#fff;font-size:17px;cursor:pointer}
+.scroll{position:absolute;inset:0;overflow-y:auto;padding:64px 14px 40px;-webkit-overflow-scrolling:touch}
+.folder{position:relative;max-width:440px;margin:0 auto;background:#e9d3a2;border:4px solid #1d1636;border-radius:10px 24px 24px 24px;box-shadow:0 12px 0 #0008;padding:26px 16px 22px;animation:fin .7s cubic-bezier(.2,1.4,.4,1);background-image:radial-gradient(#00000010 1px,transparent 1px);background-size:6px 6px}
+@keyframes fin{from{transform:translateY(60px) rotate(-4deg);opacity:0}}
+.tab{position:absolute;top:-36px;right:24px;background:#c9a66b;border:4px solid #1d1636;border-bottom:0;border-radius:14px 14px 0 0;padding:6px 16px;font-weight:700;font-size:.85rem;color:#3a2a0a}
+.stamp{position:absolute;font-family:Karantina,sans-serif;color:#c81e3c;border:4px solid #c81e3c;border-radius:10px;padding:0 12px;font-size:2.3rem;line-height:1.1;opacity:.85;mix-blend-mode:multiply;pointer-events:none}
+.s1{top:14px;left:10px;transform:rotate(-16deg);animation:st .5s cubic-bezier(.2,1.6,.4,1) .4s backwards}
+.s2{position:relative;display:inline-block;transform:rotate(-8deg);animation:st .5s cubic-bezier(.2,1.6,.4,1) .2s backwards;font-size:3rem;margin-bottom:10px}
+@keyframes st{from{transform:rotate(-16deg) scale(3.2);opacity:0}}
+.cover{text-align:center;display:grid;gap:4px;justify-items:center;margin-bottom:14px}
+.cover small{font-size:.78rem;color:#6b5428;font-weight:700}
+.cover h1{font-family:Karantina,sans-serif;font-size:2.2rem;line-height:1}
+.cover h2{font-family:Karantina,sans-serif;font-size:3.6rem;line-height:.9;color:#c81e3c;text-shadow:3px 3px 0 #fff,6px 6px 0 #1d1636;margin-bottom:6px}
+.lead{font-size:1rem;font-weight:700}
+.card{position:relative;background:#fff8e6;border:3px solid #1d1636;border-radius:16px;padding:12px 14px;margin-top:12px;box-shadow:0 5px 0 #1d1636;overflow:hidden;cursor:pointer;min-height:92px}
+.hd{display:flex;gap:8px;align-items:center;font-size:1rem}.ic{font-size:1.4rem}
+.bd{margin-top:8px;font-size:1.05rem;line-height:1.5}.bd b{color:#c81e3c}
+.bd em{display:block;font-style:normal;font-size:.86rem;color:#6b5428;margin-top:4px}
+.q{display:block;background:#fff;border:2px solid #1d1636;border-radius:14px 14px 14px 4px;padding:8px 12px;font-weight:700}.tm{display:block;font-size:.8rem;color:#6b5428;margin-top:4px}
+.nums{display:grid;grid-template-columns:1fr 1fr;gap:8px}.nums i{font-style:normal;background:#e9d3a2;border-radius:12px;padding:8px;text-align:center;font-size:.78rem;display:grid}.nums b{font-family:Karantina,sans-serif;font-size:1.9rem;line-height:1;color:#1d1636}
+.vd{display:block;font-family:Karantina,sans-serif;font-size:2.6rem;line-height:1;color:#7b5cff;text-align:center}.vr{display:block;text-align:center;font-weight:700}
+.redact{position:absolute;inset:0;background:#111;display:grid;place-content:center;justify-items:center;gap:2px;color:#fff;transform-origin:left center;transition:transform .55s cubic-bezier(.7,0,.2,1)}
+.redact span{font-family:Karantina,sans-serif;font-size:2rem;letter-spacing:6px;color:#ff3d7f}.redact small{font-size:.8rem;opacity:.7;animation:blink 1.2s infinite}
+.redact::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,#ffffff22,transparent);transform:translateX(-100%);animation:sh 2.2s infinite}
+@keyframes sh{to{transform:translateX(100%)}}@keyframes blink{50%{opacity:.25}}
+.card.open .redact{transform:scaleX(0)}
+.card.open .bd{animation:typein .6s steps(12) .25s backwards}
+@keyframes typein{from{clip-path:inset(0 0 0 100%)}}
+.card.red{cursor:default;display:flex;gap:10px;align-items:center}.card.red>div{flex:1;display:grid;gap:8px}
+.bar{height:16px;background:#111;border-radius:4px}.bar.w0{width:90%}.bar.w1{width:65%}.bar.w2{width:78%}
+.lk{margin-top:14px;text-align:center;display:grid;gap:8px}.lk b{font-size:1.2rem}.lk p{font-size:.95rem;line-height:1.5}.lk .sm{font-size:.82rem;color:#6b5428}
+.end{text-align:center;margin-top:18px;display:grid;gap:10px;justify-items:center}
+.cta{width:100%;font-family:inherit;font-weight:700;font-size:1.15rem;border:3.5px solid #1d1636;background:linear-gradient(180deg,#ffe26b,#ffc21f);color:#1d1636;border-radius:16px;padding:14px;box-shadow:0 5px 0 #1d1636;cursor:pointer}
+.ghost{font-family:inherit;font-weight:700;background:none;border:0;color:#6b5428;text-decoration:underline;cursor:pointer}
+.cta:focus-visible,.ib:focus-visible,.card:focus-visible{outline:3px solid #7b5cff;outline-offset:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01s!important}}`; }
 
 // ---------------------------------------------------------------- styles
 // the story lives in its own shadow root, so the game's own styles (.msg, .cal, .poster…) never leak into it
@@ -1266,6 +1471,12 @@ function css() {
 .pmx-hero.on{background:radial-gradient(120% 80% at 50% 0%,#19c39a 0%,#1d5a63 60%,#17112e 100%)}
 @media (max-width:360px){.pmx-tiles{grid-template-columns:1fr 1fr}.pmx-tile:last-child{grid-column:span 2}}
 @media (prefers-reduced-motion:reduce){.pmx-show *,.pmx-hero *,.pmx-ring{animation:none!important}.pmx-f.f1{opacity:1}}
+.pmf-fab{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom));left:50%;translate:-50% 0;white-space:nowrap;z-index:8000;font-family:"Varela Round",sans-serif;font-weight:700;font-size:15px;border:3px solid #1d1636;background:#e9d3a2;color:#1d1636;border-radius:999px;padding:11px 16px;box-shadow:0 5px 0 #1d1636;cursor:pointer;direction:rtl;animation:pmxPulse 2.2s ease-in-out infinite}
+.pmf-fab span{background:#c81e3c;color:#fff;border-radius:99px;padding:1px 7px;font-size:12px;margin-inline-start:4px}
+.pmf-fab.pop{animation:pmfPop .7s cubic-bezier(.2,1.6,.4,1),pmxPulse 2.2s ease-in-out .7s infinite}
+@keyframes pmfPop{from{transform:scale(0) rotate(-20deg)}}
+.pmf-names{display:flex;flex-wrap:wrap;gap:8px}.pmf-names button{font-family:inherit;font-weight:700;border:3px solid #1d1636;background:#e9d3a2;color:#1d1636;border-radius:14px;padding:10px 12px;cursor:pointer;box-shadow:0 4px 0 #1d1636}
+.pmf{padding:0;background:none;backdrop-filter:none;-webkit-backdrop-filter:none}
 .pm-toast{position:fixed;bottom:24px;left:50%;translate:-50% 20px;z-index:9500;background:#fff3d1;color:#1d1636;border:3px solid #1d1636;box-shadow:0 5px 0 #1d1636;border-radius:16px;padding:10px 16px;font-family:"Varela Round",sans-serif;font-weight:700;opacity:0;transition:.3s;direction:rtl;max-width:90vw;text-align:center}
 .pm-toast.show{opacity:1;translate:-50% 0}
 .pm-layer.pmw{padding:0;background:#0c0820;backdrop-filter:none;-webkit-backdrop-filter:none}
