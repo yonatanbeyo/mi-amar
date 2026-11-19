@@ -96,7 +96,8 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
     <div class="legend"><span><i style="background:var(--sky)"></i>כניסות לאתר</span><span>המספר מעל: משחקים שהתחילו</span></div>
     <div class="bars h24" id="hours"></div>
   </section>
-  <section class="chart"><b>⭐ פרימיום: יש עניין?</b><p class="dim" style="margin:4px 0 8px">כל שלב, וכמה מהשלב הקודם המשיכו אליו. נאסף מ־20.11.</p><div class="rows" id="pmFunnel"></div>
+  <section class="chart"><b>⭐ פרימיום: יש עניין?</b><p class="dim" style="margin:4px 0 8px">כל שלב, וכמה מהשלב הקודם המשיכו אליו. נאסף מ־20.11. אלה לחיצות, לא תשלומים: תשלום אמיתי מופיע בלוח הניהול ובמייל.</p>
+    <button id="meBtn" type="button" style="margin-bottom:10px"></button><div class="rows" id="pmFunnel"></div>
     <b style="display:block;margin-top:14px">מאיפה פתחו את חלון התשלום</b><div class="rows" id="pmFrom"></div>
     <b style="display:block;margin-top:14px">עוד לחיצות על פרימיום</b><div class="ins" id="pmMore"></div></section>
   <section class="chart"><b>תובנות לטווח שבחרת</b><div class="ins" id="ins"></div></section>
@@ -185,7 +186,7 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
     };
     rows("src_", "src"); rows("dev_", "dev"); rows("geo_", "geo");
     // premium funnel: does anyone care?
-    { const g = (k) => t[k] || 0, pct = (a, b) => (b ? Math.round((a / b) * 100) + "%" : "–");
+    { const g = (k) => t[k] || 0, pct = (a, b) => (b && a <= b ? Math.round((a / b) * 100) + "%" : "–");
       const steps = [["ראו את כרטיס הפרימיום (אחרי שהעלו צ'אט)", g("pm_seen")], ["פתחו את הסיכום החינמי", g("wrapped_open")], ["הגיעו לשקופית הנעולה", g("wrapped_lock")], ["פתחו את חלון התשלום", g("pm_open")], ["לחצו על הכפתור של ביט", g("pm_bit")], ["לחצו \"שילמתי\"", g("pm_paid")], ["הפרימיום נפתח להם", g("pm_unlocked")]];
       const mx = Math.max(1, ...steps.map((x) => x[1]));
       $("pmFunnel").innerHTML = steps.map(([l, v], i) => `<div class="row"><span>${l}</span><span class="track"><i style="width:${(v / mx) * 100}%;background:${i >= 5 ? "var(--mint,#3fe0b0)" : "var(--yellow,#ffd23f)"}"></i></span><b>${n(v)}${i ? ` · ${pct(v, steps[i - 1][1])}` : ""}</b></div>`).join("");
@@ -220,6 +221,9 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
     setInterval(draw, 5000);
     $("lvTest").onclick = () => { net.live("site"); $("lvTest").textContent = "✓ נספרת. תוך כמה שניות \"מסתכלים באתר\" יעלה ב-1"; $("lvTest").disabled = true; }; }
   document.getElementById("again").onclick = load;
+  { const b = document.getElementById("meBtn"), isMe = () => { try { return localStorage.getItem("miamar_me") === "1"; } catch { return false; } };
+    const draw = () => { b.textContent = isMe() ? "✓ הטלפון הזה לא נספר בנתונים (לחיצה מחזירה)" : "🙈 זה הטלפון שלי: לא לספור את מה שאני עושה באתר"; };
+    b.onclick = () => { try { isMe() ? localStorage.removeItem("miamar_me") : localStorage.setItem("miamar_me", "1"); } catch {} draw(); }; draw(); }
   load();
 })();
 </script>
