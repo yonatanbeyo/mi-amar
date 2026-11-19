@@ -331,7 +331,8 @@ function drawBuy() {
   const root = buyRoot!; const code = codeFor(P.key);
   root.innerHTML = `<div class="pm-sheet">
     <div class="pm-head"><b>פותחים את הפרימיום 🔓</b><button class="pm-x" id="pm-close" aria-label="סגירה">✕</button></div>
-    <ul class="pm-list"><li>🎁 הסיכום המלא של השנה, בלי סימן מים</li><li>🎙️ סבב המדיה: הקלטות, תמונות, סטיקרים וסרטונים</li><li>🎓 תעודה מצחיקה לכל שחקן, מוכנה לסטורי</li></ul>
+    <ul class="pm-list"><li>🎁 הסיכום המלא של השנה, בלי סימן מים</li><li>📁 תיק סודי לכל אחד בקבוצה</li><li>🎬 סבב המדיה: סרטונים, תמונות, הקלטות וסטיקרים</li><li>🎓 תעודה מצחיקה לכל שחקן, מוכנה לסטורי</li></ul>
+    ${P.items.length ? "" : `<p class="pm-warn">⚠️ בצ'אט שהעלית אין מדיה. בשביל סבב המדיה מייצאים מוואטסאפ <b>"כולל מדיה"</b>. אפשר לשלם עכשיו, והפרימיום יישאר פתוח גם כשתעלו את הצ'אט עם המדיה.</p>`}
     <div class="pm-price"><b>${PRICE} ₪</b><span>פעם אחת לכל הקבוצה. בלי מנוי, בלי כרטיס אשראי.</span></div>
     <h4 class="pm-h">איך משלמים? 3 צעדים, דקה אחת</h4>
     <div class="pm-step"><span class="pm-n">1</span><div><b>זה הקוד שלכם:</b><div class="pm-code"><span dir="ltr" id="pm-code">${code}</span><button id="pm-copy">העתקה</button></div></div></div>
@@ -1013,26 +1014,34 @@ function drawCert(cv: HTMLCanvasElement, x: any, bud: HTMLImageElement) {
 // ---------------------------------------------------------------- selling it: home showcase + a teaser built from the group's own chat
 const pick = <T>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 export function showcaseHtml() {
-  return `<section class="pmx-show" aria-label="פרימיום">
+  return `<section class="pmx-show" id="pmx-show" aria-label="פרימיום">
     <div class="pmx-ring"></div><div class="pmx-spark" aria-hidden="true"><i>✨</i><i>⭐</i><i>✨</i><i>💫</i><i>✨</i></div>
+    <span class="pmx-stamp" aria-hidden="true">מסווג</span>
     <span class="pmx-badge">⭐ חדש · פרימיום</span>
-    <h3 class="pmx-t">הצ'אט שלכם מסתיר סודות. <span>בובי מוצא את כולם.</span></h3>
-    <div class="pmx-tiles">
-      <div class="pmx-tile"><div class="pmx-phone"><div class="pmx-f f1"><small>מלך הסטיקרים</small><b>???</b><em>142 סטיקרים</em></div><div class="pmx-f f2"><small>ההודעה של 3 בלילה</small><span class="pmx-bub">אחי מישהו ער?</span><span class="pmx-bub me">מה קרה</span></div><div class="pmx-f f3"><small>מי נעלם</small><b>87</b><em>ימים בלי מילה</em></div></div><b>🎁 הסיכום של השנה</b><span>כמו של ספוטיפיי, רק על הקבוצה שלכם</span></div>
-      <div class="pmx-tile"><div class="pmx-voice"><span>▶︎</span><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><b>🎙️ של מי הקול?</b><span>הקלטות, תמונות וסטיקרים אמיתיים מהקבוצה</span></div>
-      <div class="pmx-tile"><div class="pmx-cert"><small>תעודה רשמית</small><b>ערפד מוסמך</b><em>🧛 רמת סכנה: 🔥🔥🔥</em></div><b>🎓 תעודה לכל שחקן</b><span>תואר מצחיק לכל אחד, מוכן לסטורי</span></div>
+    <h3 class="pmx-t">הצ'אט שלכם מסתיר סודות.<span>בובי מוצא את כולם 👀</span></h3>
+    <ul class="pmx-secrets demo"><li>👀 <span>מישהו בקבוצה מזכיר את השם של <span class="pmx-blur">אחד מכם</span> יותר מכל אחד אחר</span></li><li>🌙 <span>שניים דיברו לבד באמצע הלילה: <span class="pmx-blur">מי ומי</span></span></li><li>🗑️ <span>מישהו מחק 9 הודעות. מה הוא הסתיר?</span></li></ul>
+    <div class="pmx-grid">
+      <div class="pmx-tile"><div class="pmx-phone"><div class="pmx-f f1"><small>מלך הסטיקרים</small><b>???</b><em>142 סטיקרים</em></div><div class="pmx-f f2"><small>ההודעה של 3 בלילה</small><span class="pmx-bub">אחי מישהו ער?</span><span class="pmx-bub me">מה קרה</span></div><div class="pmx-f f3"><small>מי נעלם</small><b>87</b><em>ימים בלי מילה</em></div></div><b>🎁 הסיכום של השנה</b><span>21 שקופיות עם מוזיקה, כמו של ספוטיפיי</span></div>
+      <div class="pmx-tile"><div class="pmx-video"><div class="pmx-vframe"><span class="pmx-vblur"></span><span class="pmx-vplay">▶︎</span><i class="pmx-vbar"></i></div><div class="pmx-vq">מי שלח את הסרטון?</div></div><b>🎬 סבב המדיה</b><span>סרטונים, תמונות, הקלטות וסטיקרים אמיתיים</span></div>
+      <div class="pmx-tile"><div class="pmx-dossier"><small>תיק מס׳ 4821</small><b>התיק הסודי של</b><i class="r1"></i><i class="r2"></i><i class="r3"></i><span class="pmx-ds">סודי ביותר</span></div><b>📁 תיק סודי לכל אחד</b><span>מי מזכיר אותך, מי מתעלם ממך</span></div>
+      <div class="pmx-tile"><div class="pmx-cert"><small>תעודה רשמית</small><b>ערפד מוסמך</b><em>🧛 רמת סכנה: 🔥🔥🔥</em></div><b>🎓 תעודה לכל שחקן</b><span>תואר מצחיק, מוכן לסטורי</span></div>
     </div>
+    <div class="pmx-how"><b>איך מקבלים?</b>
+      <ol><li><span>1</span>מייצאים את הקבוצה מוואטסאפ <b>כולל מדיה</b></li><li><span>2</span>מעלים לכאן ורואים 3 שקופיות בחינם</li><li><span>3</span>פותחים הכל ב־14.90 ₪, פעם אחת לכל הקבוצה</li></ol>
+      <p class="pmx-note">🎬 בלי "כולל מדיה" אין סרטונים, תמונות והקלטות. כל השאר עובד גם בלי.</p></div>
     <button class="pmx-cta" id="pmx-go">מעלים צ'אט ומגלים ✨</button>
-    <span class="pmx-sub">14.90 ₪ פעם אחת לכל הקבוצה. בלי מנוי, בלי כרטיס אשראי.</span>
+    <span class="pmx-sub">משלמים בביט. בלי מנוי, בלי כרטיס אשראי.</span>
   </section>`;
 }
+/** a small strip at the very top of the home page that jumps to the showcase */
+export function topBarHtml() { return `<button class="pmx-top" id="pmx-top"><span class="pmx-top-b">⭐ חדש</span> סיכום השנה, סבב מדיה ותיקים סודיים <span aria-hidden="true">←</span></button>`; }
 const blur = (t: string) => `<span class="pmx-blur">${esc(t)}</span>`;
 export function teaserHtml() {
   const mc = P.items.length, k = mediaByKind();
   if (P.on) return `<section class="pmx-hero on"><div class="pmx-ring"></div><span class="pmx-badge">⭐ הפרימיום פתוח לקבוצה הזאת</span>
     <h3 class="pmx-t">הכל פתוח. תהנו 🎉</h3>
     <button class="pmx-cta" id="pm-wrap">🎁 לראות את הסיכום של ${wrappedYear()}</button>
-    ${mc ? `<button class="pmx-free" id="pm-rev">🎙️ לעבור על המדיה של סבב המדיה (${fmt(mc)})</button>` : `<p class="pmx-sub">רוצים גם את סבב המדיה? מייצאים את הצ'אט כולל מדיה ומעלים שוב.</p>`}
+    ${mc ? `<button class="pmx-free" id="pm-rev">🎙️ לעבור על המדיה של סבב המדיה (${fmt(mc)})</button>` : `<div class="pmx-nomedia"><b>⚠️ בצ'אט הזה אין מדיה</b><p>בשביל סבב המדיה מייצאים מוואטסאפ <b>"כולל מדיה"</b> ומעלים שוב. הפרימיום יזהה את הקבוצה ויישאר פתוח.</p></div>`}
     <button class="pmx-free" id="pm-files">📁 התיקים הסודיים של כל אחד</button>
     <p class="pmx-sub">🎓 התעודות מחכות בסוף המשחק. בזמן משחק, כל שחקן מקבל את התיק שלו לטלפון.</p></section>`;
   const D = hasWrapped() ? P.wrapped : null, rows: string[] = [];
@@ -1050,7 +1059,7 @@ export function teaserHtml() {
   const pics = P.items.filter((it: Item) => it.kind === "image" || it.kind === "sticker").slice(-40).sort(() => Math.random() - .5).slice(0, 5 - vids.length);
   const media = mc ? `<div class="pmx-media"><div class="pmx-thumbs">${[...vids.map((it: Item) => `<span class="pmx-th vid" data-v="${esc(it.id)}"><span>▶︎</span></span>`), ...pics.map((it: Item) => `<span class="pmx-th" data-f="${esc(it.id)}"></span>`)].sort(() => Math.random() - .5).join("")}<span class="pmx-th lock">🔒</span></div>
     <p>🎙️ <b>${[k.audio && `${fmt(k.audio)} הקלטות`, k.image && `${fmt(k.image)} תמונות`, k.sticker && `${fmt(k.sticker)} סטיקרים`, (k.video || k.gif) && `${fmt((k.video || 0) + (k.gif || 0))} סרטונים`].filter(Boolean).join(", ")}</b> מהקבוצה מחכים לסבב המדיה</p></div>`
-    : `<p class="pmx-sub">🎙️ בשביל סבב המדיה מייצאים את הצ'אט <b>כולל מדיה</b>.</p>`;
+    : `<div class="pmx-nomedia"><b>⚠️ בצ'אט הזה אין מדיה</b><p>כדי לקבל גם את סבב המדיה, עם הסרטונים, התמונות, ההקלטות והסטיקרים של הקבוצה, מייצאים את הצ'אט מוואטסאפ שוב, ובוחרים <b>"כולל מדיה"</b> במקום "ללא מדיה". אחר כך מעלים את הקובץ החדש.</p><p class="sm">הסיכום, התיקים והתעודות עובדים גם בלי מדיה.</p></div>`;
   const titles = ["ערפד מוסמך 🧛", "חופר בדרגת דוקטורט 🗣️", "נעלם במשולש ברמודה 🕵️", "פודקאסטר בלי מאזינים 🎙️", "גוגל של העניים ❓"];
   const secrets = rows.length + (mc ? 1 : 0) + 6;
   return `<section class="pmx-hero"><div class="pmx-ring"></div><div class="pmx-spark" aria-hidden="true"><i>✨</i><i>⭐</i><i>✨</i><i>💫</i><i>✨</i></div>
@@ -1411,7 +1420,7 @@ function css() {
   const s = document.createElement("style"); s.id = "pm-css";
   s.textContent = `
 /* selling: home showcase and the setup teaser */
-.pmx-show,.pmx-hero{position:relative;isolation:isolate;overflow:hidden;border-radius:26px;padding:20px 16px 18px;display:grid;gap:12px;text-align:center;color:#fff;background:radial-gradient(120% 80% at 50% 0%,#5a3fd6 0%,#2a1f55 60%,#17112e 100%);box-shadow:0 10px 0 #0006;direction:rtl}
+.pmx-show,.pmx-hero{max-width:100%;min-width:0;width:100%;box-sizing:border-box;position:relative;isolation:isolate;overflow:hidden;border-radius:26px;padding:20px 16px 18px;display:grid;gap:12px;text-align:center;color:#fff;background:radial-gradient(120% 80% at 50% 0%,#5a3fd6 0%,#2a1f55 60%,#17112e 100%);box-shadow:0 10px 0 #0006;direction:rtl}
 .pmx-ring{position:absolute;inset:-2px;z-index:-1;border-radius:inherit;padding:3px;background:conic-gradient(from var(--pmxa,0deg),#ffd23f,#ff3d7f,#7b5cff,#3fe0b0,#ffd23f);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:pmxSpin 4s linear infinite}
 @property --pmxa{syntax:"<angle>";inherits:false;initial-value:0deg}
 @keyframes pmxSpin{to{--pmxa:360deg}}
@@ -1422,7 +1431,34 @@ function css() {
 @keyframes pmxBob{to{transform:translateY(-3px) rotate(-2deg)}}
 .pmx-t{font-family:Karantina,sans-serif;font-size:2.3rem;line-height:.95;margin:0;text-shadow:0 3px 0 #0005}
 .pmx-t span{display:block;color:#ffd23f}
-.pmx-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pmx-tiles,.pmx-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pmx-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.pmx-secrets.demo li{font-size:.86rem}
+.pmx-video{height:118px;display:grid;place-items:center;gap:4px;margin-bottom:4px}
+.pmx-vframe{position:relative;width:92px;height:84px;border-radius:12px;border:3px solid #fff;overflow:hidden;background:#000}
+.pmx-vblur{position:absolute;inset:-10px;background:conic-gradient(from 0deg,#ff3d7f,#ffa928,#3fe0b0,#5fb4ff,#ff3d7f);filter:blur(10px);animation:pmxSpin 3s linear infinite}
+.pmx-vplay{position:absolute;inset:0;display:grid;place-items:center;font-size:22px;text-shadow:0 2px 6px #000}
+.pmx-vbar{position:absolute;bottom:5px;inset-inline:6px;height:4px;border-radius:3px;background:#ffffff44;overflow:hidden}.pmx-vbar::after{content:"";position:absolute;inset:0;background:#fff;transform-origin:right;animation:pmxBar 4s linear infinite}
+@keyframes pmxBar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.pmx-vq{font-size:9px;font-weight:700;background:#fff;color:#1d1636;border-radius:8px;padding:2px 6px}
+.pmx-dossier{position:relative;height:118px;margin:0 auto 4px;width:88px;background:#e9d3a2;color:#1d1636;border:3px solid #1d1636;border-radius:6px 12px 12px 12px;display:grid;align-content:start;gap:5px;padding:7px 6px;box-shadow:0 4px 0 #1d1636;transform:rotate(3deg)}
+.pmx-dossier small{font-size:7px;font-weight:700}.pmx-dossier b{font-size:9px}
+.pmx-dossier i{height:8px;background:#111;border-radius:2px;transform-origin:left;animation:pmxRed 3.5s ease-in-out infinite}.pmx-dossier .r1{width:90%}.pmx-dossier .r2{width:70%;animation-delay:.4s}.pmx-dossier .r3{width:80%;animation-delay:.8s}
+@keyframes pmxRed{0%,45%{transform:scaleX(1)}60%,85%{transform:scaleX(0)}100%{transform:scaleX(1)}}
+.pmx-ds{position:absolute;bottom:8px;left:4px;transform:rotate(-14deg);font-family:Karantina,sans-serif;color:#c81e3c;border:2px solid #c81e3c;border-radius:4px;padding:0 4px;font-size:13px;line-height:1.1}
+.pmx-how{background:#ffffff12;border:2px solid #ffffff25;border-radius:18px;padding:12px;text-align:right;display:grid;gap:8px}
+.pmx-how>b{font-size:1rem;text-align:center}
+.pmx-how ol{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.pmx-how li{display:flex;gap:8px;align-items:center;font-size:.9rem;line-height:1.35}
+.pmx-how li>span{flex:none;width:26px;height:26px;border-radius:50%;background:#ffd23f;color:#1d1636;display:grid;place-items:center;font-weight:700;border:2px solid #1d1636}
+.pmx-how li b,.pmx-nomedia b{color:#ffd23f}
+.pmx-note{margin:0;font-size:.82rem;color:#ffd9e6;background:#ff3d7f26;border-radius:10px;padding:7px 9px;text-align:center}
+.pmx-nomedia{background:#ff3d7f22;border:2.5px dashed #ff8ab0;border-radius:16px;padding:10px 12px;text-align:right;display:grid;gap:5px}
+.pmx-nomedia>b{color:#fff!important;font-size:1rem}.pmx-nomedia p{margin:0;font-size:.88rem;line-height:1.45}.pmx-nomedia .sm{font-size:.8rem;color:#d8cffa}
+.pmx-top{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;font-family:inherit;font-weight:700;font-size:.92rem;color:#fff;border:2.5px solid #1d1636;border-radius:999px;padding:9px 14px;cursor:pointer;background:linear-gradient(90deg,#ff3d7f,#7b5cff,#ff3d7f);background-size:200% 100%;animation:pmxSlide 4s linear infinite;box-shadow:0 4px 0 #1d1636;direction:rtl}
+.pmx-top-b{background:#ffd23f;color:#1d1636;border-radius:99px;padding:1px 8px;font-size:.78rem}
+@keyframes pmxSlide{to{background-position:200% 0}}
+.pm-warn{background:#fff0f4;border:2.5px dashed #ff3d7f;border-radius:12px;padding:8px 10px;font-size:.88rem;line-height:1.45}
 .pmx-tile{background:#ffffff14;border:2px solid #ffffff2a;border-radius:18px;padding:8px 6px 10px;display:grid;gap:4px;align-content:start;font-size:.8rem}
 .pmx-tile>b{font-size:.85rem}.pmx-tile>span{color:#d8cffa;font-size:.72rem;line-height:1.35}
 .pmx-phone{position:relative;height:118px;margin:0 auto 4px;width:70px;border-radius:12px;border:3px solid #1d1636;background:#ff3d7f;overflow:hidden;box-shadow:0 4px 0 #1d1636}
@@ -1449,14 +1485,15 @@ function css() {
 .pmx-free{font-family:inherit;font-weight:700;font-size:1rem;background:#ffffff1c;color:#fff;border:2px solid #ffffff55;border-radius:14px;padding:11px 14px;cursor:pointer}
 .pmx-link{font-family:inherit;background:none;border:0;color:#d8cffa;text-decoration:underline;font-size:.88rem;cursor:pointer}
 .pmx-secrets{list-style:none;margin:0;padding:0;display:grid;gap:7px;text-align:right}
+.pmx-secrets li>span{min-width:0;overflow-wrap:anywhere}
 .pmx-secrets li{display:flex;gap:8px;align-items:flex-start;background:#ffffff14;border:2px solid #ffffff22;border-radius:14px;padding:9px 11px;font-size:.92rem;line-height:1.4;font-weight:700;animation:pmxIn .5s cubic-bezier(.2,1.4,.4,1) backwards}
 .pmx-secrets li:nth-child(2){animation-delay:.12s}.pmx-secrets li:nth-child(3){animation-delay:.24s}.pmx-secrets li:nth-child(4){animation-delay:.36s}
 @keyframes pmxIn{from{opacity:0;transform:translateX(-20px)}}
-.pmx-blur{display:inline-block;filter:blur(6px);background:#ffd23f33;border-radius:6px;padding:0 4px;color:#ffd23f;user-select:none;-webkit-user-select:none;animation:pmxJig 2.5s ease-in-out infinite}
+.pmx-blur{display:inline;box-decoration-break:clone;-webkit-box-decoration-break:clone;filter:blur(6px);background:#ffd23f33;border-radius:6px;padding:0 4px;color:#ffd23f;user-select:none;-webkit-user-select:none;animation:pmxJig 2.5s ease-in-out infinite}
 @keyframes pmxJig{50%{filter:blur(4px)}}
 .pmx-media{display:grid;gap:8px}
 .pmx-media p{margin:0;font-size:.9rem;line-height:1.4}
-.pmx-thumbs{display:flex;justify-content:center;gap:6px}
+.pmx-thumbs{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
 .pmx-th{width:48px;height:48px;border-radius:12px;border:2.5px solid #fff;background:#7b5cff center/cover;filter:blur(3px) saturate(1.2);transform:rotate(var(--r,0deg))}
 .pmx-th:nth-child(odd){--r:-6deg}.pmx-th:nth-child(even){--r:5deg}
 .pmx-th.vid{position:relative;overflow:hidden;width:62px;filter:none}.pmx-th.vid video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(4px) saturate(1.3);transform:scale(1.15)}.pmx-th.vid span{position:absolute;inset:0;display:grid;place-items:center;font-size:16px;text-shadow:0 1px 4px #000}
@@ -1470,6 +1507,7 @@ function css() {
 .pmx-certline b{color:#ffd23f}
 .pmx-hero.on{background:radial-gradient(120% 80% at 50% 0%,#19c39a 0%,#1d5a63 60%,#17112e 100%)}
 @media (max-width:360px){.pmx-tiles{grid-template-columns:1fr 1fr}.pmx-tile:last-child{grid-column:span 2}}
+.pmx-tile{min-width:0}
 @media (prefers-reduced-motion:reduce){.pmx-show *,.pmx-hero *,.pmx-ring{animation:none!important}.pmx-f.f1{opacity:1}}
 .pmf-fab{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom));left:50%;translate:-50% 0;white-space:nowrap;z-index:8000;font-family:"Varela Round",sans-serif;font-weight:700;font-size:15px;border:3px solid #1d1636;background:#e9d3a2;color:#1d1636;border-radius:999px;padding:11px 16px;box-shadow:0 5px 0 #1d1636;cursor:pointer;direction:rtl;animation:pmxPulse 2.2s ease-in-out infinite}
 .pmf-fab span{background:#c81e3c;color:#fff;border-radius:99px;padding:1px 7px;font-size:12px;margin-inline-start:4px}

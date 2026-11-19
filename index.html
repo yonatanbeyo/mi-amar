@@ -555,7 +555,8 @@ input[type=text] { background: var(--soft); color: var(--ink); border: 0; border
    Bubbi, the chat bubble with eyes, reacts to the game. A sticker logo, a drifting doodle wallpaper,
    glossy candy tiles and cards with a real bottom edge. */
 :root { --ink2: #1b1530; }
-#app { position: relative; z-index: 1; }
+#app { position: relative; z-index: 1; max-width: 100%; overflow-x: clip; }
+#app > * { min-width: 0; max-width: 100%; }
 .doodles { position: fixed; top: -260px; left: -260px; right: 0; bottom: 0; z-index: 0; pointer-events: none; opacity: .09; background-repeat: repeat; background-size: 260px 260px; animation: drift 60s linear infinite; will-change: transform; }
 @keyframes drift { to { transform: translate(260px, 260px); } }
 
@@ -859,8 +860,8 @@ body.yt-mini #ytmin { display: none; }
 <main class="wrap" id="app"></main>
 <div class="overlay" id="overlay" hidden></div>
 
-<script src="config.js?v=1795123101"></script>
-<script src="app.js?v=1795123101"></script>
+<script src="config.js?v=1795123654"></script>
+<script src="app.js?v=1795123654"></script>
 <script>
 (() => {
   const C = window.Chat;
@@ -2305,6 +2306,7 @@ ${samples}
     const TICK = ["אני כבר בדרך", "מי בא היום?", "חחחחחח מת", "רגע מי זה אמר", "אחי די", "שולח תמונה", "5 דקות ואני יוצא", "מישהו ער?", "סתם סתם", "איזה אגדה"];
     app.innerHTML = `
       <div class="top"><span class="brand">מי אמר<span>?</span></span>${muteBtn()}</div>
+      ${PREM.topBarHtml ? PREM.topBarHtml() : ""}
       <section class="hero">
         <h1 id="title"><span class="t1">מי אמר</span> <span class="q">את זה?</span></h1>
         <p class="lead">מעלים את הצ'אט של הקבוצה, כולם סורקים QR, וכל אחד מנחש מהטלפון שלו <b>מי כתב כל הודעה</b>.</p>
@@ -2344,6 +2346,7 @@ ${samples}
     anim(tq, [{ opacity: 0, transform: "rotate(-40deg) scale(2.2)" }, { opacity: 1, transform: "rotate(-4deg) scale(.95)", offset: .7 }, { opacity: 1, transform: "rotate(-8deg)" }], { duration: 700, easing: EASE.out, fill: "backwards", delay: 380 });
     const file = document.getElementById("file");
     document.getElementById("pick").onclick = () => { audio(); file.click(); };
+    { const tb = document.getElementById("pmx-top"); if (tb) tb.onclick = () => { SFX.tap(); try { NET.bump("pm_topbar"); } catch {} document.getElementById("pmx-show")?.scrollIntoView({ behavior: "smooth", block: "start" }); }; }
     { const g = document.getElementById("pmx-go"); if (g) g.onclick = () => { audio(); SFX.tap(); try { NET.bump("pm_home"); } catch {} file.click(); }; }
     file.onchange = async () => {
       const f = file.files[0]; if (!f) return;
