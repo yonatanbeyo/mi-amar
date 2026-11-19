@@ -812,38 +812,130 @@ async function share(cv: HTMLCanvasElement, name: string, title: string) {
 }
 
 // ---------------------------------------------------------------- certificates
+// funny titles: every person gets the thing they are most "the worst" at, and nobody gets the same title twice
+function personFacts(msgs: Message[]) {
+  const F = new Map<string, any>(), get = (n: string) => { let f = F.get(n); if (!f) F.set(n, (f = { n: 0, stick: 0, voice: 0, img: 0, night: 0, morning: 0, laugh: 0, q: 0, edit: 0, achi: 0, long: 0, stretch: 0, tag: 0, start: 0, gap: 0, reps: [] as number[], emo: new Map<string, number>(), last: 0 })); return f; };
+  let prev: Message | null = null;
+  for (const m of msgs) {
+    if (!m.ts) continue; const f = get(m.author), h = new Date(m.ts).getHours();
+    f.n++; if (h < 5) f.night++; else if (h < 10) f.morning++;
+    if (f.last && m.ts - f.last > f.gap) f.gap = m.ts - f.last; f.last = m.ts;
+    if (!prev || m.ts - prev.ts! > 3 * 3600e3) f.start++;
+    else if (prev.author !== m.author && m.ts - prev.ts! < 3600e3) f.reps.push((m.ts - prev.ts!) / 1000);
+    if (m.media) { if (m.kind === "sticker") f.stick++; else if (m.kind === "audio") f.voice++; else if (m.kind === "image") f.img++; }
+    if (m.edited) f.edit++;
+    const t = m.text || "";
+    if (t) {
+      if (/חח{2,}|😂|🤣/.test(t)) f.laugh++;
+      if (/\?/.test(t)) f.q++;
+      f.achi += (t.match(/אחי/g) || []).length;
+      if (/([א-ת])\1{3,}/.test(t)) f.stretch++;
+      if (/@כולם|@everyone|@all/i.test(t)) f.tag++;
+      if (t.length > f.long) f.long = t.length;
+      for (const e of t.match(EMO) || []) f.emo.set(e, (f.emo.get(e) || 0) + 1);
+    }
+    prev = m;
+  }
+  F.forEach((f) => { const r = f.reps.slice().sort((a: number, b: number) => a - b); f.fast = r.length >= 15 ? r[Math.floor(r.length / 2)] : 0; const e = [...f.emo].sort((a, b) => b[1] - a[1])[0]; f.fe = e && e[1] >= 5 ? e : null; });
+  return F;
+}
+type Title = { e: string; t: string; r: string; tag: string };
+// [metric, minimum, emoji, title, reason, danger level 1-3]
+const TITLES: [string, number, string, string, (v: number, f: any) => string, number][] = [
+  ["n", 50, "🗣️", "חופר בדרגת דוקטורט", (v) => `${fmt(v)} הודעות השנה. האצבעות ביקשו חופש והוא אמר לא.`, 3],
+  ["stick", 8, "🤡", "מילים זה למתחילים", (v) => `${fmt(v)} סטיקרים. כתב משפט שלם פעם אחת, ב־2019.`, 2],
+  ["voice", 4, "🎙️", "פודקאסטר בלי מאזינים", (v) => `${fmt(v)} הקלטות. אף אחד לא שמע אחת מהן עד הסוף.`, 3],
+  ["night", 15, "🧛", "ערפד מוסמך", (v) => `${fmt(v)} הודעות בין חצות לחמש. השמש? לא מכירים.`, 3],
+  ["gapd", 14, "🕵️", "נעלם במשולש ברמודה", (v) => `${fmt(v)} ימים בלי מילה. כבר הדפסנו מודעות.`, 2],
+  ["fastn", 1, "⚡", "אין לו חיים, יש לו התראות", (v, f) => `עונה תוך ${fmt(f.fast)} שניות. הטלפון דבוק לו ליד.`, 3],
+  ["laugh", 8, "😂", "קהל מקצועי", (v) => `צחק ${fmt(v)} פעמים. גם כשזה ממש לא היה מצחיק.`, 1],
+  ["long", 250, "📜", "כותב ספרים בקבוצה", (v) => `הודעה אחת של ${fmt(v)} תווים. אף אחד לא קרא עד הסוף.`, 2],
+  ["q", 15, "❓", "גוגל של העניים", (v) => `${fmt(v)} שאלות בקבוצה. יש גוגל, אחי. בחינם.`, 2],
+  ["edit", 4, "✏️", "העורך הראשי", (v) => `ערך ${fmt(v)} הודעות. כולם כבר ראו מה היה כתוב שם.`, 2],
+  ["start", 8, "🧟", "מעיר המתים", (v) => `החיה את הקבוצה ${fmt(v)} פעמים אחרי שכולם נעלמו.`, 1],
+  ["achi", 15, "🤝", "שגריר ה״אחי״", (v) => `אמר ״אחי״ ${fmt(v)} פעמים. אחי. די.`, 1],
+  ["img", 8, "📸", "פפראצי של הקבוצה", (v) => `${fmt(v)} תמונות. אף אחד לא ביקש אף אחת מהן.`, 2],
+  ["morning", 25, "🐓", "תרנגול הבוקר", (v) => `${fmt(v)} הודעות לפני 10 בבוקר. מי מדבר בשעות האלה??`, 1],
+  ["stretch", 6, "🫠", "מאריך אותיותתתתת", (v) => `${fmt(v)} הודעות עם אותיות כפולותתתת. המקלדת בוכה.`, 1],
+  ["tag", 3, "📢", "הרמקול של הקבוצה", (v) => `תייג את כולם ${fmt(v)} פעמים. כולם שונאים את זה בשקט.`, 3],
+  ["emo", 5, "🔁", "מכונת אימוג׳ים", (v, f) => `${f.fe[0]} ${fmt(f.fe[1])} פעמים. זה כבר לא אימוג׳י, זו אישיות.`, 1],
+];
+function certTitles(players: string[]): Map<string, Title> {
+  const F = personFacts(P.msgs), out = new Map<string, Title>(), used = new Set<string>();
+  const val = (f: any, k: string) => k === "gapd" ? f.gap / DAY : k === "fastn" ? (f.fast ? 1 / f.fast : 0) : k === "emo" ? (f.fe ? f.fe[1] : 0) : f[k] || 0;
+  const disp = (f: any, k: string) => k === "gapd" ? Math.round(f.gap / DAY) : val(f, k);
+  const minOk = (f: any, k: string, min: number) => k === "fastn" ? !!f.fast && f.fast < 40 : disp(f, k) >= min;
+  const inChat = players.filter((p) => F.has(p));
+  // every (person, title) pair, scored by how far ahead of everyone else the person is
+  const pairs: [number, string, number][] = [];
+  TITLES.forEach(([k, min], ti) => {
+    const vals = inChat.map((p) => val(F.get(p), k)), mx = Math.max(...vals, 0); if (!mx) return;
+    inChat.forEach((p, i) => { const f = F.get(p); if (!minOk(f, k, min)) return; const sorted = vals.slice().sort((a, b) => b - a); const lead = vals[i] / (sorted[sorted[0] === vals[i] ? 1 : 0] || vals[i] / 2 || 1); pairs.push([(vals[i] === mx ? 2 : 0) + Math.min(lead, 3), p, ti]); });
+  });
+  pairs.sort((a, b) => b[0] - a[0]);
+  for (const [, p, ti] of pairs) { if (out.has(p) || used.has(TITLES[ti][3])) continue; const [k, , e, t, r, d] = TITLES[ti]; const f = F.get(p); out.set(p, { e: k === "emo" && f.fe ? f.fe[0] : e, t, r: r(disp(f, k), f), tag: "🔥".repeat(d) }); used.add(t); }
+  for (const p of players) if (!out.has(p)) {
+    const f = F.get(p);
+    out.set(p, !f ? { e: "🎟️", t: "אורח כבוד", r: "לא כתב אף מילה בקבוצה, ובא לאסוף נקודות על חשבוננו.", tag: "🔥" }
+      : f.n < 40 ? { e: "👀", t: "הצופה השקט", r: `רק ${fmt(f.n)} הודעות. קורא הכל, לא אומר כלום. מפחיד.`, tag: "🔥🔥" }
+      : { e: "🧱", t: "רהיט של הקבוצה", r: `${fmt(f.n)} הודעות. תמיד שם, אף פעם לא במרכז. כמו ספה.`, tag: "🔥" });
+  }
+  return out;
+}
+const placeLine = (place: number, score: number, total: number) => !score ? "" : place === 1 ? `👑 ניצח את כולם הערב עם ${fmt(score)} נקודות` : place === total && total > 2 ? `מקום אחרון במשחק. לפחות התעודה יפה.` : `מקום ${place} במשחק, ${fmt(score)} נקודות`;
+
 export function certificates(players: string[], scores: Record<string, number>, from = "end") {
   if (!P.on) { buy(from); return; }
-  if (!hasWrapped()) { P.opts?.toast?.("צריך צ'אט ארוך יותר בשביל תעודות"); return; }
+  if (!P.msgs.length) { P.opts?.toast?.("צריך להעלות את הצ'אט בשביל תעודות"); return; }
   try { P.opts?.net?.bump("certs_open"); } catch {}
-  const D = P.wrapped, used = new Set<string>(), rank = Object.entries(scores || {}).sort((a, b) => b[1] - a[1]).map((r) => r[0]);
-  const list = players.map((p) => ({ p, ...titleFor(D, p, used), place: rank.indexOf(p) + 1, score: scores?.[p] || 0 }));
+  const T = certTitles(players), rank = Object.entries(scores || {}).sort((a, b) => b[1] - a[1]).map((r) => r[0]);
+  const list = players.map((p) => ({ p, ...T.get(p)!, place: rank.indexOf(p) + 1, score: scores?.[p] || 0, total: players.length }));
+  let cur = 0;
   const root = layer("pm-certs");
   root.innerHTML = `<div class="pm-sheet wide"><div class="pm-head"><b>🎓 התעודות של הערב</b><button class="pm-x" aria-label="סגירה">✕</button></div>
-    <p class="pm-dim">מחליקים הצידה. כל תעודה מוכנה לסטורי.</p><div class="pm-strip" id="pm-strip">${list.map((_, i) => `<div class="pm-cert"><canvas data-i="${i}" width="1080" height="1920"></canvas><button class="pm-btn" data-s="${i}">📲 שמירה לסטורי</button></div>`).join("")}</div></div>`;
+    <div class="pm-cview"><canvas width="1080" height="1920" id="pm-cv"></canvas></div>
+    <div class="pm-cnav"><button class="pm-nav" id="pm-prev" aria-label="הקודמת">→</button><span id="pm-cnt"></span><button class="pm-nav" id="pm-next" aria-label="הבאה">←</button></div>
+    <button class="pm-btn" id="pm-save">📲 שמירה לסטורי</button></div>`;
   root.querySelector<HTMLButtonElement>(".pm-x")!.onclick = () => root.remove();
-  (async () => { await fonts(); const bud = await budImage("party");
-    for (const [i, x] of list.entries()) { const cv = root.querySelector<HTMLCanvasElement>(`canvas[data-i="${i}"]`); if (cv) drawCert(cv, x, D, bud); } })();
-  root.querySelectorAll<HTMLButtonElement>("[data-s]").forEach((b) => (b.onclick = () => { const cv = root.querySelector<HTMLCanvasElement>(`canvas[data-i="${b.dataset.s}"]`); if (cv) share(cv, `תעודה-${list[+b.dataset.s!].p}.png`, "תעודה מ״מי אמר את זה?״"); }));
+  const cv = root.querySelector<HTMLCanvasElement>("#pm-cv")!; let bud: HTMLImageElement | null = null;
+  const show = async (i: number) => {
+    cur = (i + list.length) % list.length; root.querySelector("#pm-cnt")!.textContent = `${cur + 1} מתוך ${list.length}`;
+    if (!bud) { await fonts(); bud = await budImage("party"); }
+    drawCert(cv, list[cur], bud); cv.animate([{ transform: "translateX(30px) rotate(2deg)", opacity: .3 }, { transform: "none", opacity: 1 }], { duration: 320, easing: "cubic-bezier(.2,1.4,.4,1)" });
+  };
+  root.querySelector<HTMLButtonElement>("#pm-next")!.onclick = () => show(cur + 1);
+  root.querySelector<HTMLButtonElement>("#pm-prev")!.onclick = () => show(cur - 1);
+  root.querySelector<HTMLButtonElement>("#pm-save")!.onclick = () => share(cv, `תעודה-${plainName(list[cur].p)}.png`, "תעודה מ״מי אמר את זה?״");
+  // swipe on the certificate itself
+  let x0 = 0; cv.addEventListener("pointerdown", (e) => { x0 = e.clientX; }); cv.addEventListener("pointerup", (e) => { const dx = e.clientX - x0; if (Math.abs(dx) > 40) show(cur + (dx < 0 ? 1 : -1)); });
+  root.querySelector<HTMLElement>(".pm-cnav")!.hidden = list.length < 2;
+  show(0);
 }
-function drawCert(cv: HTMLCanvasElement, x: any, D: any, bud: HTMLImageElement) {
+function drawCert(cv: HTMLCanvasElement, x: any, bud: HTMLImageElement) {
   const c = cv.getContext("2d")!, cols = ["#ff3d7f", "#7b5cff", "#19c39a", "#ffa928", "#3f7bff"], acc = cols[[...x.p].reduce((a: number, ch: string) => a + ch.charCodeAt(0), 0) % cols.length];
-  c.fillStyle = acc; c.fillRect(0, 0, 1080, 1920); dots(c, "#ffffff22");
+  c.clearRect(0, 0, 1080, 1920); c.fillStyle = acc; c.fillRect(0, 0, 1080, 1920); dots(c, "#ffffff22");
   c.fillStyle = "#1d1636"; rr(c, 70, 150, 940, 1650, 50); c.fill(); c.fillStyle = "#fff3d1"; rr(c, 70, 130, 940, 1650, 50); c.fill(); c.lineWidth = 10; c.strokeStyle = "#1d1636"; c.stroke();
   c.setLineDash([18, 14]); c.lineWidth = 5; c.strokeStyle = acc; rr(c, 110, 170, 860, 1570, 36); c.stroke(); c.setLineDash([]);
-  stickerText(c, "תעודה רשמית", 540, 300, 120, acc, "#fff", "#1d1636");
-  textLine(c, "בזאת מוענקת ל", 540, 420, 44, "#5a4a8a", 700);
+  textLine(c, `תעודה מס׳ ${String(1000 + ([...x.p].reduce((a: number, ch: string) => a * 31 + ch.charCodeAt(0), 7) >>> 0) % 9000)}`, 540, 225, 30, "#8a7bb8", 700);
+  stickerText(c, "תעודה רשמית", 540, 320, 120, acc, "#fff", "#1d1636");
+  textLine(c, "ועדת הצ'אט מעניקה בגאווה (ובבושה) ל", 540, 430, 38, "#5a4a8a", 700);
   stickerText(c, plainName(x.p), 540, 560, 170, "#1d1636", "#fff3d1", "#fff3d1", 860);
-  c.font = '150px "Apple Color Emoji","Segoe UI Emoji",sans-serif'; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(x.e, 540, 780);
-  textLine(c, "התואר", 540, 900, 44, "#5a4a8a", 700);
-  stickerText(c, x.t, 540, 1010, 130, acc, "#fff", "#1d1636", 860);
-  textLine(c, x.r, 540, 1140, 48, "#1d1636", 700, 820);
-  if (x.place && x.score > 0) textLine(c, x.place === 1 ? "👑 ניצח/ה במשחק הערב" : `מקום ${x.place} במשחק הערב, ${fmt(x.score)} נקודות`, 540, 1260, 42, "#5a4a8a", 700, 820);
-  c.drawImage(bud, 150, 1380, 260, 302);
-  c.save(); c.translate(760, 1530); c.rotate(-.22); c.beginPath(); c.arc(0, 0, 150, 0, 7); c.fillStyle = acc; c.fill(); c.lineWidth = 8; c.strokeStyle = "#1d1636"; c.stroke();
+  c.font = '140px "Apple Color Emoji","Segoe UI Emoji",sans-serif'; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(x.e, 540, 760);
+  textLine(c, "את התואר", 540, 870, 40, "#5a4a8a", 700);
+  stickerText(c, x.t, 540, 975, 118, acc, "#fff", "#1d1636", 880);
+  // the reason in a speech bubble, the joke lives here
+  c.fillStyle = "#fff"; rr(c, 150, 1060, 780, 200, 34); c.fill(); c.lineWidth = 6; c.strokeStyle = "#1d1636"; c.stroke();
+  c.beginPath(); c.moveTo(760, 1258); c.lineTo(800, 1305); c.lineTo(820, 1258); c.closePath(); c.fill(); c.stroke(); c.fillStyle = "#fff"; c.fillRect(756, 1250, 70, 8);
+  textLine(c, x.r, 540, 1125, 44, "#1d1636", 700, 700);
+  textLine(c, `רמת סכנה: ${x.tag}`, 540, 1345, 40, "#5a4a8a", 700);
+  const pl = placeLine(x.place, x.score, x.total); if (pl) textLine(c, pl, 540, 1410, 40, acc === "#ffa928" ? "#b26b00" : acc, 700, 860);
+  c.drawImage(bud, 150, 1410, 230, 268);
+  c.save(); c.strokeStyle = "#1d1636"; c.lineWidth = 4; c.beginPath(); c.moveTo(180, 1690); c.bezierCurveTo(220, 1668, 250, 1708, 290, 1678); c.bezierCurveTo(310, 1668, 330, 1693, 350, 1683); c.stroke(); c.restore();
+  textLine(c, "בובי, יו״ר הוועדה", 265, 1715, 26, "#5a4a8a", 700, 300);
+  c.save(); c.translate(770, 1580); c.rotate(-.22); c.beginPath(); c.arc(0, 0, 150, 0, 7); c.fillStyle = acc; c.fill(); c.lineWidth = 8; c.strokeStyle = "#1d1636"; c.stroke();
   c.beginPath(); c.arc(0, 0, 122, 0, 7); c.setLineDash([10, 8]); c.lineWidth = 4; c.strokeStyle = "#fff"; c.stroke(); c.setLineDash([]);
   stickerText(c, "מי אמר", 0, -30, 74, "#fff", "#1d1636", "#1d1636", 240); stickerText(c, "את זה?", 0, 45, 74, "#ffd23f", "#1d1636", "#1d1636", 240); c.restore();
-  textLine(c, `${P.name || "הקבוצה"} · ${new Date().getDate()} ב${MONTHS[new Date().getMonth()]} ${new Date().getFullYear()}`, 540, 1730, 34, "#5a4a8a", 700, 860);
+  textLine(c, `${P.name || "הקבוצה"} · ${new Date().getDate()} ב${MONTHS[new Date().getMonth()]} ${new Date().getFullYear()} · אין ערעורים`, 540, 1761, 26, "#5a4a8a", 700, 860);
 }
 
 // ---------------------------------------------------------------- styles
@@ -1029,7 +1121,8 @@ function css() {
 .pm-tile em{position:absolute;inset:0;display:none;place-items:center;font-style:normal;font-size:44px;color:#fff;background:#c81e3caa;font-weight:700}
 .pm-tile.out em{display:grid}
 .pm-img img{width:100%;border-radius:14px;border:3px solid #1d1636}
-.pm-strip{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px}
+.pm-cview{display:grid;place-items:center}.pm-cview canvas{width:min(78vw,330px,calc((100dvh - 230px) * .5625));height:auto;border-radius:16px;border:3px solid #1d1636;touch-action:pan-y}
+.pm-cnav{display:flex;justify-content:center;align-items:center;gap:16px;font-weight:700}.pm-cnav[hidden]{display:none}.pm-nav{width:52px;height:52px;border-radius:50%;border:3.5px solid #1d1636;background:#fff;font-size:22px;font-weight:700;cursor:pointer;box-shadow:0 4px 0 #1d1636;color:#1d1636}
 .pm-cert{flex:none;width:min(78vw,300px);scroll-snap-align:center;display:grid;gap:8px}
 .pm-cert canvas{width:100%;height:auto;border-radius:16px;border:3px solid #1d1636;background:#fff3d1}
 /* media in the question bubble */
