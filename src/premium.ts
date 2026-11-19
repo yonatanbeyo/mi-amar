@@ -35,6 +35,7 @@ const MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", 
 const MSHORT = ["ינו", "פבר", "מרץ", "אפר", "מאי", "יוני", "יולי", "אוג", "ספט", "אוק", "נוב", "דצמ"];
 const WDAYS = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 const db = () => { try { return getDatabase(getApp()); } catch { return null; } };
+const bump = (k: string) => { try { P.opts?.net?.bump(k); } catch {} };
 const emit = (e: string) => P.listeners.forEach((f: any) => { try { f(e); } catch {} });
 
 // a short one-way fingerprint of the chat: the same group exported from different phones gives the same key
@@ -103,7 +104,7 @@ function watchUnlock() {
     P.unwatch = onValue(ref(d, `unlocks/${k}`), (s) => {
       if (!s.exists() || P.key !== k) return;
       const list = store.get("pm_on", []) as string[]; if (!list.includes(k)) { list.push(k); store.set("pm_on", list.slice(-30)); }
-      if (!P.on) { P.on = true; closeBuy(true); emit("unlock"); }
+      if (!P.on) { P.on = true; if (buyRoot || (store.get("pm_sent", []) as string[]).includes(k)) bump("pm_unlocked"); closeBuy(true); emit("unlock"); }
     }, () => {});
   } catch {}
 }
@@ -600,7 +601,7 @@ function build() {
     ${(() => { const h = perHead(); return h ? `<p class="lead r" style="--d:1.02s;color:var(--pw-yellow)">רק ${h.e} ₪ לכל אחד מה־${h.people}. ${esc(h.thing)} 😤</p>` : ""; })()}
     <p class="small r" style="--d:1.05s">פעם אחת לכל הקבוצה, בביט. בלי מנוי ובלי כרטיס אשראי.<br>כולל גם את סבב המדיה ואת התעודות.</p>
     <button class="pw-btn r" style="--d:1.2s" id="punlock">לפתוח לכולם 🔓</button>`,
-    enter() { later(() => sfx("lock"), 900); W.root.querySelector("#punlock").onclick = (e: Event) => { e.stopPropagation(); buy("wrapped"); }; } });
+    enter() { bump("wrapped_lock"); later(() => sfx("lock"), 900); W.root.querySelector("#punlock").onclick = (e: Event) => { e.stopPropagation(); buy("wrapped"); }; } });
   const premium: any[] = [];
   { const d = D.day, mx = Math.max(...d.month, 1);
     premium.push({ bg: "#232a6e", band: "#3f3bd6", bt: "55%", dur: 8000, html: `
@@ -745,7 +746,7 @@ function build() {
     <div class="fin z" style="--d:.4s;--rot:-1deg"><div class="awards">${aw.map((a) => `<div class="aw"><em>${a[0]}</em><b>${nm(a[1])}</b><span>${esc(a[2])}</span></div>`).join("")}</div>${P.on ? "" : `<div class="wmk">מי אמר את זה?</div>`}</div>
     <div class="row r" style="--d:.8s"><button class="pw-btn" id="psave">📲 שמירה לסטורי</button><button class="pw-btn alt" id="pagain">↻ מההתחלה</button></div>
     <p class="small r" style="--d:1s">${P.on ? "נשמר נקי, בלי סימן מים." : "בחינם נשמר עם סימן מים. בפרימיום נקי לגמרי."}</p>`,
-    enter() { hit(100); later(() => { sfx("ding"); confetti(200); }, 500); W.root.querySelector("#psave").onclick = (e: Event) => { e.stopPropagation(); sfx("pop"); saveStory(); }; W.root.querySelector("#pagain").onclick = (e: Event) => { e.stopPropagation(); go(0); }; } });
+    enter() { bump(P.on ? "wrapped_end" : "wrapped_end_free"); hit(100); later(() => { sfx("ding"); confetti(200); }, 500); W.root.querySelector("#psave").onclick = (e: Event) => { e.stopPropagation(); sfx("pop"); saveStory(); }; W.root.querySelector("#pagain").onclick = (e: Event) => { e.stopPropagation(); go(0); }; } });
   W.slides = P.on ? [...S, ...premium] : [...S, ...premium.slice(-1).map((s) => ({ ...s, html: s.html }))];
   // without premium the free story is: 3 free slides, the lock, and the final card with a watermark
   if (!P.on) W.slides = [...S, premium[premium.length - 1]];
@@ -861,6 +862,7 @@ function textLine(c: CanvasRenderingContext2D, t: string, x: number, y: number, 
   lines.forEach((l, i) => c.fillText(l, x, y + i * size * 1.35)); return lines.length * size * 1.35;
 }
 async function saveStory() {
+  bump(P.on ? "story_save" : "story_save_free");
   const D = W.D, aw = awardsOf(D).slice(0, 8); await fonts();
   const cv = document.createElement("canvas"); cv.width = 1080; cv.height = 1920; const c = cv.getContext("2d")!;
   c.fillStyle = "#3b2a8f"; c.fillRect(0, 0, 1080, 1920); c.save(); c.translate(540, 960); c.rotate(-.16); c.fillStyle = "#7b5cff"; c.fillRect(-900, 120, 1800, 640); c.restore(); dots(c, "#ffffff1c");
@@ -1052,6 +1054,7 @@ export const perHeadHtml = (cls = "pmx-each") => { const h = perHead(); return h
 const blur = (t: string) => `<span class="pmx-blur">${esc(t)}</span>`;
 export function teaserHtml() {
   const mc = P.items.length, k = mediaByKind();
+  if (P.key && P.seenKey !== P.key) { P.seenKey = P.key; bump(P.on ? "pm_seen_on" : "pm_seen"); if (mc) bump("pm_seen_media"); }
   if (P.on) return `<section class="pmx-hero on"><div class="pmx-ring"></div><span class="pmx-badge">⭐ הפרימיום פתוח לקבוצה הזאת</span>
     <h3 class="pmx-t">הכל פתוח. תהנו 🎉</h3>
     <button class="pmx-cta" id="pm-wrap">🎁 לראות את הסיכום של ${wrappedYear()}</button>
@@ -1174,6 +1177,7 @@ function gotFile(m: any) {
   let fab = document.querySelector<HTMLButtonElement>(".pmf-fab");
   if (!fab) { fab = document.createElement("button"); fab.className = "pmf-fab"; document.body.append(fab); fab.onclick = () => openFile(P.myFile); }
   fab.innerHTML = f.locked ? `📁 התיק הסודי שלך <span>🔒</span>` : `📁 התיק הסודי שלך <span>חדש!</span>`;
+  if (!was) bump(f.locked ? "file_fab_locked" : "file_fab");
   if (!was || (was.locked && !f.locked)) { fab.classList.remove("pop"); void fab.offsetWidth; fab.classList.add("pop"); try { navigator.vibrate && navigator.vibrate([30, 40, 30]); } catch {} }
 }
 
