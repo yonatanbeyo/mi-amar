@@ -9,6 +9,8 @@ import type { Message } from "./lib/parser";
 const PRICE = "14.90";
 const BIT_URL = "https://www.bitpay.co.il/app/me/826990EF-07DF-40B2-B8AE-9A7737DEE4ED";
 const BIT_NUM = "058-646-3236";
+// email to the owner on every "I paid" (web3forms.com: the key is public by design and only routes mail to the owner)
+const MAIL_KEY = "";
 const ICE = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun.cloudflare.com:3478" }] };
 const DAY = 864e5;
 
@@ -361,10 +363,17 @@ async function claim() {
   await P.opts.net.uid();
   let code = codeFor(P.key);
   for (let i = 0; i < 4; i++) {
-    try { await set(ref(d, `pay/${code}`), { c: P.key, s: "wait", t: serverTimestamp() }); return; }
+    try { await set(ref(d, `pay/${code}`), { c: P.key, s: "wait", t: serverTimestamp() }); notifyOwner(code); return; }
     catch (e) { if (i === 3) throw e; } // the code is taken (or already sent): try a fresh one
     code = newCode(P.key);
   }
+}
+function notifyOwner(code: string) {
+  if (!MAIL_KEY) return;
+  const t = new Date(), hhmm = `${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}`;
+  fetch("https://api.web3forms.com/submit", { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ access_key: MAIL_KEY, subject: `💰 תשלום חדש מחכה לאישור: ${code}`, from_name: "מי אמר את זה?",
+      message: `מישהו לחץ "שילמתי" בשעה ${hhmm}.\n\nהקוד: ${code}\nהסכום: ${PRICE} ₪\n\nמה עושים: פותחים את ביט, מחפשים העברה של ${PRICE} ₪ עם הקוד ${code} בהערה, ואז מאשרים בלוח הניהול:\nhttps://mi-amar.co.il/admin.html` }) }).catch(() => {});
 }
 function drawWait() {
   const root = buyRoot!; const code = codeFor(P.key);
