@@ -334,6 +334,7 @@ function drawBuy() {
     <ul class="pm-list"><li>🎁 הסיכום המלא של השנה, בלי סימן מים</li><li>📁 תיק סודי לכל אחד בקבוצה</li><li>🎬 סבב המדיה: סרטונים, תמונות, הקלטות וסטיקרים</li><li>🎓 תעודה מצחיקה לכל שחקן, מוכנה לסטורי</li></ul>
     ${P.items.length ? "" : `<p class="pm-warn">⚠️ בצ'אט שהעלית אין מדיה. בשביל סבב המדיה מייצאים מוואטסאפ <b>"כולל מדיה"</b>. אפשר לשלם עכשיו, והפרימיום יישאר פתוח גם כשתעלו את הצ'אט עם המדיה.</p>`}
     <div class="pm-price"><b>${PRICE} ₪</b><span>פעם אחת לכל הקבוצה. בלי מנוי, בלי כרטיס אשראי.</span></div>
+    ${perHeadHtml("pm-each")}
     <h4 class="pm-h">איך משלמים? 3 צעדים, דקה אחת</h4>
     <div class="pm-step"><span class="pm-n">1</span><div><b>זה הקוד שלכם:</b><div class="pm-code"><span dir="ltr" id="pm-code">${code}</span><button id="pm-copy">העתקה</button></div></div></div>
     <div class="pm-step"><span class="pm-n">2</span><div><b>משלמים בביט, ובהערה מדביקים את הקוד</b>
@@ -596,6 +597,7 @@ function build() {
     <div class="peek r" style="--d:.6s">${[["#ffa928", "👑"], ["#2a1f55", "🌙"], ["#ff3d7f", "💍"], ["#3fe0b0", "🕵️"], ["#5fb4ff", "⚡"], ["#ffd23f", "😭"]].map(([c, e]) => `<div style="background:${c}">${e}</div>`).join("")}</div>
     <p class="sub r" style="--d:.8s">עוד המון שקופיות: מלך הסטיקרים, הזוג של הקבוצה, ההודעה של 3 בלילה, מי נעלם, ועוד.</p>
     <div class="st s w r" style="--d:1s;--c:var(--pw-yellow)">${PRICE} ₪</div>
+    ${(() => { const h = perHead(); return h ? `<p class="lead r" style="--d:1.02s;color:var(--pw-yellow)">רק ${h.e} ₪ לכל אחד מה־${h.people}. ${esc(h.thing)} 😤</p>` : ""; })()}
     <p class="small r" style="--d:1.05s">פעם אחת לכל הקבוצה, בביט. בלי מנוי ובלי כרטיס אשראי.<br>כולל גם את סבב המדיה ואת התעודות.</p>
     <button class="pw-btn r" style="--d:1.2s" id="punlock">לפתוח לכולם 🔓</button>`,
     enter() { later(() => sfx("lock"), 900); W.root.querySelector("#punlock").onclick = (e: Event) => { e.stopPropagation(); buy("wrapped"); }; } });
@@ -1035,6 +1037,18 @@ export function showcaseHtml() {
 }
 /** a small strip at the very top of the home page that jumps to the showcase */
 export function topBarHtml() { return `<button class="pmx-top" id="pmx-top"><span class="pmx-top-b">⭐ חדש</span> סיכום השנה, סבב מדיה ותיקים סודיים <span aria-hidden="true">←</span></button>`; }
+// "only 1.35 ₪ each": the price split by the people in the group, with a jab
+function perHead() {
+  const n = P.msgs.length ? new Set(P.msgs.filter((m: Message) => m.ts).map((m: Message) => m.author)).size : 0;
+  const counts = new Map<string, number>(); P.msgs.forEach((m: Message) => counts.set(m.author, (counts.get(m.author) || 0) + 1));
+  const people = [...counts.values()].filter((c) => c >= 3).length || n;
+  if (people < 2) return null;
+  const each = Math.ceil((14.9 / people) * 100) / 100, e = each.toFixed(2);
+  const thing = each < 1.5 ? "פחות ממסטיק" : each < 2.5 ? "פחות מבמבה" : each < 4 ? "פחות משוקו" : each < 6 ? "פחות מפחית קולה" : "פחות מפלאפל";
+  const jab = pick([`אל תהיו קמצנים 😤`, `${thing}. אין תירוצים 😤`, `מי שלא משלם, בובי יודע עליו הכל 👀`, `${thing}. נו באמת 🙄`]);
+  return { people, e, thing, jab };
+}
+export const perHeadHtml = (cls = "pmx-each") => { const h = perHead(); return h ? `<div class="${cls}"><b>רק ${h.e} ₪ לכל אחד</b><span>${h.people} אנשים בקבוצה. ${esc(h.jab)}</span><small>אחד משלם, וכל השאר מחזירים לו בביט 😉</small></div>` : ""; };
 const blur = (t: string) => `<span class="pmx-blur">${esc(t)}</span>`;
 export function teaserHtml() {
   const mc = P.items.length, k = mediaByKind();
@@ -1070,6 +1084,7 @@ export function teaserHtml() {
     ${media}
     <p class="pmx-certline">📁 ולכל אחד מחכה <b>תיק סודי</b>: מי מזכיר אותו, מי מתעלם ממנו וההודעה הכי מביכה שלו. <button class="pmx-link" id="pm-files" style="display:inline">להציץ בכריכה</button></p>
     <p class="pmx-certline">🎓 וכל שחקן מקבל תעודה. למשל: <b>"${pick(titles)}"</b></p>
+    ${perHeadHtml()}
     <button class="pmx-cta" id="pm-buy">לגלות הכל ב־${PRICE} ₪ ✨</button>
     <span class="pmx-sub">פעם אחת לכל הקבוצה. בלי מנוי, בלי כרטיס אשראי. משלמים בביט.</span>
     <button class="pmx-free" id="pm-wrap">או לראות קודם 3 שקופיות בחינם ←</button>
@@ -1458,6 +1473,10 @@ function css() {
 .pmx-top{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;font-family:inherit;font-weight:700;font-size:.92rem;color:#fff;border:2.5px solid #1d1636;border-radius:999px;padding:9px 14px;cursor:pointer;background:linear-gradient(90deg,#ff3d7f,#7b5cff,#ff3d7f);background-size:200% 100%;animation:pmxSlide 4s linear infinite;box-shadow:0 4px 0 #1d1636;direction:rtl}
 .pmx-top-b{background:#ffd23f;color:#1d1636;border-radius:99px;padding:1px 8px;font-size:.78rem}
 @keyframes pmxSlide{to{background-position:200% 0}}
+.pmx-each{background:#ffd23f;color:#1d1636;border:3px solid #1d1636;border-radius:16px;padding:9px 12px;display:grid;gap:2px;transform:rotate(-1.5deg);box-shadow:0 5px 0 #1d1636;animation:pmxWig 2.6s ease-in-out infinite}
+.pmx-each b{font-family:Karantina,sans-serif;font-size:2rem;line-height:1}.pmx-each span{font-size:.9rem;font-weight:700}.pmx-each small{font-size:.78rem;opacity:.75}
+@keyframes pmxWig{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg) scale(1.02)}}
+.pm-each{background:#ffd23f;border:3px solid #1d1636;border-radius:14px;padding:8px 12px;display:grid;gap:2px;text-align:center}.pm-each b{font-family:Karantina,sans-serif;font-size:1.8rem;line-height:1}.pm-each span{font-size:.88rem;font-weight:700}.pm-each small{font-size:.76rem;color:#5a4a8a}
 .pm-warn{background:#fff0f4;border:2.5px dashed #ff3d7f;border-radius:12px;padding:8px 10px;font-size:.88rem;line-height:1.45}
 .pmx-tile{background:#ffffff14;border:2px solid #ffffff2a;border-radius:18px;padding:8px 6px 10px;display:grid;gap:4px;align-content:start;font-size:.8rem}
 .pmx-tile>b{font-size:.85rem}.pmx-tile>span{color:#d8cffa;font-size:.72rem;line-height:1.35}
