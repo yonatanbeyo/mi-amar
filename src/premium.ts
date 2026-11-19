@@ -983,7 +983,7 @@ function css() {
   s.textContent = `
 .pm-toast{position:fixed;bottom:24px;left:50%;translate:-50% 20px;z-index:9500;background:#fff3d1;color:#1d1636;border:3px solid #1d1636;box-shadow:0 5px 0 #1d1636;border-radius:16px;padding:10px 16px;font-family:"Varela Round",sans-serif;font-weight:700;opacity:0;transition:.3s;direction:rtl;max-width:90vw;text-align:center}
 .pm-toast.show{opacity:1;translate:-50% 0}
-.pmw{padding:0;background:#0c0820;backdrop-filter:none;-webkit-backdrop-filter:none}
+.pm-layer.pmw{padding:0;background:#0c0820;backdrop-filter:none;-webkit-backdrop-filter:none}
 .pm-layer{position:fixed;inset:0;z-index:9000;display:grid;place-items:center;background:#0c0820cc;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);font-family:"Varela Round",system-ui,sans-serif;color:#1d1636;direction:rtl;padding:14px;animation:pmIn .25s ease}
 @keyframes pmIn{from{opacity:0}}
 .pm-sheet{background:#fff3d1;border:4px solid #1d1636;border-radius:26px;box-shadow:0 10px 0 #1d1636;width:min(440px,100%);max-height:calc(100dvh - 40px);overflow:auto;padding:18px;display:grid;gap:12px;animation:pmUp .45s cubic-bezier(.2,1.4,.4,1)}

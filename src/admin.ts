@@ -34,10 +34,11 @@ function draw() {
       <div class="main"><b class="code" dir="ltr">${esc(code)}</b><span class="dim">${when(v.t)} · ${ago(v.t)}</span><span class="dim small">קבוצה ${esc(String(v.c).slice(0, 6))}</span></div>
       <div class="acts">${v.s === "wait" ? `<button class="ok" data-ok="${esc(code)}">אשר ✓</button><button class="no" data-no="${esc(code)}">דחייה</button>`
         : v.s === "ok" ? `<span class="tag ok">אושר ${when(v.a)}</span><label class="rc"><input type="checkbox" data-r="${esc(code)}" ${v.r ? "checked" : ""}> הוצאתי קבלה</label>`
-        : `<span class="tag no">נדחה</span><button class="ghost" data-ok="${esc(code)}">לאשר בכל זאת</button>`}</div></div>`).join("")
+        : `<span class="tag no">נדחה</span><button class="ghost" data-ok="${esc(code)}">לאשר בכל זאת</button>`}<button class="del" data-del="${esc(code)}" aria-label="מחיקה מהרשימה">🗑</button></div></div>`).join("")
     : `<p class="empty">${filter === "wait" ? "אין כרגע תשלומים שמחכים. 😴" : "אין פה כלום."}</p>`;
   document.querySelectorAll<HTMLButtonElement>("[data-ok]").forEach((b) => (b.onclick = () => approve(b.dataset.ok!, b)));
   document.querySelectorAll<HTMLButtonElement>("[data-no]").forEach((b) => (b.onclick = () => { if (confirmIn(b, "לדחות?")) update(ref(db), { [`pay/${b.dataset.no}/s`]: "no" }).catch(fail); }));
+  document.querySelectorAll<HTMLButtonElement>("[data-del]").forEach((b) => (b.onclick = () => { if (confirmIn(b, "למחוק?")) update(ref(db), { [`pay/${b.dataset.del}`]: null }).then(() => toast("נמחק מהרשימה. אם הקבוצה נפתחה, היא נשארת פתוחה.")).catch(fail); }));
   document.querySelectorAll<HTMLInputElement>("[data-r]").forEach((c) => (c.onchange = () => update(ref(db), { [`pay/${c.dataset.r}/r`]: c.checked }).catch(fail)));
 }
 // a second tap confirms (no browser dialogs)
