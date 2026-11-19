@@ -5,7 +5,8 @@
     npm i firebase@10.14.1 qrcode-generator@1.4.4 jszip esbuild
     npx esbuild src/entry.ts --bundle --format=iife --minify --target=es2020 --outfile=app.js
     npx esbuild src/admin.ts --bundle --format=iife --minify --target=es2020 --outfile=admin.js
-    cp src/template.html index.html && cp src/stats.html stats.html && cp src/admin.html admin.html && cp src/terms.html terms.html
+    V=$(date +%s); sed "s#src=\"app.js\"#src=\"app.js?v=$V\"#; s#src=\"config.js\"#src=\"config.js?v=$V\"#" src/template.html > index.html   # new version number every build, so phones never mix old and new files
+    cp src/stats.html stats.html && cp src/admin.html admin.html && cp src/terms.html terms.html
 
 `firebase-rules.json` must also be pasted by hand into Firebase console → Realtime Database → Rules.
 

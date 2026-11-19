@@ -2322,7 +2322,7 @@ ${samples}
       <input type="file" id="file" accept=".zip,.txt,application/zip,text/plain" hidden>
       ${err ? `<p class="err" role="alert">${esc(err)}</p>` : ""}
       <div class="row"><button class="btn alt" id="demo">לנסות עם צ'אט לדוגמה</button></div>
-      ${PREM.showcaseHtml()}
+      ${PREM.showcaseHtml ? PREM.showcaseHtml() : ""}
       <section class="how">
         <div class="hw"><b>1</b><strong>מייצאים</strong><span>את הצ'אט מוואטסאפ, בלי מדיה</span></div>
         <div class="hw"><b>2</b><strong>סורקים</strong><span>כל אחד נכנס מהטלפון, בלי אפליקציה</span></div>
@@ -3063,12 +3063,12 @@ ${samples}
     PREM.pushManifest(); if (S.multi) hostEmit();
   }
   const mediaLine = (k) => [["audio", "הקלטות"], ["image", "תמונות"], ["sticker", "סטיקרים"], ["video", "סרטונים"], ["gif", "גיפים"]].filter(([x]) => k[x]).map(([x, t]) => `${n(k[x])} ${t}`).join(", ");
-  function premPanel() { return PREM.teaserHtml(); }
+  function premPanel() { try { return PREM.teaserHtml ? PREM.teaserHtml() : ""; } catch { return ""; } }
   function bindPrem() {
     const b = document.getElementById("pm-buy"); if (b) b.onclick = () => { SFX.tap(); PREM.buy("setup"); };
     const w = document.getElementById("pm-wrap"); if (w) w.onclick = () => { audio(); SFX.tap(); PREM.openWrapped(); };
     const r = document.getElementById("pm-rev"); if (r) r.onclick = () => { SFX.tap(); PREM.review(); };
-    PREM.bindTeaser();
+    if (PREM.bindTeaser) PREM.bindTeaser();
   }
   const canMulti = () => true;
   const siteURL = () => location.origin + location.pathname;
