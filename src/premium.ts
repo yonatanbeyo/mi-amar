@@ -423,6 +423,23 @@ function computeWrapped(msgs: Message[]) {
     if (p && p.author !== m.author && m.ts! - p.ts! < 120000) inc(pairs, [p.author, m.author].sort().join("\u0001"));
   });
   const people = top(by);
+  // ---- the spicy part
+  // who talks about whom: a person's first name inside other people's messages
+  const nick = new Map<string, string>(); people.forEach(([n]) => { const w = plainName(n).split(/\s+/)[0]; if (w && w.length >= 2 && /[\u05d0-\u05ea]/.test(w)) nick.set(n, w); });
+  const ment = C(), mentAll = C();
+  all.forEach((m) => { if (!m.text || m.media) return; nick.forEach((w, n) => { if (n === m.author) return; const k = (m.text.match(new RegExp(`(^|[^\u05d0-\u05ea])[והבלמש]?${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\u05d0-\u05ea])`, "g")) || []).length; if (k) { inc(ment, m.author + "\u0001" + n, k); inc(mentAll, n, k); } }); });
+  const mTop = top(ment)[0], talkedAbout = top(mentAll)[0];
+  const mention = mTop && mTop[1] >= 8 ? { from: mTop[0].split("\u0001")[0], to: mTop[0].split("\u0001")[1], n: mTop[1], most: talkedAbout } : null;
+  // the question nobody answered: a question followed by the longest silence
+  let ghost: any = null;
+  all.forEach((m, i) => { const nx = all[i + 1]; if (!nx || !m.text || !/\?\s*$/.test(m.text) || m.text.length < 6) return; const g = nx.ts! - m.ts!; if (g > 4 * 3600e3 && (!ghost || g > ghost.g)) ghost = { g, who: m.author, t: m.text.slice(0, 80), ts: m.ts }; });
+  // the secret night talk: two people alone, at night, a lot of messages fast
+  let duo: any = null;
+  { let run: Message[] = [];
+    const flush = () => { const who = new Set(run.map((m) => m.author)); if (run.length >= 16 && who.size === 2) { const mins = Math.max(1, Math.round((run[run.length - 1].ts! - run[0].ts!) / 60000)); if (!duo || run.length > duo.n) duo = { a: [...who], n: run.length, mins, ts: run[0].ts }; } };
+    for (const m of all) { const h = new Date(m.ts!).getHours(); const close = run.length && m.ts! - run[run.length - 1].ts! < 15 * 60e3; if ((h < 5 || h >= 23) && (close || !run.length)) run.push(m); else { flush(); run = (h < 5 || h >= 23) ? [m] : []; } } flush(); }
+  const delBy = top(all.reduce((mp, m) => { if (m.deleted) inc(mp, m.author); return mp; }, C()))[0];
+  const editBy = top(all.reduce((mp, m) => { if (m.edited) inc(mp, m.author); return mp; }, C()))[0];
   // busiest day
   const [bdk, bdn] = top(dayCnt)[0];
   const [by_, bm, bd] = bdk.split("-").map(Number);
@@ -467,6 +484,7 @@ function computeWrapped(msgs: Message[]) {
     owl: owlTop && owlTop[1] >= 5 ? { who: owlTop[0], n: owlTop[1], morning: morning.get(owlTop[0]) || 0 } : null,
     hours, peakH, quiet, wday: wd.indexOf(Math.max(...wd)),
     months, dead, missing, fast: fast ? { who: fast[0], s: Math.max(1, Math.round(fast[1])) } : null, night,
+    mention, ghost: ghost && ghost.g >= 6 * 3600e3 ? ghost : null, duo, deleted: delBy && delBy[1] >= 3 ? delBy : null, edited: editBy && editBy[1] >= 5 ? editBy : null,
     longest: longest && (longest as Message).text.length > 120 ? { who: (longest as Message).author, n: (longest as Message).text.length, t: (longest as Message).text.slice(0, 520) } : null,
   };
 }
@@ -685,6 +703,36 @@ function build() {
     <div class="st m w r num" style="--d:1.1s;--c:var(--pw-yellow)">${fmt(D.longest.n)} תווים</div>
     <p class="lead r dark" style="--d:1.6s">בהודעה אחת. מישהו פה כותב ספר. 📜</p>`,
     enter() { hit(200); later(() => sfx("whoosh"), 500); } });
+  if (D.mention) { const m = D.mention; premium.splice(1, 0, { bg: "#c81e5a", band: "#ff3d7f", bt: "60%", dur: 8500, html: `
+    <div class="lbl r">מי מדבר על מי 👀</div>
+    <div class="st m w slap" style="--d:.3s;--c:var(--pw-yellow)">${nm(m.from)}</div>
+    <p class="lead r" style="--d:.7s">הזכיר את השם של</p>
+    <div class="st ${big(m.to)} w slap" style="--d:1.1s;--c:#fff;--oc:var(--pw-ink)">${nm(m.to)}</div>
+    <div class="st l w num r" style="--d:1.5s;--c:var(--pw-yellow)" id="pcm">0</div>
+    <p class="lead r" style="--d:1.8s">פעמים. יותר מכל אחד אחר בקבוצה.</p>
+    <p class="sub r" style="--d:2.4s">צירוף מקרים? בובי לא חושב. 🤨${m.most && m.most[0] !== m.to ? `<br>ובאופן כללי, על ${nm(m.most[0])} מדברים הכי הרבה פה.` : ""}</p>`,
+    enter() { sfx("roll"); hit(1100, "boom", 90); later(() => count("#pcm", m.n), 1500); } }); }
+  if (D.duo) { const [a, b] = D.duo.a, tm = new Date(D.duo.ts).toTimeString().slice(0, 5); premium.push({ bg: "#140f33", band: "#2a1f55", bt: "66%", dur: 8500, html: `<div class="stars"></div>
+    <div class="lbl r">השיחה הסודית של הלילה 🌙</div>
+    <div class="duo"><div class="av drop" style="--d:.2s;background:var(--pw-pink);--rot:-6deg">${esc([...plainName(a)][0])}</div><div class="heart">🤫</div><div class="av drop" style="--d:.45s;background:var(--pw-sky);--rot:6deg">${esc([...plainName(b)][0])}</div></div>
+    <div class="st ${(plainName(a) + plainName(b)).length > 14 ? "s" : "m"} w slap" style="--d:1s;--c:var(--pw-yellow);--oc:#140f33;--sc:#ffd23f55">${nm(a)} ו${nm(b)}</div>
+    <p class="lead r" style="--d:1.4s">${fmt(D.duo.n)} הודעות ב־${fmt(D.duo.mins)} דקות, ב־${tm}.<br>רק שניהם. כל השאר ישנו.</p>
+    <p class="sub r" style="--d:2s">על מה מדברים בשעה כזאת? 👀</p>`,
+    enter() { hit(300); hit(550); later(() => sfx("ding"), 1000); } }); }
+  if (D.ghost) { const g = D.ghost, h = Math.round(g.g / 3600e3); premium.push({ bg: "#4a4a5e", band: "#6b6b85", bt: "16%", dur: 8000, html: `
+    <div class="lbl r">השאלה שאף אחד לא ענה עליה 🦗</div>
+    <div class="chat" style="max-width:300px"><div class="msg show" style="opacity:1;transform:none"><small>${nm(g.who)}</small>${esc(g.t)}</div></div>
+    <div class="st xl w slap num" style="--d:.8s;--c:var(--pw-yellow)">${fmt(h)}</div>
+    <div class="st s r" style="--d:1.1s">שעות של שקט מוחלט</div>
+    <p class="lead r" style="--d:1.6s">כולם ראו. כולם התעלמו. 💀</p>`,
+    enter() { later(() => sfx("sad"), 700); hit(800, "boom"); } }); }
+  if (D.deleted) premium.push({ bg: "#2b0f1f", band: "#5c1438", bt: "56%", dur: 7500, html: `
+    <div class="z" style="--d:.1s;font-size:84px;line-height:1">🗑️</div>
+    <div class="lbl r" style="--d:.3s">מלך המחיקות</div>
+    <div class="st ${big(D.deleted[0])} w slap" style="--d:.5s;--c:var(--pw-pink)">${nm(D.deleted[0])}</div>
+    <div class="st m r num" style="--d:.9s">${fmt(D.deleted[1])} הודעות נמחקו</div>
+    <p class="lead r" style="--d:1.4s">מה היה כתוב שם?<br>אף אחד לא יודע. חוץ מכל מי שהספיק לקרוא. 👀</p>`,
+    enter() { hit(500, "boom"); } });
   const aw = awardsOf(D).slice(0, 8);
   premium.push({ last: 1, bg: "#3b2a8f", band: "#7b5cff", bt: "40%", dur: 0, html: `
     <div class="st m w slap" style="--d:.1s;--c:var(--pw-yellow)">הפרסים של ${D.year}</div>
@@ -985,21 +1033,27 @@ export function teaserHtml() {
     <p class="pmx-sub">🎓 התעודות מחכות בסוף המשחק.</p></section>`;
   const D = hasWrapped() ? P.wrapped : null, rows: string[] = [];
   if (D) {
-    if (D.stick && D.stick[1] >= 5) rows.push(`<li>👑 <span>מלך הסטיקרים: ${blur(plainName(D.stick[0]))}, עם ${fmt(D.stick[1])} סטיקרים</span></li>`);
-    if (D.missing) rows.push(`<li>🕵️ <span>מישהו נעלם ל־${fmt(D.missing.days)} ימים: ${blur(plainName(D.missing.who))}</span></li>`);
+    if (D.mention) rows.push(`<li>👀 <span>מישהו בקבוצה מזכיר את השם של ${blur(plainName(D.mention.to))} יותר מכל אחד אחר. ${fmt(D.mention.n)} פעמים.</span></li>`);
+    if (D.duo) rows.push(`<li>🌙 <span>שניים דיברו לבד ${fmt(D.duo.n)} הודעות באמצע הלילה: ${blur(plainName(D.duo.a[0]) + " ו" + plainName(D.duo.a[1]))}</span></li>`);
+    if (D.ghost) rows.push(`<li>🦗 <span>מישהו שאל שאלה ואף אחד לא ענה ${fmt(Math.round(D.ghost.g / 3600e3))} שעות: ${blur(D.ghost.t.slice(0, 26))}</span></li>`);
+    if (D.deleted) rows.push(`<li>🗑️ <span>מישהו מחק ${fmt(D.deleted[1])} הודעות. מה הוא הסתיר? ${blur(plainName(D.deleted[0]))}</span></li>`);
     if (D.pair && D.pair.n >= 10) rows.push(`<li>💍 <span>הזוג של הקבוצה: ${blur(plainName(D.pair.a[0]) + " ו" + plainName(D.pair.a[1]))}</span></li>`);
-    if (D.night) rows.push(`<li>🌙 <span>ההודעה של ${new Date(D.night.ts).toTimeString().slice(0, 5)} בלילה: ${blur(D.night.msgs[0].t.slice(0, 30))}</span></li>`);
-    if (D.owl) rows.push(`<li>🦉 <span>מי לא ישן אף פעם: ${blur(plainName(D.owl.who))}</span></li>`);
-    if (D.dead) rows.push(`<li>💀 <span>החודש שבו הקבוצה כמעט מתה: ${blur(MONTHS[D.dead.m])}</span></li>`);
+    if (D.missing) rows.push(`<li>🕵️ <span>מישהו נעלם ל־${fmt(D.missing.days)} ימים: ${blur(plainName(D.missing.who))}</span></li>`);
+    if (D.night) rows.push(`<li>🌚 <span>ההודעה של ${new Date(D.night.ts).toTimeString().slice(0, 5)} בלילה: ${blur(D.night.msgs[0].t.slice(0, 30))}</span></li>`);
+    if (D.stick && D.stick[1] >= 5) rows.push(`<li>👑 <span>מלך הסטיקרים: ${blur(plainName(D.stick[0]))}, עם ${fmt(D.stick[1])} סטיקרים</span></li>`);
   }
-  const media = mc ? `<div class="pmx-media"><div class="pmx-thumbs">${P.items.filter((it: Item) => it.kind === "image" || it.kind === "sticker").slice(-40).sort(() => Math.random() - .5).slice(0, 5).map((it: Item) => `<span class="pmx-th" data-f="${esc(it.id)}"></span>`).join("")}<span class="pmx-th lock">🔒</span></div>
+  const vids = P.items.filter((it: Item) => (it.kind === "video" || it.kind === "gif") && it.size < 4e6).sort(() => Math.random() - .5).slice(0, 2);
+  const pics = P.items.filter((it: Item) => it.kind === "image" || it.kind === "sticker").slice(-40).sort(() => Math.random() - .5).slice(0, 5 - vids.length);
+  const media = mc ? `<div class="pmx-media"><div class="pmx-thumbs">${[...vids.map((it: Item) => `<span class="pmx-th vid" data-v="${esc(it.id)}"><span>▶︎</span></span>`), ...pics.map((it: Item) => `<span class="pmx-th" data-f="${esc(it.id)}"></span>`)].sort(() => Math.random() - .5).join("")}<span class="pmx-th lock">🔒</span></div>
     <p>🎙️ <b>${[k.audio && `${fmt(k.audio)} הקלטות`, k.image && `${fmt(k.image)} תמונות`, k.sticker && `${fmt(k.sticker)} סטיקרים`, (k.video || k.gif) && `${fmt((k.video || 0) + (k.gif || 0))} סרטונים`].filter(Boolean).join(", ")}</b> מהקבוצה מחכים לסבב המדיה</p></div>`
     : `<p class="pmx-sub">🎙️ בשביל סבב המדיה מייצאים את הצ'אט <b>כולל מדיה</b>.</p>`;
   const titles = ["ערפד מוסמך 🧛", "חופר בדרגת דוקטורט 🗣️", "נעלם במשולש ברמודה 🕵️", "פודקאסטר בלי מאזינים 🎙️", "גוגל של העניים ❓"];
+  const secrets = rows.length + (mc ? 1 : 0) + 6;
   return `<section class="pmx-hero"><div class="pmx-ring"></div><div class="pmx-spark" aria-hidden="true"><i>✨</i><i>⭐</i><i>✨</i><i>💫</i><i>✨</i></div>
+    <span class="pmx-stamp" aria-hidden="true">מסווג</span>
     <span class="pmx-badge">⭐ פרימיום</span>
-    <h3 class="pmx-t">בובי כבר עבר על הצ'אט שלכם.<span> והוא מצא דברים 👀</span></h3>
-    ${rows.length ? `<ul class="pmx-secrets">${rows.slice(0, 4).join("")}</ul>` : ""}
+    <h3 class="pmx-t">בובי מצא <span class="pmx-n" data-to="${secrets}">0</span> סודות<span>בצ'אט שלכם 👀</span></h3>
+    ${rows.length ? `<ul class="pmx-secrets">${rows.slice(0, 5).join("")}</ul>` : ""}
     ${media}
     <p class="pmx-certline">🎓 וכל שחקן מקבל תעודה. למשל: <b>"${pick(titles)}"</b></p>
     <button class="pmx-cta" id="pm-buy">לגלות הכל ב־${PRICE} ₪ ✨</button>
@@ -1009,7 +1063,12 @@ export function teaserHtml() {
   </section>`;
 }
 /** after the teaser is on screen: blurred thumbnails of the group's own photos and stickers */
-export function bindTeaser() { document.querySelectorAll<HTMLElement>(".pmx-th[data-f]:not([data-on])").forEach(async (el) => { el.dataset.on = "1"; const u = await urlOf(el.dataset.f!); if (u) el.style.backgroundImage = `url("${u}")`; }); }
+export function bindTeaser() {
+  document.querySelectorAll<HTMLElement>(".pmx-th[data-f]:not([data-on])").forEach(async (el) => { el.dataset.on = "1"; const u = await urlOf(el.dataset.f!); if (u) el.style.backgroundImage = `url("${u}")`; });
+  // short clips from the group play blurred and silent: you can tell it's them, you can't tell what happens
+  document.querySelectorAll<HTMLElement>(".pmx-th[data-v]:not([data-on])").forEach(async (el) => { el.dataset.on = "1"; const u = await urlOf(el.dataset.v!); if (!u) return; const v = document.createElement("video"); v.src = u; v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true; v.setAttribute("playsinline", ""); el.prepend(v); v.play().catch(() => {}); });
+  document.querySelectorAll<HTMLElement>(".pmx-n:not([data-on])").forEach((el) => { el.dataset.on = "1"; const to = +el.dataset.to! || 0, t0 = performance.now(); (function f(t: number) { const k = Math.min(1, (t - t0) / 1400); el.textContent = String(Math.round(to * (1 - Math.pow(1 - k, 3)))); if (k < 1) requestAnimationFrame(f); })(t0); });
+}
 
 // ---------------------------------------------------------------- styles
 // the story lives in its own shadow root, so the game's own styles (.msg, .cal, .poster…) never leak into it
@@ -1195,6 +1254,12 @@ function css() {
 .pmx-thumbs{display:flex;justify-content:center;gap:6px}
 .pmx-th{width:48px;height:48px;border-radius:12px;border:2.5px solid #fff;background:#7b5cff center/cover;filter:blur(3px) saturate(1.2);transform:rotate(var(--r,0deg))}
 .pmx-th:nth-child(odd){--r:-6deg}.pmx-th:nth-child(even){--r:5deg}
+.pmx-th.vid{position:relative;overflow:hidden;width:62px;filter:none}.pmx-th.vid video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(4px) saturate(1.3);transform:scale(1.15)}.pmx-th.vid span{position:absolute;inset:0;display:grid;place-items:center;font-size:16px;text-shadow:0 1px 4px #000}
+.pmx-stamp{position:absolute;top:16px;left:-6px;transform:rotate(-14deg);border:3px solid #ff3d7f;color:#ff3d7f;font-family:Karantina,sans-serif;font-size:1.7rem;padding:0 10px;border-radius:8px;opacity:.85;animation:pmxStamp .6s cubic-bezier(.2,1.6,.4,1) .4s backwards,pmxGlitch 3.5s steps(1) 1.2s infinite}
+@keyframes pmxStamp{from{transform:rotate(-14deg) scale(3);opacity:0}}
+@keyframes pmxGlitch{0%,92%,100%{translate:0 0;filter:none}93%{translate:3px -1px;filter:hue-rotate(90deg)}95%{translate:-3px 1px}97%{translate:1px 0;filter:hue-rotate(-60deg)}}
+.pmx-n{display:inline!important;color:#ffd23f;font-variant-numeric:tabular-nums}
+.pmx-hero .pmx-secrets li{background:linear-gradient(90deg,#ff3d7f22,#ffffff10)}
 .pmx-th.lock{filter:none;display:grid;place-items:center;background:#1d1636;font-size:20px}
 .pmx-certline{margin:0;font-size:.92rem}
 .pmx-certline b{color:#ffd23f}
