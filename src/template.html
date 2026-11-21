@@ -2768,7 +2768,8 @@ ${samples}
 
   function revealBlock(q) {
     const last = S.idx + 1 >= S.game.questions.length;
-    return `${revealHead(q)}
+    let mid = ""; try { mid = S.chatText && PREM.midHtml ? PREM.midHtml(S.idx, S.game.questions.length) : ""; } catch {}
+    return `${revealHead(q)}${mid}
       ${S.multi ? multiResults(q) : S.players.length ? `<section class="panel"><b>מי ניחש נכון?</b><div class="chips" id="scorers">${S.players.map((p) => `<button class="chip" aria-pressed="false" data-p="${esc(p)}">${esc(p)}${S.streaks[p] >= 2 ? `<span class="streak">🔥${S.streaks[p]}</span>` : ""}</button>`).join("")}</div></section>` : ""}
       <div class="rate" id="rate"><span>איך הייתה השאלה?</span><button class="chip" data-r="up" aria-label="שאלה טובה">👍</button><button class="chip" data-r="down" aria-label="שאלה משעממת">👎</button></div>
       <button class="btn big" id="next" style="width:100%">${last ? "לתוצאות" : "השאלה הבאה"}</button>`;
@@ -2777,6 +2778,7 @@ ${samples}
   // which kind of question this was, for the 👍/👎 counts on the stats page (no message text is ever sent)
   const rateKey = (q) => q.title === "רגע של WTF 🤯" ? "wtf" : q.type === "legend" ? (q.msg ? "legend" : q.title === "מי התחיל את זה?" ? "inside" : "first") : q.type === "day" ? (q.author ? "day_who" : "day_topic") : q.type;
   function bindReveal(q) {
+    const pmid = document.getElementById("pm-buy-mid"); if (pmid) pmid.onclick = () => { SFX.tap(); PREM.buy("mid"); };
     const rate = document.getElementById("rate");
     if (rate) rate.querySelectorAll("button").forEach((b) => (b.onclick = () => {
       NET.bump(`r_${rateKey(q)}_${b.dataset.r}`.slice(0, 24)); SFX.point(); buzz(15);
@@ -2996,7 +2998,7 @@ ${samples}
       <div class="awards">${g.awards.map(([k, v, d]) => `<div class="award"><span class="dim small">${k}</span><b>${esc(v)}</b><span class="small">${esc(d)}</span></div>`).join("")}</div>
       ${S.chatText && PREM.hasWrapped() ? `<section class="panel prem-end"><div class="row" style="justify-content:center">
         <button class="btn" id="pm-cert">🎓 תעודה לכל שחקן${PREM.isOn() ? "" : " 🔒"}</button><button class="btn alt" id="pm-files2">📁 תיקים סודיים${PREM.isOn() ? "" : " 🔒"}</button><button class="btn alt" id="pm-wrap2">🎁 הסיכום של ${PREM.wrappedYear()}</button></div>
-        ${PREM.isOn() ? "" : `<p class="dim small" style="text-align:center">התעודות, הסיכום המלא וסבב המדיה נפתחים בפרימיום, פעם אחת ב־14.90 ₪ לכל הקבוצה.</p>`}</section>` : ""}
+        ${PREM.isOn() ? "" : (PREM.endTeaserHtml ? PREM.endTeaserHtml() : "")}</section>` : ""}
       <section class="panel story" id="story" hidden>
         <b>תמונה לסטורי</b>
         <img id="story-img" alt="תמונת סיכום של המשחק: הפודיום והציטוט של הערב">
@@ -3030,7 +3032,8 @@ ${samples}
     }
     { const c = document.getElementById("pm-cert"); if (c) c.onclick = () => { SFX.tap(); PREM.certificates(S.players || [], S.scores || {}, "end"); };
       const w = document.getElementById("pm-wrap2"); if (w) w.onclick = () => { SFX.tap(); PREM.openWrapped(); };
-      const fl = document.getElementById("pm-files2"); if (fl) fl.onclick = () => { SFX.tap(); PREM.files("end"); }; }
+      const fl = document.getElementById("pm-files2"); if (fl) fl.onclick = () => { SFX.tap(); PREM.files("end"); };
+      const be = document.getElementById("pm-buy-end"); if (be) be.onclick = () => { SFX.tap(); PREM.buy("end2"); }; }
     document.getElementById("again").onclick = () => { SFX.tap(); if (S.multi) stopHosting(); S.screen = S.chatText ? "setup" : "home"; render(); };
     document.getElementById("home").onclick = () => { keepAwake(false); if (S.multi) stopHosting(); S = { screen: "home" }; render(); };
     document.getElementById("copy").onclick = async () => {

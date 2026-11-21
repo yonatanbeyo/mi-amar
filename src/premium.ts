@@ -6,7 +6,12 @@ import { getApp } from "firebase/app";
 import { getDatabase, ref, set, onValue, serverTimestamp } from "firebase/database";
 import type { Message } from "./lib/parser";
 
-const PRICE = "14.90";
+// launch price until the end of 2026, then the regular price (shown honestly, with the real date)
+const LAUNCH_END = new Date(2027, 0, 1).getTime();
+const LAUNCH = () => Date.now() < LAUNCH_END;
+const PRICE_AFTER = "19.90";
+const PRICE = LAUNCH() ? "14.90" : PRICE_AFTER;
+export const price = () => PRICE;
 const BIT_URL = "https://www.bitpay.co.il/app/me/826990EF-07DF-40B2-B8AE-9A7737DEE4ED";
 const BIT_NUM = "058-646-3236";
 // email to the owner on every "I paid" (web3forms.com: the key is public by design and only routes mail to the owner)
@@ -50,7 +55,16 @@ function hash20(s: string) {
 }
 
 // ---------------------------------------------------------------- setup
-export function init(o: Opts) { P.opts = { toast, ...o }; css(); observeMedia(); }
+export function init(o: Opts) { P.opts = { toast, ...o }; css(); observeMedia(); taps(); }
+function taps() {
+  const ping = (f1: number, f2: number) => { try { const ac = new (window.AudioContext || (window as any).webkitAudioContext)(), t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain(); o.type = "triangle"; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + .18); g.gain.setValueAtTime(.25, t); g.gain.exponentialRampToValueAtTime(.001, t + .3); o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + .35); setTimeout(() => ac.close(), 600); } catch {} };
+  const open = (el: HTMLElement) => {
+    if (el.id === "pmx-rd" && !el.classList.contains("open")) { el.classList.add("open"); ping(300, 1200); try { navigator.vibrate && navigator.vibrate(25); } catch {} const f = el.parentElement?.querySelector<HTMLElement>(".pmx-try-f"); if (f) f.hidden = false; bump("demo_file"); }
+    if (el.classList.contains("pmx-free1") && !el.classList.contains("open")) { el.classList.add("open"); ping(500, 1500); try { navigator.vibrate && navigator.vibrate([20, 30, 20]); } catch {} bump("teaser_free"); }
+  };
+  document.addEventListener("click", (e) => { const el = (e.target as HTMLElement).closest<HTMLElement>("#pmx-rd,.pmx-free1"); if (el) open(el); });
+  document.addEventListener("keydown", (e) => { if (e.key !== "Enter" && e.key !== " ") return; const el = (e.target as HTMLElement).closest?.<HTMLElement>(".pmx-free1"); if (el) { e.preventDefault(); open(el); } });
+}
 export const on = (fn: (e: string) => void) => { P.listeners.push(fn); };
 export const isOn = () => P.on;
 
@@ -273,7 +287,7 @@ async function phoneLink(room: any) {
   ch.send(JSON.stringify({ t: "hi" })); // ask for the list again, in case the first one came too early
   setInterval(() => { if (ch.readyState === "open" && !P.phone.busy && P.phone.want.some((x: string) => !P.urls.has(x))) next(); }, 3000);
 }
-export function phoneReset() { try { P.phone.ch?.close(); } catch {} P.phone = { started: false, failed: false, ch: null, want: [], busy: false }; P.myFile = null; document.querySelector(".pmf-fab")?.remove(); }
+export function phoneReset() { if (P.phoneKey) { P.key = ""; P.phoneKey = 0; } try { P.phone.ch?.close(); } catch {} P.phone = { started: false, failed: false, ch: null, want: [], busy: false }; P.myFile = null; document.querySelector(".pmf-fab")?.remove(); }
 
 // ---------------------------------------------------------------- review the media before the game
 export function review(done?: () => void) {
@@ -332,10 +346,13 @@ function drawBuy() {
   const root = buyRoot!; const code = codeFor(P.key);
   root.innerHTML = `<div class="pm-sheet">
     <div class="pm-head"><b>פותחים את הפרימיום 🔓</b><button class="pm-x" id="pm-close" aria-label="סגירה">✕</button></div>
-    <ul class="pm-list"><li>🎁 הסיכום המלא של השנה, בלי סימן מים</li><li>📁 תיק סודי לכל אחד בקבוצה</li><li>🎬 סבב המדיה: סרטונים, תמונות, הקלטות וסטיקרים</li><li>🎓 תעודה מצחיקה לכל שחקן, מוכנה לסטורי</li></ul>
-    ${P.items.length ? "" : `<p class="pm-warn">⚠️ בצ'אט שהעלית אין מדיה. בשביל סבב המדיה מייצאים מוואטסאפ <b>"כולל מדיה"</b>. אפשר לשלם עכשיו, והפרימיום יישאר פתוח גם כשתעלו את הצ'אט עם המדיה.</p>`}
+    <ul class="pm-list"><li>🎁 הסיכום המלא של השנה, בלי סימן מים</li><li>📁 תיק סודי לכל אחד בקבוצה</li><li>🎬 סבב המדיה: סרטונים, תמונות, הקלטות וסטיקרים</li><li>🎓 תעודה מצחיקה לכל שחקן, מוכנה לסטורי</li><li>🔮 התחזיות של בובי לשנה הבאה</li></ul>
+    ${P.items.length || !P.msgs.length ? "" : `<p class="pm-warn">⚠️ בצ'אט שהעלית אין מדיה. בשביל סבב המדיה מייצאים מוואטסאפ <b>"כולל מדיה"</b>. אפשר לשלם עכשיו, והפרימיום יישאר פתוח גם כשתעלו את הצ'אט עם המדיה.</p>`}
     <div class="pm-price"><b>${PRICE} ₪</b><span>פעם אחת לכל הקבוצה. בלי מנוי, בלי כרטיס אשראי.</span></div>
+    ${launchHtml("pm-launch")}
     ${perHeadHtml("pm-each")}
+    ${trustHtml("pm-trust")}
+    <div class="pm-me">${budSvg("party", 54)}<p><b>היי, אני יונתן 👋</b> בניתי את המשחק הזה לבד. בביט יופיע השם שלי, זה בסדר, זה אני. אני בודק כל תשלום בעצמי ופותח לכם.</p></div>
     <h4 class="pm-h">איך משלמים? 3 צעדים, דקה אחת</h4>
     <div class="pm-step"><span class="pm-n">1</span><div><b>זה הקוד שלכם:</b><div class="pm-code"><span dir="ltr" id="pm-code">${code}</span><button id="pm-copy">העתקה</button></div></div></div>
     <div class="pm-step"><span class="pm-n">2</span><div><b>משלמים בביט, ובהערה מדביקים את הקוד</b>
@@ -471,6 +488,10 @@ function computeWrapped(msgs: Message[]) {
   { let best: Message[] = [], cur: Message[] = [];
     for (const m of all) { const h = new Date(m.ts!).getHours(); if (h >= 2 && h < 5 && m.text && !m.media) { if (cur.length && m.ts! - cur[cur.length - 1].ts! > 10 * 60e3) cur = []; cur.push(m); if (cur.length > best.length) best = cur.slice(); } else if (h >= 5) cur = []; }
     if (best.length >= 3) night = { ts: best[0].ts, msgs: best.slice(0, 6).map((m) => ({ a: m.author, t: m.text.slice(0, 90) })) }; }
+  // how it all started: the first words of the people who talk the most
+  const firsts: { a: string; t: string; ts: number }[] = [];
+  { const seen = new Set<string>(), want = new Set(people.slice(0, 6).map((p) => p[0]));
+    for (const m of all) { if (seen.has(m.author) || !want.has(m.author) || !m.text || m.media || m.deleted || m.text.length < 2) continue; seen.add(m.author); firsts.push({ a: m.author, t: m.text.slice(0, 90), ts: m.ts! }); if (firsts.length >= 4) break; } }
   const pair = top(pairs);
   const word = top(words)[0];
   const wordBy = word ? top(all.reduce((mp, m) => { const k = (m.text.match(new RegExp(word[0], "g")) || []).length; if (k) inc(mp, m.author, k); return mp; }, C())) [0] : null;
@@ -488,6 +509,7 @@ function computeWrapped(msgs: Message[]) {
     word: word ? { w: word[0], n: word[1], by: wordBy, more: top(words).slice(1, 9).map((x) => x[0]) } : null,
     emoji: emoTop && emoTop[1] >= 3 ? { e: emoTop[0], n: emoTop[1], by: emoBy, second: top(emo)[1]?.[0] } : null,
     owl: owlTop && owlTop[1] >= 5 ? { who: owlTop[0], n: owlTop[1], morning: morning.get(owlTop[0]) || 0 } : null,
+    firsts: firsts.length >= 2 ? firsts : null,
     hours, peakH, quiet, wday: wd.indexOf(Math.max(...wd)),
     months, dead, missing, fast: fast ? { who: fast[0], s: Math.max(1, Math.round(fast[1])) } : null, night,
     mention, ghost: ghost && ghost.g >= 6 * 3600e3 ? ghost : null, duo, deleted: delBy && delBy[1] >= 3 ? delBy : null, edited: editBy && editBy[1] >= 5 ? editBy : null,
@@ -512,6 +534,23 @@ function awardsOf(D: any) {
   if (D.emoji?.by) add(D.emoji.e, D.emoji.by[0], "מלך האימוג'י", `${D.emoji.e} ${fmt(D.emoji.by[1])} פעמים`);
   return A;
 }
+// Bubbi's predictions for next year: built from the year's numbers, never mean, always the same for the same chat
+function predictionsOf(D: any) {
+  const used = new Set<string>(), out: [string, string, string][] = []; // emoji, who, prediction
+  const add = (e: string, who: string | undefined | null, t: string) => { if (!who || used.has(who) || out.length >= 5) return; used.add(who); out.push([e, who, t]); };
+  if (D.pair && D.pair.n >= 10) { const [a, b] = D.pair.a; if (!used.has(a) && !used.has(b)) { used.add(a); used.add(b); out.push(["💍", `${plainName(a)} ו${plainName(b)}`, "יתחתנו ראשונים. בובי כבר קנה חליפה."]); } }
+  add("🦉", D.owl?.who, "עדיין יהיה ער ב־4 בלילה. גם בגיל 40.");
+  add("🕵️", D.missing?.who, "ייעלם מהקבוצה לחודש, ויחזור עם ״מה פספסתי?״");
+  add("🎙️", D.voice && D.voice[1] >= 3 ? D.voice[0] : null, "יפתח פודקאסט. אף אחד לא יקשיב, חוץ מאמא.");
+  add("😂", D.laugh && D.laugh[1] >= 3 ? D.laugh[0] : null, "יצחק מבדיחה שעוד לא סיפרו.");
+  add("⚡", D.fast?.who, "יענה להודעה עוד לפני שהיא נשלחה.");
+  const rest = D.people.map((p: any) => p[0]).filter((n: string) => !used.has(n));
+  const h = (n: string) => [...n].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 11);
+  rest.sort((a: string, b: string) => h(a) - h(b));
+  const fill: [string, string][] = [["💸", "יהיה מיליונר, וימשיך לבקש העברה בביט על פיצה."], ["📱", "יהיה מפורסם בטיקטוק בגלל סרטון שהוא בכלל לא התכוון להעלות."], ["✈️", "יעבור לגור בחו״ל, ויישאר הכי פעיל בקבוצה."], ["👶", "יהיה הראשון עם ילד. הקבוצה תהיה הבייביסיטר."], ["🍕", "יפתח מסעדה. הקבוצה תאכל בחינם (בתקווה)."]];
+  for (const [e, t] of fill) { const who = rest.shift(); if (!who) break; add(e, who, t); }
+  return out;
+}
 function titleFor(D: any, name: string, used: Set<string>) {
   const mine = awardsOf(D).filter((a) => a[1] === name || a[1].split(" ו").includes(plainName(name)));
   const pick = mine.find((a) => !used.has(a[2])) || mine[0];
@@ -522,6 +561,8 @@ function titleFor(D: any, name: string, used: Set<string>) {
   return rank > D.people.length / 2 ? { e: "🤫", t: "שקט אבל מסוכן", r: `רק ${fmt(n[1])} הודעות, אבל כל אחת שווה זהב` } : { e: "⭐", t: "עמוד תווך", r: `${fmt(n[1])} הודעות שמחזיקות את הקבוצה בחיים` };
 }
 
+// how many premium slides this chat has (for "and N more slides")
+function premiumCount(D: any) { return [1, D.stick && D.stick[1] >= 5, D.night, D.pair && D.pair.n >= 10, D.word && D.word.n >= 10, D.emoji, D.owl, 1, D.dead, D.missing, D.voice && D.voice[1] >= 3, D.laugh && D.laugh[1] >= 3, D.fast, D.longest, D.mention, D.duo, D.ghost, D.deleted, D.firsts, predictionsOf(D).length >= 2].filter(Boolean).length; }
 // ---------------------------------------------------------------- the year summary: the story
 let W: any = null;
 export function hasWrapped() { if (!P.wrapped && P.msgs.length) P.wrapped = computeWrapped(P.msgs); return !!P.wrapped; }
@@ -592,16 +633,24 @@ function build() {
     <div class="opts r" style="--d:.7s" id="popts">${opts4.map((o: string) => `<button class="pw-opt" data-w="${o === p0[0] ? 1 : 0}">${nm(o)}</button>`).join("")}</div>
     <div class="race" id="prace" hidden></div><p class="sub" id="pgres" style="min-height:48px"></p>`,
     enter() { hit(200); W.root.querySelectorAll(".pw-opt").forEach((b: HTMLButtonElement) => (b.onclick = (e) => { e.stopPropagation(); answer(b); })); } });
-  if (!P.on) S.push({ lock: 1, bg: "#17112e", band: "#2a1f55", bt: "30%", dur: 0, html: `
+  const cliff = D.mention ? { t: "מי מדבר על מי 👀", a: D.mention.from, mid: "הזכיר/ה את השם של", b: D.mention.to, n: D.mention.n, u: "פעמים. יותר מכל אחד אחר." }
+    : D.duo ? { t: "השיחה הסודית של הלילה 🌙", a: D.duo.a[0], mid: "ו", b: D.duo.a[1], n: D.duo.n, u: "הודעות באמצע הלילה. רק שניהם." }
+    : D.pair && D.pair.n >= 10 ? { t: "הזוג של הקבוצה 💍", a: D.pair.a[0], mid: "ו", b: D.pair.a[1], n: D.pair.n, u: "תשובות אחד לשני תוך שתי דקות." } : null;
+  const more = premiumCount(D);
+  if (!P.on) S.push({ lock: 1, bg: "#17112e", band: "#2a1f55", bt: "30%", dur: 0, html: (cliff ? `
+    <div class="lbl r">השקופית הבאה: ${cliff.t}</div>
+    <div class="cliff z" style="--d:.2s"><span class="bl">${nm(cliff.a)}</span><small>${cliff.mid}</small><span class="bl">${nm(cliff.b)}</span><b class="num" id="pcl">0</b><em>${cliff.u}</em><i class="lk">🔒</i></div>
+    <p class="sub r" style="--d:.8s">ועוד ${fmt(Math.max(1, more - 1))} שקופיות כאלה, עם השמות האמיתיים. כולל התחזיות של בובי ל־${D.year + 1} 🔮</p>`
+    : `
     <div class="lockbig">🔒</div>
     <div class="st m slap" style="--d:.3s">מפה זה כבר רכילות כבדה</div>
     <div class="peek r" style="--d:.6s">${[["#ffa928", "👑"], ["#2a1f55", "🌙"], ["#ff3d7f", "💍"], ["#3fe0b0", "🕵️"], ["#5fb4ff", "⚡"], ["#ffd23f", "😭"]].map(([c, e]) => `<div style="background:${c}">${e}</div>`).join("")}</div>
-    <p class="sub r" style="--d:.8s">עוד המון שקופיות: מלך הסטיקרים, הזוג של הקבוצה, ההודעה של 3 בלילה, מי נעלם, ועוד.</p>
-    <div class="st s w r" style="--d:1s;--c:var(--pw-yellow)">${PRICE} ₪</div>
-    ${(() => { const h = perHead(); return h ? `<p class="lead r" style="--d:1.02s;color:var(--pw-yellow)">רק ${h.e} ₪ לכל אחד מה־${h.people}. ${esc(h.thing)} 😤</p>` : ""; })()}
-    <p class="small r" style="--d:1.05s">פעם אחת לכל הקבוצה, בביט. בלי מנוי ובלי כרטיס אשראי.<br>כולל גם את סבב המדיה ואת התעודות.</p>
+    <p class="sub r" style="--d:.8s">עוד ${fmt(more)} שקופיות: מלך הסטיקרים, ההודעה של 3 בלילה, מי נעלם, התחזיות של בובי ועוד.</p>`) + `
+    <div class="st s w r" style="--d:1s;--c:var(--pw-yellow)">${PRICE} ₪</div>${LAUNCH() ? `<p class="small r" style="--d:1.01s">🚀 מחיר השקה עד 31.12, אחר כך ${PRICE_AFTER} ₪</p>` : ""}
+    ${(() => { const h = perHead(); return h ? `<p class="lead r" style="--d:1.02s;color:var(--pw-yellow)">רק ${h.e} ₪ לכל אחד מה־${h.people}. ${esc(h.thing)} 🍬</p>` : ""; })()}
+    <p class="small r" style="--d:1.05s">אחד משלם, וכל הקבוצה מקבלת הכל. לתמיד.<br>כולל התיקים הסודיים, סבב המדיה והתעודות.</p>
     <button class="pw-btn r" style="--d:1.2s" id="punlock">לפתוח לכולם 🔓</button>`,
-    enter() { bump("wrapped_lock"); later(() => sfx("lock"), 900); W.root.querySelector("#punlock").onclick = (e: Event) => { e.stopPropagation(); buy("wrapped"); }; } });
+    enter() { bump("wrapped_lock"); later(() => sfx("lock"), 900); if (cliff) { later(() => { sfx("roll"); count("#pcl", cliff.n, 1500); }, 500); hit(2000, "boom"); } W.root.querySelector("#punlock").onclick = (e: Event) => { e.stopPropagation(); buy("wrapped"); }; } });
   const premium: any[] = [];
   { const d = D.day, mx = Math.max(...d.month, 1);
     premium.push({ bg: "#232a6e", band: "#3f3bd6", bt: "55%", dur: 8000, html: `
@@ -740,6 +789,20 @@ function build() {
     <div class="st m r num" style="--d:.9s">${fmt(D.deleted[1])} הודעות נמחקו</div>
     <p class="lead r" style="--d:1.4s">מה היה כתוב שם?<br>אף אחד לא יודע. חוץ מכל מי שהספיק לקרוא. 👀</p>`,
     enter() { hit(500, "boom"); } });
+  if (D.firsts) { const f0 = new Date(D.firsts[0].ts); premium.unshift({ bg: "#0f5257", band: "#1b8a8f", bt: "60%", dur: 4500 + D.firsts.length * 1100, html: `
+    <div class="lbl r">איך הכל התחיל 🥹</div>
+    <div class="st m w slap" style="--d:.2s;--c:var(--pw-yellow)">${f0.getDate()} ב${MONTHS[f0.getMonth()]} ${f0.getFullYear()}</div>
+    <p class="small r" style="--d:.4s">המילים הראשונות של כל אחד בצ'אט</p>
+    <div class="chat" id="pfirst">${D.firsts.map((m: any, i: number) => `<div class="msg ${i % 2 ? "me" : ""}"><small>${nm(m.a)} · ${new Date(m.ts).getDate()}.${new Date(m.ts).getMonth() + 1}.${String(new Date(m.ts).getFullYear()).slice(2)}</small>${esc(m.t)}</div>`).join("")}</div>
+    <p class="lead r" style="--d:${1.1 + D.firsts.length * .9}s">תראו אותם. כל כך תמימים. עוד לא ידעו מה מחכה להם. 😭</p>`,
+    enter() { later(() => sfx("whoosh"), 200); hit(300); W.root.querySelectorAll("#pfirst .msg").forEach((m: HTMLElement, i: number) => later(() => { m.classList.add("show"); sfx("pop"); vib(10); }, 900 + i * 900)); } }); }
+  const pr = predictionsOf(D);
+  if (pr.length >= 2) premium.push({ bg: "#2a0f4f", band: "#5b21b6", bt: "22%", dur: 3500 + pr.length * 1500, html: `<div class="stars"></div>
+    <div class="z" style="--d:.1s;font-size:78px;line-height:1">🔮</div>
+    <div class="st m w slap" style="--d:.3s;--c:var(--pw-yellow);--oc:#2a0f4f;--sc:#ffd23f55">התחזיות של בובי ל־${D.year + 1}</div>
+    <div class="pred" id="ppred">${pr.map((x) => `<div><em>${x[0]}</em><span><b>${esc(plainName(x[1]))}</b> ${esc(x[2])}</span></div>`).join("")}</div>
+    <p class="sub r" style="--d:${1.2 + pr.length * 1.3}s">בובי אף פעם לא טועה. (בובי טועה כל הזמן.)</p>`,
+    enter() { sfx("roll"); W.root.querySelectorAll("#ppred > div").forEach((d: HTMLElement, i: number) => later(() => { d.classList.add("show"); sfx("pop"); vib(15); }, 1000 + i * 1300)); later(() => confetti(80, ["#ffd23f", "#c084fc", "#fff"]), 1000 + pr.length * 1300); } });
   const aw = awardsOf(D).slice(0, 8);
   premium.push({ last: 1, bg: "#3b2a8f", band: "#7b5cff", bt: "40%", dur: 0, html: `
     <div class="st m w slap" style="--d:.1s;--c:var(--pw-yellow)">הפרסים של ${D.year}</div>
@@ -773,8 +836,9 @@ function answer(b: HTMLButtonElement) {
 function go(i: number) {
   if (!W || i < 0 || i >= W.slides.length) return;
   W.timers.forEach(clearTimeout); W.timers = [];
-  const stage = W.root.querySelector(".pw-stage"), old = stage.querySelector(".slide");
-  if (old) { old.classList.add("leave"); setTimeout(() => old.remove(), 320); }
+  const stage = W.root.querySelector(".pw-stage");
+  // fast tapping: anything already leaving goes now, so slides never pile up on each other
+  stage.querySelectorAll(".slide").forEach((old: HTMLElement) => { if (old.classList.contains("leave")) old.remove(); else { old.classList.add("leave"); setTimeout(() => old.remove(), 320); } });
   W.cur = i; const s = W.slides[i]; if (s.guess) { s.answered = 0; s.dur = 0; }
   W.root.querySelector(".pw-bg").style.backgroundColor = s.bg; const bd = W.root.querySelector(".pw-band"); bd.style.backgroundColor = s.band; bd.style.top = s.bt;
   const el = document.createElement("section"); el.className = "slide"; el.innerHTML = s.html; stage.append(el);
@@ -875,8 +939,8 @@ async function saveStory() {
     stickerText(c, plainName(a[1]), x + bw / 2, y + 140, 74, "#1d1636", "#fff3d1", "#fff3d1", bw - 40);
     textLine(c, a[2], x + bw / 2, y + 205, 32, "#5a4a8a", 700, bw - 40); });
   const bud = await budImage("party"); c.drawImage(bud, 540 - 120, 1560, 240, 279);
-  textLine(c, "מי אמר את זה?", 540, 1870, 40, "#fff", 700);
-  if (!P.on) { c.save(); c.globalAlpha = .18; c.fillStyle = "#fff"; c.font = '700 120px Karantina, sans-serif'; c.textAlign = "center"; c.translate(540, 960); c.rotate(-.45); for (let y = -1200; y < 1200; y += 260) c.fillText("מי אמר את זה?", 0, y); c.restore(); textLine(c, "נוצר בחינם ב־mi-amar.co.il", 540, 1500, 38, "#ffd23f", 700); }
+  textLine(c, "מי אמר את זה?  mi-amar.co.il", 540, 1870, 40, "#fff", 700);
+  if (!P.on) { c.save(); c.globalAlpha = .18; c.fillStyle = "#fff"; c.font = '700 120px Karantina, sans-serif'; c.textAlign = "center"; c.translate(540, 960); c.rotate(-.45); for (let y = -1200; y < 1200; y += 260) c.fillText("מי אמר את זה?", 0, y); c.restore(); textLine(c, "איך נראית הקבוצה שלכם? mi-amar.co.il", 540, 1500, 40, "#ffd23f", 700); }
   await share(cv, `סיכום-${D.year}.png`, "הסיכום של הקבוצה");
 }
 async function share(cv: HTMLCanvasElement, name: string, title: string) {
@@ -1024,6 +1088,10 @@ export function showcaseHtml() {
     <span class="pmx-badge">⭐ חדש · פרימיום</span>
     <h3 class="pmx-t">הצ'אט שלכם מסתיר סודות.<span>בובי מוצא את כולם 👀</span></h3>
     <ul class="pmx-secrets demo"><li>👀 <span>מישהו בקבוצה מזכיר את השם של <span class="pmx-blur">אחד מכם</span> יותר מכל אחד אחר</span></li><li>🌙 <span>שניים דיברו לבד באמצע הלילה: <span class="pmx-blur">מי ומי</span></span></li><li>🗑️ <span>מישהו מחק 9 הודעות. מה הוא הסתיר?</span></li></ul>
+    <div class="pmx-try"><div class="pmx-try-h"><small>תיק לדוגמה, נסו בעצמכם</small><b>📁 התיק הסודי של נועה</b></div>
+      <button class="pmx-rd" id="pmx-rd" type="button"><span class="pmx-rd-tx">👁️ <b>דניאל</b> כתב את השם שלך <b>214</b> פעמים. מישהו פה חושב עליך הרבה 😳</span><span class="pmx-rd-bar">מסווג <small>הקישו כדי לחשוף</small></span></button>
+      <div class="pmx-rd-l">🔒 מי מתעלם ממך</div><div class="pmx-rd-l">🔒 ההודעה הכי מביכה שלך</div><div class="pmx-rd-l">🔒 פסק הדין של בובי</div>
+      <p class="pmx-try-f" hidden>בתיק שלכם זה יהיה עם השמות האמיתיים מהקבוצה 👀</p></div>
     <div class="pmx-grid">
       <div class="pmx-tile"><div class="pmx-phone"><div class="pmx-f f1"><small>מלך הסטיקרים</small><b>???</b><em>142 סטיקרים</em></div><div class="pmx-f f2"><small>ההודעה של 3 בלילה</small><span class="pmx-bub">אחי מישהו ער?</span><span class="pmx-bub me">מה קרה</span></div><div class="pmx-f f3"><small>מי נעלם</small><b>87</b><em>ימים בלי מילה</em></div></div><b>🎁 הסיכום של השנה</b><span>21 שקופיות עם מוזיקה, כמו של ספוטיפיי</span></div>
       <div class="pmx-tile"><div class="pmx-video"><div class="pmx-vframe"><span class="pmx-vblur"></span><span class="pmx-vplay">▶︎</span><i class="pmx-vbar"></i></div><div class="pmx-vq">מי שלח את הסרטון?</div></div><b>🎬 סבב המדיה</b><span>סרטונים, תמונות, הקלטות וסטיקרים אמיתיים</span></div>
@@ -1031,10 +1099,11 @@ export function showcaseHtml() {
       <div class="pmx-tile"><div class="pmx-cert"><small>תעודה רשמית</small><b>ערפד מוסמך</b><em>🧛 רמת סכנה: 🔥🔥🔥</em></div><b>🎓 תעודה לכל שחקן</b><span>תואר מצחיק, מוכן לסטורי</span></div>
     </div>
     <div class="pmx-how"><b>איך מקבלים?</b>
-      <ol><li><span>1</span>מייצאים את הקבוצה מוואטסאפ <b>כולל מדיה</b></li><li><span>2</span>מעלים לכאן ורואים 3 שקופיות בחינם</li><li><span>3</span>פותחים הכל ב־14.90 ₪, פעם אחת לכל הקבוצה</li></ol>
+      <ol><li><span>1</span>מייצאים את הקבוצה מוואטסאפ <b>כולל מדיה</b></li><li><span>2</span>מעלים לכאן ורואים 3 שקופיות בחינם</li><li><span>3</span>פותחים הכל ב־${PRICE} ₪, פעם אחת לכל הקבוצה</li></ol>
       <p class="pmx-note">🎬 בלי "כולל מדיה" אין סרטונים, תמונות והקלטות. כל השאר עובד גם בלי.</p></div>
+    ${launchHtml()}
     <button class="pmx-cta" id="pmx-go">מעלים צ'אט ומגלים ✨</button>
-    <span class="pmx-sub">משלמים בביט. בלי מנוי, בלי כרטיס אשראי.</span>
+    ${trustHtml()}
   </section>`;
 }
 /** a small strip at the very top of the home page that jumps to the showcase */
@@ -1045,12 +1114,20 @@ function perHead() {
   const counts = new Map<string, number>(); P.msgs.forEach((m: Message) => counts.set(m.author, (counts.get(m.author) || 0) + 1));
   const people = [...counts.values()].filter((c) => c >= 3).length || n;
   if (people < 2) return null;
-  const each = Math.ceil((14.9 / people) * 100) / 100, e = each.toFixed(2);
+  const each = Math.ceil((parseFloat(PRICE) / people) * 100) / 100, e = each.toFixed(2);
   const thing = each < 1.5 ? "פחות ממסטיק" : each < 2.5 ? "פחות מבמבה" : each < 4 ? "פחות משוקו" : each < 6 ? "פחות מפחית קולה" : "פחות מפלאפל";
-  const jab = pick([`אל תהיו קמצנים 😤`, `${thing}. אין תירוצים 😤`, `מי שלא משלם, בובי יודע עליו הכל 👀`, `${thing}. נו באמת 🙄`]);
+  const jab = pick([`${thing} לכל אחד 🍬`, `${thing}. שווה כל אגורה 😏`, `${thing}, על שנה שלמה של סודות 👀`]);
   return { people, e, thing, jab };
 }
 export const perHeadHtml = (cls = "pmx-each") => { const h = perHead(); return h ? `<div class="${cls}"><b>רק ${h.e} ₪ לכל אחד</b><span>${h.people} אנשים בקבוצה. ${esc(h.jab)}</span><small>אחד משלם, וכל השאר מחזירים לו בביט 😉</small></div>` : ""; };
+/** the launch price, with the real end date and the real price after it */
+export function launchHtml(cls = "pmx-launch") {
+  if (!LAUNCH()) return "";
+  const left = Math.max(1, Math.ceil((LAUNCH_END - Date.now()) / DAY));
+  return `<div class="${cls}"><span>🚀 מחיר השקה עד 31.12</span><span>אחר כך ${PRICE_AFTER} ₪${left <= 20 ? `, נשארו ${left} ימים` : ""}</span></div>`;
+}
+/** three short reasons to trust it, right next to the price */
+export const trustHtml = (cls = "pmx-trust") => `<ul class="${cls}"><li><b>✓</b> אחד משלם, וכל הקבוצה מקבלת הכל. לתמיד.</li><li><b>✓</b> הצ'אט לא יוצא מהטלפון. אף אחד לא רואה אותו, גם לא אני.</li><li><b>✓</b> לא נפתח תוך 48 שעות? הכסף חוזר.</li></ul>`;
 const blur = (t: string) => `<span class="pmx-blur">${esc(t)}</span>`;
 export function teaserHtml() {
   const mc = P.items.length, k = mediaByKind();
@@ -1072,6 +1149,8 @@ export function teaserHtml() {
     if (D.night) rows.push(`<li>🌚 <span>ההודעה של ${new Date(D.night.ts).toTimeString().slice(0, 5)} בלילה: ${blur(D.night.msgs[0].t.slice(0, 30))}</span></li>`);
     if (D.stick && D.stick[1] >= 5) rows.push(`<li>👑 <span>מלך הסטיקרים: ${blur(plainName(D.stick[0]))}, עם ${fmt(D.stick[1])} סטיקרים</span></li>`);
   }
+  // one real secret can be opened for free: the taste that makes you want the rest
+  if (rows.length) rows[0] = rows[0].replace("<li>", `<li class="pmx-free1" role="button" tabindex="0">`).replace(/<\/li>$/, `<em class="pmx-tap">👆 הקישו, את זה בובי חושף בחינם</em></li>`);
   const vids = P.items.filter((it: Item) => (it.kind === "video" || it.kind === "gif") && it.size < 4e6).sort(() => Math.random() - .5).slice(0, 2);
   const pics = P.items.filter((it: Item) => it.kind === "image" || it.kind === "sticker").slice(-40).sort(() => Math.random() - .5).slice(0, 5 - vids.length);
   const media = mc ? `<div class="pmx-media"><div class="pmx-thumbs">${[...vids.map((it: Item) => `<span class="pmx-th vid" data-v="${esc(it.id)}"><span>▶︎</span></span>`), ...pics.map((it: Item) => `<span class="pmx-th" data-f="${esc(it.id)}"></span>`)].sort(() => Math.random() - .5).join("")}<span class="pmx-th lock">🔒</span></div>
@@ -1087,9 +1166,11 @@ export function teaserHtml() {
     ${media}
     <p class="pmx-certline">📁 ולכל אחד מחכה <b>תיק סודי</b>: מי מזכיר אותו, מי מתעלם ממנו וההודעה הכי מביכה שלו. <button class="pmx-link" id="pm-files" style="display:inline">להציץ בכריכה</button></p>
     <p class="pmx-certline">🎓 וכל שחקן מקבל תעודה. למשל: <b>"${pick(titles)}"</b></p>
+    <p class="pmx-certline">🔮 ובסוף: <b>התחזיות של בובי ל־${wrappedYear() + 1}</b>. מי יתחתן ראשון ומי ייעלם מהקבוצה.</p>
     ${perHeadHtml()}
+    ${launchHtml()}
     <button class="pmx-cta" id="pm-buy">לגלות הכל ב־${PRICE} ₪ ✨</button>
-    <span class="pmx-sub">פעם אחת לכל הקבוצה. בלי מנוי, בלי כרטיס אשראי. משלמים בביט.</span>
+    ${trustHtml()}
     <button class="pmx-free" id="pm-wrap">או לראות קודם 3 שקופיות בחינם ←</button>
     ${mc ? `<button class="pmx-link" id="pm-rev">לעבור על המדיה ולהוריד מה שלא מתאים</button>` : ""}
   </section>`;
@@ -1103,6 +1184,27 @@ export function bindTeaser() {
   document.querySelectorAll<HTMLElement>(".pmx-n:not([data-on])").forEach((el) => { el.dataset.on = "1"; const to = +el.dataset.to! || 0, t0 = performance.now(); (function f(t: number) { const k = Math.min(1, (t - t0) / 1400); el.textContent = String(Math.round(to * (1 - Math.pow(1 - k, 3)))); if (k < 1) requestAnimationFrame(f); })(t0); });
 }
 
+/** end screen, before premium: the juiciest secret of the group, blurred, right after the scores */
+export function endTeaserHtml() {
+  if (P.on || !hasWrapped()) return "";
+  const D = P.wrapped, row = D.mention ? `👀 ${blur(plainName(D.mention.from))} הזכיר/ה את השם של ${blur(plainName(D.mention.to))} <b>${fmt(D.mention.n)}</b> פעמים`
+    : D.duo ? `🌙 ${blur(plainName(D.duo.a[0]) + " ו" + plainName(D.duo.a[1]))} דיברו לבד <b>${fmt(D.duo.n)}</b> הודעות באמצע הלילה`
+    : D.deleted ? `🗑️ ${blur(plainName(D.deleted[0]))} מחק/ה <b>${fmt(D.deleted[1])}</b> הודעות. מה היה כתוב שם?` : "";
+  return `<section class="pmx-end"><b class="pmx-end-h">רגע, לפני שהולכים 👀</b>${row ? `<p class="pmx-end-r">${row}</p>` : ""}
+    <p class="pmx-end-r">📁 ולכל אחד מכם מחכה תיק סודי. מי מזכיר אותו, מי מתעלם ממנו וההודעה הכי מביכה שלו.</p>
+    ${launchHtml()}<button class="pmx-cta" id="pm-buy-end">לגלות הכל ב־${PRICE} ₪ ✨</button>
+    <span class="pmx-sub">אחד משלם, וכל הקבוצה מקבלת הכל. לתמיד.</span></section>`;
+}
+/** one small, friendly nudge in the middle of the game (once per chat) */
+export function midHtml(idx: number, total: number) {
+  if (P.on || !P.key || total < 8 || idx !== Math.floor(total / 2) || !hasWrapped()) return "";
+  if (P.midCache && P.midCache[0] === P.key + ":" + idx) return P.midCache[1]; // the same reveal drawn again
+  const seen = store.get("pm_mid", []) as string[]; if (seen.includes(P.key)) return "";
+  seen.push(P.key); store.set("pm_mid", seen.slice(-30)); bump("pm_mid_seen");
+  const D = P.wrapped, line = D.mention ? `מישהו פה הזכיר את השם של ${blur(plainName(D.mention.to))} <b>${fmt(D.mention.n)}</b> פעמים השנה` : D.night ? `מישהו כתב פה משהו ב־${new Date(D.night.ts).toTimeString().slice(0, 5)} בלילה` : `בובי מצא סודות שלא נכנסו למשחק`;
+  const html = `<div class="pmx-mid"><span>🔒</span><p><b>חצי משחק עבר.</b> ${line}. מי? זה בפרימיום.</p><button id="pm-buy-mid">להציץ</button></div>`;
+  P.midCache = [P.key + ":" + idx, html]; return html;
+}
 // ---------------------------------------------------------------- the personal file: a classified dossier for every player
 function dossierFor(name: string) {
   const all = P.msgs.filter((m: Message) => m.ts);
@@ -1167,13 +1269,16 @@ function sendFiles() {
   P.peerNames.forEach((n: string, uid: string) => {
     const state = (P.on ? "on" : "lock") + ":" + n; if (P.sentFiles.get(uid) === state) return;
     const f = dossierFor(n); if (!f) return; P.sentFiles.set(uid, state);
-    room.sig(uid, { t: "file", f: P.on ? f : { locked: 1, name: f.name, no: f.no, n: fileSecrets(f), group: f.group } }).catch(() => P.sentFiles.delete(uid));
+    room.sig(uid, { t: "file", f: P.on ? f : { locked: 1, name: f.name, no: f.no, n: fileSecrets(f), group: f.group, k: P.key } }).catch(() => P.sentFiles.delete(uid));
   });
 }
 on((e) => { if (e === "unlock") sendFiles(); });
 function gotFile(m: any) {
   const f = m.f; if (!f || typeof f.name !== "string") return;
   const was = P.myFile; P.myFile = f;
+  // a player can open the premium for everyone from their own phone: the payment is tied to the host's chat
+  if (f.locked && typeof f.k === "string" && /^[0-9a-f]{20}$/.test(f.k) && !P.msgs.length) { P.key = f.k; P.phoneKey = 1; }
+  if (!f.locked && buyRoot) closeBuy(true);
   let fab = document.querySelector<HTMLButtonElement>(".pmf-fab");
   if (!fab) { fab = document.createElement("button"); fab.className = "pmf-fab"; document.body.append(fab); fab.onclick = () => openFile(P.myFile); }
   fab.innerHTML = f.locked ? `📁 התיק הסודי שלך <span>🔒</span>` : `📁 התיק הסודי שלך <span>חדש!</span>`;
@@ -1207,7 +1312,7 @@ function openFile(f: any) {
         <div class="bud">${budSvg(f.locked ? "think" : "shock", 96)}</div>
         <p class="lead">${f.locked ? `בובי אסף <b>${fmt(f.n)}</b> סודות עליך מתוך הצ'אט.` : `בובי עבר על כל ההודעות שלך. כל. ההודעות.`}</p></div>
       ${f.locked ? `<div class="locked">${Array.from({ length: Math.min(6, f.n) }, (_, i) => `<div class="card red"><span class="ic">🔒</span><div><div class="bar w${i % 3}"></div><div class="bar w${(i + 1) % 3}"></div></div></div>`).join("")}
-        <div class="lk"><b>🔒 התיק נעול</b><p>מי מזכיר אותך הכי הרבה, מי מתעלם ממך, ההודעה הכי מביכה שלך ופסק הדין של בובי. הכל פה, מתחת לפסים השחורים.</p><p class="sm">התיק נפתח כשמישהו בקבוצה פותח את הפרימיום (14.90 ₪ פעם אחת לכל הקבוצה).${P.key ? "" : " תגידו למי שפתח את המשחק 😉"}</p>${P.key ? `<button class="cta" id="buy">לפתוח את כל התיקים ✨</button>` : ""}</div></div>`
+        <div class="lk"><b>🔒 התיק נעול</b><p>מי מזכיר אותך הכי הרבה, מי מתעלם ממך, ההודעה הכי מביכה שלך ופסק הדין של בובי. הכל פה, מתחת לפסים השחורים.</p><p class="sm">מספיק שאחד מכם פותח את הפרימיום (${PRICE} ₪ פעם אחת), וכל התיקים של כל הקבוצה נפתחים. גם שלך.</p>${P.key ? `<button class="cta" id="buy">לפתוח לכולם ב־${PRICE} ₪ ✨</button>` : `<p class="sm">תגידו למי שפתח את המשחק 😉</p>`}</div></div>`
       : `${sec.map((x, i) => `<div class="card" data-i="${i}"><div class="hd"><span class="ic">${x[0]}</span><b>${x[1]}</b></div><div class="bd">${x[2]}<em>${x[3]}</em></div><div class="redact"><span>מסווג</span><small>הקישו כדי לחשוף</small></div></div>`).join("")}
         <div class="end" hidden><div class="stamp s2">נחשף!</div><button class="cta" id="save">📲 שמירה לסטורי</button><button class="ghost" id="again">לראות תיק של מישהו אחר</button></div>`}
     </div></div></div>`;
@@ -1381,6 +1486,17 @@ canvas.pw-fx{position:absolute;inset:0;z-index:15;pointer-events:none;width:100%
 .pw-ph .spark i{flex:1;background:#ffffff55;border-radius:3px 3px 0 0;height:0;transition:height .9s var(--pw-out)}.pw-ph .spark i.hot{background:var(--pw-yellow)}
 .pw-ph .peek{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;width:100%;max-width:330px}
 .pw-ph .peek div{aspect-ratio:9/12;border-radius:12px;border:3px solid var(--pw-ink);display:grid;place-items:center;font-size:28px;filter:blur(2.5px) saturate(1.3)}
+.pw-ph .cliff{position:relative;width:100%;max-width:320px;box-sizing:border-box;background:#c81e5a;border:3.5px solid var(--pw-ink);border-radius:22px;padding:16px 14px 14px;display:grid;gap:4px;justify-items:center;box-shadow:0 7px 0 var(--pw-ink);transform:rotate(-1.5deg)}
+.pw-ph .cliff .bl{font-family:Karantina,sans-serif;font-size:44px;line-height:1;color:#fff;filter:blur(9px);user-select:none;-webkit-user-select:none;max-width:100%;overflow:hidden;white-space:nowrap}
+.pw-ph .cliff small{font-size:15px;color:#ffd9e6}
+.pw-ph .cliff b{font-family:Karantina,sans-serif;font-size:76px;line-height:.9;color:var(--pw-yellow);text-shadow:0 4px 0 var(--pw-ink)}
+.pw-ph .cliff em{font-style:normal;font-size:15px;color:#fff}
+.pw-ph .cliff .lk{position:absolute;top:-18px;left:-10px;font-style:normal;font-size:38px;transform:rotate(-14deg);animation:pwShake .45s 1.6s 3}
+.pw-ph .pred{width:100%;max-width:330px;display:grid;gap:8px;text-align:right}
+.pw-ph .pred div{display:flex;gap:10px;align-items:center;background:#ffffff14;border:2.5px solid #ffffff38;border-radius:16px;padding:8px 12px;font-size:15px;line-height:1.3;opacity:0;transform:translateX(-24px) scale(.94);transition:.45s var(--pw-spring)}
+.pw-ph .pred div.show{opacity:1;transform:none}
+.pw-ph .pred em{font-style:normal;font-size:28px;flex:none}
+.pw-ph .pred b{color:var(--pw-yellow)}
 .pw-ph .lockbig{font-size:60px;opacity:0}
 .pw-ph .on .lockbig{animation:pwZoom .8s var(--pw-spring) forwards,pwShake .45s .9s 2}
 @keyframes pwShake{25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
@@ -1438,6 +1554,37 @@ function css() {
   if (document.getElementById("pm-css")) return;
   const s = document.createElement("style"); s.id = "pm-css";
   s.textContent = `
+/* launch price, trust lines, the free secret, the demo file, end and mid-game offers */
+.pmx-launch{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 10px;font-weight:700;font-size:.86rem;color:#1d1636;background:#3fe0b0;border:2.5px solid #1d1636;border-radius:12px;padding:6px 10px;box-shadow:0 3px 0 #1d1636}
+.pmx-launch span:last-child{font-weight:400}
+.pmx-trust{list-style:none;margin:0;padding:0;display:grid;gap:5px;text-align:right;font-size:.84rem;color:#e6e0ff}
+.pmx-trust li{display:flex;gap:7px;align-items:flex-start;min-width:0}.pmx-trust b{flex:none;width:20px;height:20px;border-radius:50%;background:#3fe0b0;color:#1d1636;display:grid;place-items:center;font-size:.75rem;margin-top:1px}
+.pmx-secrets li.pmx-free1{position:relative;cursor:pointer;display:grid!important;grid-template-columns:auto minmax(0,1fr);gap:4px 8px;align-items:start;background:#ffd23f1f!important;border:2px dashed #ffd23f!important;border-radius:12px;padding:6px 8px;outline-offset:3px}
+.pmx-tap{display:block;grid-column:1/-1;font-style:normal;font-weight:700;font-size:.8rem;color:#ffd23f;margin-top:3px;animation:pmxBob 1.2s ease-in-out infinite alternate}
+.pmx-free1.open .pmx-blur{filter:none;animation:pmxPop .5s cubic-bezier(.2,1.6,.4,1);background:#ffd23f;color:#1d1636}
+.pmx-secrets li.pmx-free1.open{border-style:solid;background:#ffd23f2e}.pmx-free1.open .pmx-tap{animation:none;color:#fff;font-weight:400}.pmx-free1.open .pmx-tap::before{content:"✨ זה היה בחינם. ";font-weight:700;color:#ffd23f}
+.pmx-free1.open .pmx-tap{font-size:0}.pmx-free1.open .pmx-tap::after{content:"כל השאר מחכה בפנים 👇";font-size:.8rem}.pmx-free1.open .pmx-tap::before{font-size:.8rem}
+@keyframes pmxPop{0%{transform:scale(.6)}100%{transform:none}}
+.pmx-try{background:#e9d3a2;color:#1d1636;border:3px solid #1d1636;border-radius:8px 18px 18px 18px;padding:12px;display:grid;gap:7px;text-align:right;box-shadow:0 6px 0 #1d1636;transform:rotate(-1deg)}
+.pmx-try-h{display:grid;gap:1px}.pmx-try-h small{font-size:.75rem;color:#7a5a2a;font-weight:700}.pmx-try-h b{font-family:Karantina,sans-serif;font-size:1.7rem;line-height:1}
+.pmx-rd{position:relative;display:block;width:100%;font:inherit;text-align:right;color:#1d1636;background:#fff8e6;border:2.5px solid #1d1636;border-radius:12px;padding:10px 12px;cursor:pointer;overflow:hidden;min-height:58px}
+.pmx-rd-tx{font-size:.92rem;line-height:1.35}
+.pmx-rd-bar{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;background:repeating-linear-gradient(-45deg,#1d1636 0 14px,#2a1f55 14px 28px);color:#ff3d7f;font-family:Karantina,sans-serif;font-size:1.6rem;line-height:1;transition:transform .55s cubic-bezier(.6,-0.3,.7,0),opacity .55s;animation:pmxShake 2.6s ease-in-out infinite}
+.pmx-rd-bar small{font-family:inherit;font-size:.8rem;color:#fff;font-family:system-ui,sans-serif;font-weight:700}
+.pmx-rd.open .pmx-rd-bar{transform:translateX(-120%) rotate(-8deg);opacity:0;animation:none}
+@keyframes pmxShake{0%,86%,100%{transform:none}90%{transform:rotate(-1.5deg)}94%{transform:rotate(1.5deg)}}
+.pmx-rd-l{background:#1d1636;color:#fff;border-radius:10px;padding:7px 10px;font-size:.85rem;font-weight:700;opacity:.9}
+.pmx-try-f{margin:0;font-weight:700;font-size:.88rem;color:#c81e3c}
+.pmx-end{position:relative;overflow:hidden;margin-top:12px;display:grid;gap:9px;text-align:center;color:#fff;background:radial-gradient(120% 90% at 50% 0%,#5a3fd6,#2a1f55 65%,#17112e);border:3px solid #1d1636;border-radius:22px;padding:16px 14px;box-shadow:0 6px 0 #1d1636;direction:rtl}
+.pmx-end-h{font-family:Karantina,sans-serif;font-size:2rem;line-height:1;color:#ffd23f}
+.pmx-end-r{margin:0;font-size:.95rem;text-align:right;background:#ffffff12;border-radius:12px;padding:8px 10px}
+.pmx-mid{display:flex;align-items:center;gap:10px;margin:10px 0;padding:10px 12px;border-radius:16px;background:#1d1636;color:#fff;border:2.5px solid #ffd23f;box-shadow:0 4px 0 #0006;text-align:right;direction:rtl;animation:pmxIn .5s cubic-bezier(.2,1.5,.4,1) .3s backwards}
+.pmx-mid>span{font-size:1.6rem;flex:none}.pmx-mid p{margin:0;flex:1;min-width:0;font-size:.9rem;line-height:1.35}
+.pmx-mid button{flex:none;font:inherit;font-weight:700;background:#ffd23f;color:#1d1636;border:2.5px solid #1d1636;border-radius:12px;padding:8px 12px;cursor:pointer;box-shadow:0 3px 0 #000}
+@keyframes pmxIn{from{opacity:0;transform:translateY(12px) scale(.96)}}
+.pm-launch{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 10px;font-weight:700;font-size:.88rem;background:#3fe0b0;border:2.5px solid #1d1636;border-radius:12px;padding:6px 10px}
+.pm-trust{list-style:none;margin:0;padding:0;display:grid;gap:5px;font-size:.88rem}.pm-trust li{display:flex;gap:7px}.pm-trust b{flex:none;color:#0e7a5c}
+.pm-me{display:flex;gap:10px;align-items:center;background:#f3efff;border:2px solid #d8cffa;border-radius:14px;padding:8px 10px}.pm-me p{margin:0;font-size:.86rem;line-height:1.4}
 /* selling: home showcase and the setup teaser */
 .pmx-show,.pmx-hero{max-width:100%;min-width:0;width:100%;box-sizing:border-box;position:relative;isolation:isolate;overflow:hidden;border-radius:26px;padding:20px 16px 18px;display:grid;gap:12px;text-align:center;color:#fff;background:radial-gradient(120% 80% at 50% 0%,#5a3fd6 0%,#2a1f55 60%,#17112e 100%);box-shadow:0 10px 0 #0006;direction:rtl}
 .pmx-ring{position:absolute;inset:-2px;z-index:-1;border-radius:inherit;padding:3px;background:conic-gradient(from var(--pmxa,0deg),#ffd23f,#ff3d7f,#7b5cff,#3fe0b0,#ffd23f);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:pmxSpin 4s linear infinite}

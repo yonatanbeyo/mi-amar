@@ -5,7 +5,8 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRe
 import { getDatabase, ref, onValue, update, serverTimestamp } from "firebase/database";
 
 const ADMIN = "yonatan.beyo@gmail.com";
-const PRICE = 14.9;
+const PRICE = 14.9; // launch price until the end of 2026, 19.90 after
+const priceAt = (ts: number) => (ts && ts >= new Date(2027, 0, 1).getTime() ? 19.9 : PRICE);
 const MORNING = "https://app.greeninvoice.co.il/";
 const cfg = (window as any).MIAMAR_FIREBASE;
 const app = initializeApp(cfg), auth = getAuth(app), db = getDatabase(app);
@@ -23,7 +24,7 @@ function draw() {
   document.title = wait.length ? `(${wait.length}) לוח ניהול` : "לוח ניהול";
   $("#sum").innerHTML = `
     <div class="kpi"><b>${ok.length}</b><span>מכירות</span></div>
-    <div class="kpi"><b>${(ok.length * PRICE).toFixed(2)} ₪</b><span>הכנסות</span></div>
+    <div class="kpi"><b>${ok.reduce((a: number, [, v]: any) => a + priceAt(v.t || 0), 0).toFixed(2)} ₪</b><span>הכנסות</span></div>
     <div class="kpi ${wait.length ? "hot" : ""}"><b>${wait.length}</b><span>מחכים לאישור</span></div>
     <div class="kpi ${noRec.length ? "warn" : ""}"><b>${noRec.length}</b><span>בלי קבלה</span></div>`;
   $("#rec").hidden = !noRec.length;
