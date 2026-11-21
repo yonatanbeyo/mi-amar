@@ -443,6 +443,7 @@ function computeWrapped(msgs: Message[]) {
   const dkey = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
   const names = new Set<string>(); all.forEach((m) => plainName(m.author).split(/\s+/).forEach((w) => names.add(w)));
   let longest: Message | null = null;
+  const repTo = C(), repOut = C(), repIn = C(), laughAt = C(); let mono: any = null, run_ = 0, runStart = 0;
   all.forEach((m, i) => {
     const d = new Date(m.ts!), h = d.getHours();
     inc(by, m.author); hours[h]++; wd[d.getDay()]++;
@@ -458,6 +459,11 @@ function computeWrapped(msgs: Message[]) {
     }
     const p = all[i - 1];
     if (p && p.author !== m.author && m.ts! - p.ts! < 120000) inc(pairs, [p.author, m.author].sort().join("\u0001"));
+    // who answers whom, and who laughs at whom (the message right before, within 10 minutes)
+    if (p && p.author !== m.author && m.ts! - p.ts! < 600000) { inc(repTo, m.author + "\u0001" + p.author); inc(repOut, m.author); inc(repIn, p.author);
+      if (m.text && !m.media && /חח{2,}|😂|🤣|💀/.test(m.text)) inc(laughAt, m.author + "\u0001" + p.author); }
+    // the monologue: the most messages in a row with nobody else saying a word
+    if (p && p.author === m.author && m.ts! - p.ts! < 30 * 60e3) { run_++; if (run_ > (mono?.n || 0)) mono = { who: m.author, n: run_, ts: runStart }; } else { run_ = 1; runStart = m.ts!; }
   });
   const people = top(by);
   // ---- the spicy part
@@ -467,6 +473,25 @@ function computeWrapped(msgs: Message[]) {
   all.forEach((m) => { if (!m.text || m.media) return; nick.forEach((w, n) => { if (n === m.author) return; const k = (m.text.match(new RegExp(`(^|[^\u05d0-\u05ea])[והבלמש]?${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\u05d0-\u05ea])`, "g")) || []).length; if (k) { inc(ment, m.author + "\u0001" + n, k); inc(mentAll, n, k); } }); });
   const mTop = top(ment)[0], talkedAbout = top(mentAll)[0];
   const mention = mTop && mTop[1] >= 8 ? { from: mTop[0].split("\u0001")[0], to: mTop[0].split("\u0001")[1], n: mTop[1], most: talkedAbout } : null;
+  // who ignores whom: answers everyone a lot, but almost never this one person (who talks plenty)
+  const split = (k: string) => k.split("\u0001");
+  let ignore: any = null;
+  { const tot = all.length;
+    for (const [a, ra] of repOut) { if (ra < 30) continue;
+      for (const [b, nb] of by) { if (b === a || nb < 40) continue;
+        const exp = ra * (repIn.get(b) || 0) / Math.max(1, [...repIn].reduce((x, [n, v]) => x + (n === a ? 0 : v), 0));
+        const act = repTo.get(a + "\u0001" + b) || 0;
+        if (exp >= 10 && act <= exp * .3) { const sc = exp / (act + 1); if (!ignore || sc > ignore.sc) ignore = { a, b, n: act, others: ra - act, sc, bn: nb }; } } }
+    void tot; }
+  // who is obsessed with whom: most of someone's answers go to one person, and it is not mutual
+  let crush: any = null;
+  if (people.length >= 3) for (const [k, n] of repTo) { const [a, b] = split(k), ra = repOut.get(a) || 0; if (ra < 25 || n < 10) continue;
+    const share = n / ra, back = (repTo.get(b + "\u0001" + a) || 0) / Math.max(1, repOut.get(b) || 0);
+    if (share >= .3 && back < share * .65 && (!crush || share > crush.share)) crush = { a, b, share, back, n }; }
+  // the biggest fan: laughs at one person's messages more than anyone laughs at anyone
+  const fanTop = top(laughAt)[0];
+  const fan = fanTop && fanTop[1] >= 6 ? { a: split(fanTop[0])[0], b: split(fanTop[0])[1], n: fanTop[1] } : null;
+  const monologue = mono && mono.n >= 12 ? mono : null;
   // the question nobody answered: a question followed by the longest silence
   let ghost: any = null;
   all.forEach((m, i) => { const nx = all[i + 1]; if (!nx || !m.text || !/\?\s*$/.test(m.text) || m.text.length < 6) return; const g = nx.ts! - m.ts!; if (g > 4 * 3600e3 && (!ghost || g > ghost.g)) ghost = { g, who: m.author, t: m.text.slice(0, 80), ts: m.ts }; });
@@ -523,7 +548,7 @@ function computeWrapped(msgs: Message[]) {
     word: word ? { w: word[0], n: word[1], by: wordBy, more: top(words).slice(1, 9).map((x) => x[0]) } : null,
     emoji: emoTop && emoTop[1] >= 3 ? { e: emoTop[0], n: emoTop[1], by: emoBy, second: top(emo)[1]?.[0] } : null,
     owl: owlTop && owlTop[1] >= 5 ? { who: owlTop[0], n: owlTop[1], morning: morning.get(owlTop[0]) || 0 } : null,
-    firsts: firsts.length >= 2 ? firsts : null,
+    firsts: firsts.length >= 2 ? firsts : null, ignore, crush, fan, monologue,
     hours, peakH, quiet, wday: wd.indexOf(Math.max(...wd)),
     months, dead, missing, fast: fast ? { who: fast[0], s: Math.max(1, Math.round(fast[1])) } : null, night,
     mention, ghost: ghost && ghost.g >= 6 * 3600e3 ? ghost : null, duo, deleted: delBy && delBy[1] >= 3 ? delBy : null, edited: editBy && editBy[1] >= 5 ? editBy : null,
@@ -533,13 +558,15 @@ function computeWrapped(msgs: Message[]) {
 
 // awards for the final card and for the certificates: one strong title per person where possible
 function awardsOf(D: any) {
-  const A: [string, string, string, string][] = []; // emoji, who, title, reason
-  const add = (e: string, who: string | undefined, t: string, r: string) => { if (who) A.push([e, who, t, r]); };
-  if (D.stick && D.stick[1] >= 5) add("👑", D.stick[0], "מלך הסטיקרים", `${fmt(D.stick[1])} סטיקרים השנה`);
+  const A: [string, string, string, string, number?, string?][] = []; // emoji, who, title, reason, secret (hidden without premium), title when hidden
+  const add = (e: string, who: string | undefined, t: string, r: string, sec = 0, lt = "") => { if (who) A.push([e, who, t, r, sec, lt]); };
+  if (D.stick && D.stick[1] >= 5) add("👑", D.stick[0], "מלך הסטיקרים", `${fmt(D.stick[1])} סטיקרים השנה`, 1);
   add("🗣️", D.people[0]?.[0], "הכי חפרן", `${fmt(D.people[0][1])} הודעות השנה`);
-  if (D.pair) add("💍", D.pair.a.map(plainName).join(" ו"), "הזוג של הקבוצה", `${fmt(D.pair.n)} תשובות תוך שתי דקות`);
+  if (D.pair) add("💍", D.pair.a.map(plainName).join(" ו"), "הזוג של הקבוצה", `${fmt(D.pair.n)} תשובות תוך שתי דקות`, 1);
   if (D.owl) add("🦉", D.owl.who, "ינשוף הלילה", `${fmt(D.owl.n)} הודעות בין חצות לחמש`);
-  if (D.missing) add("🕵️", D.missing.who, "נעלם מקצועי", `${fmt(D.missing.days)} ימים בלי מילה`);
+  if (D.missing) add("🕵️", D.missing.who, "נעלם מקצועי", `${fmt(D.missing.days)} ימים בלי מילה`, 1);
+  if (D.crush) add("😍", D.crush.a, `מת על ${plainName(D.crush.b)}`, `${Math.round(D.crush.share * 100)}% מהתשובות שלו`, 1, "מת על מישהו פה");
+  if (D.fan) add("🤡", D.fan.b, "הקומיקאי של הקבוצה", `הצחיק ${fmt(D.fan.n)} פעמים`, 1);
   if (D.fast) add("⚡", D.fast.who, "עונה לפני שכתבו", `עונה תוך ${fmt(D.fast.s)} שניות`);
   if (D.voice && D.voice[1] >= 3) add("🎙️", D.voice[0], "פודקאסטר לא רשמי", `${fmt(D.voice[1])} הקלטות`);
   if (D.laugh && D.laugh[1] >= 3) add("😂", D.laugh[0], "מלך ה״חחחח״", `צחק ${fmt(D.laugh[1])} פעמים`);
@@ -576,7 +603,7 @@ function titleFor(D: any, name: string, used: Set<string>) {
 }
 
 // how many premium slides this chat has (for "and N more slides")
-function premiumCount(D: any) { return [1, D.stick && D.stick[1] >= 5, D.night, D.pair && D.pair.n >= 10, D.word && D.word.n >= 10, D.emoji, D.owl, 1, D.dead, D.missing, D.voice && D.voice[1] >= 3, D.laugh && D.laugh[1] >= 3, D.fast, D.longest, D.mention, D.duo, D.ghost, D.deleted, D.firsts, predictionsOf(D).length >= 2].filter(Boolean).length; }
+function premiumCount(D: any) { return [1, D.stick && D.stick[1] >= 5, D.night, D.pair && D.pair.n >= 10, D.word && D.word.n >= 10, D.emoji, D.owl, 1, D.dead, D.missing, D.voice && D.voice[1] >= 3, D.laugh && D.laugh[1] >= 3, D.fast, D.longest, D.mention, D.duo, D.ghost, D.deleted, D.firsts, D.crush, D.ignore, D.fan, D.monologue, predictionsOf(D).length >= 2].filter(Boolean).length; }
 // ---------------------------------------------------------------- the year summary: the story
 let W: any = null;
 export function hasWrapped() { if (!P.wrapped && P.msgs.length) P.wrapped = computeWrapped(P.msgs); return !!P.wrapped; }
@@ -647,7 +674,9 @@ function build() {
     <div class="opts r" style="--d:.7s" id="popts">${opts4.map((o: string) => `<button class="pw-opt" data-w="${o === p0[0] ? 1 : 0}">${nm(o)}</button>`).join("")}</div>
     <div class="race" id="prace" hidden></div><p class="sub" id="pgres" style="min-height:48px"></p>`,
     enter() { hit(200); W.root.querySelectorAll(".pw-opt").forEach((b: HTMLButtonElement) => (b.onclick = (e) => { e.stopPropagation(); answer(b); })); } });
-  const cliff = D.mention ? { t: "מי מדבר על מי 👀", a: D.mention.from, mid: "הזכיר/ה את השם של", b: D.mention.to, n: D.mention.n, u: "פעמים. יותר מכל אחד אחר." }
+  const cliff = D.crush ? { t: "מי מת על מי 😍", a: D.crush.a, mid: "עונה הכי הרבה ל", b: D.crush.b, n: Math.round(D.crush.share * 100), u: "אחוז מכל התשובות. וזה לא הדדי. 💔" }
+    : D.ignore ? { t: "מי מתעלם ממי 🙄", a: D.ignore.a, mid: "ענה ל", b: D.ignore.b, n: D.ignore.n, u: `פעמים כל השנה. ולשאר הקבוצה ${fmt(D.ignore.others)}.` }
+    : D.mention ? { t: "מי מדבר על מי 👀", a: D.mention.from, mid: "הזכיר/ה את השם של", b: D.mention.to, n: D.mention.n, u: "פעמים. יותר מכל אחד אחר." }
     : D.duo ? { t: "השיחה הסודית של הלילה 🌙", a: D.duo.a[0], mid: "ו", b: D.duo.a[1], n: D.duo.n, u: "הודעות באמצע הלילה. רק שניהם." }
     : D.pair && D.pair.n >= 10 ? { t: "הזוג של הקבוצה 💍", a: D.pair.a[0], mid: "ו", b: D.pair.a[1], n: D.pair.n, u: "תשובות אחד לשני תוך שתי דקות." } : null;
   const more = premiumCount(D);
@@ -796,6 +825,41 @@ function build() {
     <div class="st s r" style="--d:1.1s">שעות של שקט מוחלט</div>
     <p class="lead r" style="--d:1.6s">כולם ראו. כולם התעלמו. 💀</p>`,
     enter() { later(() => sfx("sad"), 700); hit(800, "boom"); } }); }
+  if (D.crush) { const c = D.crush, pc = Math.round(c.share * 100), pb = Math.round(c.back * 100); premium.splice(2, 0, { bg: "#7a0f3d", band: "#c81e5a", bt: "58%", dur: 9000, html: `
+    <div class="lbl r">מי מת על מי 😍</div>
+    <div class="duo"><div class="av drop" style="--d:.2s;background:var(--pw-pink);--rot:-6deg">${esc([...plainName(c.a)][0])}</div><div class="heart">💘</div><div class="av drop" style="--d:.45s;background:var(--pw-yellow);--rot:6deg">${esc([...plainName(c.b)][0])}</div></div>
+    <div class="st ${big(c.a)} w slap" style="--d:.9s;--c:var(--pw-yellow)">${nm(c.a)}</div>
+    <p class="lead r" style="--d:1.2s">מכל מי שבקבוצה, עונה הכי הרבה ל${nm(c.b)}</p>
+    <div class="st l w num r" style="--d:1.6s;--c:#fff;--oc:var(--pw-ink)"><span id="pcr">0</span>%</div>
+    <p class="lead r" style="--d:2s">מכל התשובות שלו/ה הולכות ל${nm(c.b)}.</p>
+    <p class="sub r" style="--d:2.8s">ו${nm(c.b)}? רק ${pb}% מהתשובות חוזרות. 💔 אהבה חד־צדדית?</p>`,
+    enter() { sfx("roll"); hit(900); later(() => count("#pcr", pc, 1200), 1600); later(() => { sfx("sad"); vib(60); }, 2900); } }); }
+  if (D.ignore) { const g = D.ignore; premium.push({ bg: "#1f2a3a", band: "#34475f", bt: "44%", dur: 9000, html: `
+    <div class="z" style="--d:.1s;font-size:80px;line-height:1">🙄</div>
+    <div class="lbl r" style="--d:.3s">מי מתעלם ממי</div>
+    <div class="st ${big(g.a)} w slap" style="--d:.6s;--c:var(--pw-yellow)">${nm(g.a)}</div>
+    <p class="lead r" style="--d:1s">ענה לכל הקבוצה ${fmt(g.others)} פעמים.<br>ול${nm(g.b)}?</p>
+    <div class="st xl w num r" style="--d:1.7s;--c:var(--pw-pink)">${fmt(g.n)}</div>
+    <p class="lead r" style="--d:2.1s">${g.n === 0 ? "אף פעם. אפילו לא פעם אחת." : g.n === 1 ? "פעם אחת. כל השנה." : "פעמים. כל השנה."} 💀</p>
+    <p class="sub r" style="--d:2.8s">ו${nm(g.b)} כתב/ה ${fmt(g.bn)} הודעות. יש פה משהו שאנחנו לא יודעים? 👀</p>`,
+    enter() { later(() => { sfx("lock"); hit(0, "boom", 110); vib(120); }, 1700); } }); }
+  if (D.fan) { const f = D.fan; premium.push({ bg: "#5a3a00", band: "#a86b00", bt: "62%", dur: 8000, html: `
+    <div class="z" style="--d:.1s;font-size:80px;line-height:1">😂</div>
+    <div class="lbl r" style="--d:.3s">המעריץ מספר 1</div>
+    <div class="st ${big(f.a)} w slap" style="--d:.6s;--c:var(--pw-yellow)">${nm(f.a)}</div>
+    <p class="lead r" style="--d:1s">צחק מההודעות של ${nm(f.b)}</p>
+    <div class="st l w num r" style="--d:1.4s;--c:#fff;--oc:var(--pw-ink)" id="pfn">0</div>
+    <p class="lead r" style="--d:1.8s">פעמים. יותר מכל זוג אחר בקבוצה.</p>
+    <p class="sub r" style="--d:2.5s">או ש${nm(f.b)} באמת מצחיק/ה, או שמישהו פה מנסה משהו. 😏</p>`,
+    enter() { sfx("roll"); later(() => count("#pfn", f.n), 1400); later(() => sfx("ding"), 2600); } }); }
+  if (D.monologue) { const m = D.monologue, d = new Date(m.ts); premium.push({ bg: "#123d2a", band: "#1f6b47", bt: "30%", dur: 7500, html: `
+    <div class="lbl r">המונולוג של השנה 🎤</div>
+    <div class="st ${big(m.who)} w slap" style="--d:.3s;--c:var(--pw-yellow)">${nm(m.who)}</div>
+    <p class="lead r" style="--d:.7s">שלח/ה ברצף</p>
+    <div class="st xl w num r" style="--d:1s;--c:#fff;--oc:var(--pw-ink)" id="pmo">0</div>
+    <p class="lead r" style="--d:1.4s">הודעות. ואף אחד לא ענה באמצע.</p>
+    <p class="sub r" style="--d:2s">${d.getDate()} ב${MONTHS[d.getMonth()]}. כולם קראו. אף אחד לא העז לעצור. 😶</p>`,
+    enter() { sfx("roll"); later(() => count("#pmo", m.n, 1300), 1000); } }); }
   if (D.deleted) premium.push({ bg: "#2b0f1f", band: "#5c1438", bt: "56%", dur: 7500, html: `
     <div class="z" style="--d:.1s;font-size:84px;line-height:1">🗑️</div>
     <div class="lbl r" style="--d:.3s">מלך המחיקות</div>
@@ -820,7 +884,7 @@ function build() {
   const aw = awardsOf(D).slice(0, 8);
   premium.push({ last: 1, bg: "#3b2a8f", band: "#7b5cff", bt: "40%", dur: 0, html: `
     <div class="st m w slap" style="--d:.1s;--c:var(--pw-yellow)">הפרסים של ${D.year}</div>
-    <div class="fin z" style="--d:.4s;--rot:-1deg"><div class="awards">${aw.map((a) => `<div class="aw"><em>${a[0]}</em><b>${nm(a[1])}</b><span>${esc(a[2])}</span></div>`).join("")}</div>${P.on ? "" : `<div class="wmk">מי אמר את זה?</div>`}</div>
+    <div class="fin z" style="--d:.4s;--rot:-1deg"><div class="awards">${aw.map((a) => `<div class="aw${!P.on && a[4] ? " lk" : ""}"><em>${a[0]}</em><b>${!P.on && a[4] ? "🔒 ???" : nm(a[1])}</b><span>${esc(!P.on && a[4] && a[5] ? a[5] : a[2])}</span></div>`).join("")}</div>${P.on ? "" : `<div class="wmk">מי אמר את זה?</div>`}</div>
     <div class="row r" style="--d:.8s"><button class="pw-btn" id="psave">📲 שמירה לסטורי</button><button class="pw-btn alt" id="pagain">↻ מההתחלה</button></div>
     <p class="small r" style="--d:1s">${P.on ? "נשמר נקי, בלי סימן מים." : "בחינם נשמר עם סימן מים. בפרימיום נקי לגמרי."}</p>`,
     enter() { bump(P.on ? "wrapped_end" : "wrapped_end_free"); hit(100); later(() => { sfx("ding"); confetti(200); }, 500); W.root.querySelector("#psave").onclick = (e: Event) => { e.stopPropagation(); sfx("pop"); saveStory(); }; W.root.querySelector("#pagain").onclick = (e: Event) => { e.stopPropagation(); go(0); }; } });
@@ -858,7 +922,7 @@ function go(i: number) {
   const el = document.createElement("section"); el.className = "slide"; el.innerHTML = s.html; stage.append(el);
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("on")));
   [...W.root.querySelector(".pw-bars").children].forEach((b: any, k) => (b.firstChild.style.width = k < i ? "100%" : "0"));
-  W.root.querySelector(".pw-pill").textContent = s.free ? `חינם, ${i + 1} מתוך ${W.free.filter((x: any) => x.free).length}` : s.lock ? "🔒 פרימיום" : "⭐ פרימיום";
+  W.root.querySelector(".pw-pill").textContent = s.free ? `חינם, ${i + 1} מתוך ${W.free.filter((x: any) => x.free).length}` : s.lock ? "🔒 פרימיום" : s.last && !P.on ? "🎁 הסיכום החינמי" : "⭐ פרימיום";
   W.energy = Math.min(1, i / 6); if (i > 0) sfx("whoosh");
   s.enter && s.enter(); W.t0 = performance.now(); W.paused = false;
 }
@@ -950,8 +1014,8 @@ async function saveStory() {
   aw.forEach((a, i) => { const col = i % 2, row = Math.floor(i / 2), x = col ? 80 : 80 + bw + gx, y = top + row * (bh + 34);
     c.fillStyle = "#1d1636"; rr(c, x, y + 12, bw, bh, 30); c.fill(); c.fillStyle = "#fff3d1"; rr(c, x, y, bw, bh, 30); c.fill(); c.lineWidth = 7; c.strokeStyle = "#1d1636"; c.stroke();
     c.font = '64px "Apple Color Emoji","Segoe UI Emoji",sans-serif'; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(a[0], x + bw / 2, y + 62);
-    stickerText(c, plainName(a[1]), x + bw / 2, y + 140, 74, "#1d1636", "#fff3d1", "#fff3d1", bw - 40);
-    textLine(c, a[2], x + bw / 2, y + 205, 32, "#5a4a8a", 700, bw - 40); });
+    stickerText(c, !P.on && a[4] ? "🔒 ???" : plainName(a[1]), x + bw / 2, y + 140, 74, "#1d1636", "#fff3d1", "#fff3d1", bw - 40);
+    textLine(c, !P.on && a[4] && a[5] ? a[5] : a[2], x + bw / 2, y + 205, 32, "#5a4a8a", 700, bw - 40); });
   const bud = await budImage("party"); c.drawImage(bud, 540 - 120, 1560, 240, 279);
   textLine(c, "מי אמר את זה?  mi-amar.co.il", 540, 1870, 40, "#fff", 700);
   if (!P.on) { c.save(); c.globalAlpha = .18; c.fillStyle = "#fff"; c.font = '700 120px Karantina, sans-serif'; c.textAlign = "center"; c.translate(540, 960); c.rotate(-.45); for (let y = -1200; y < 1200; y += 260) c.fillText("מי אמר את זה?", 0, y); c.restore(); textLine(c, "איך נראית הקבוצה שלכם? mi-amar.co.il", 540, 1500, 40, "#ffd23f", 700); }
@@ -1154,13 +1218,17 @@ export function teaserHtml() {
     <p class="pmx-sub">🎓 התעודות מחכות בסוף המשחק. בזמן משחק, כל שחקן מקבל את התיק שלו לטלפון.</p></section>`;
   const rows = secretRows();
   // one real secret can be opened for free: the taste that makes you want the rest
-  if (rows.length) rows[0] = rows[0].replace("<li>", `<li class="pmx-free1" role="button" tabindex="0">`).replace(/<\/li>$/, `<em class="pmx-tap">👆 הקישו, את זה בובי חושף בחינם</em></li>`);
+  // the free one is a mild secret (who talks about whom), never the juiciest ones
+  const fi = Math.max(0, rows.findIndex((r) => r.startsWith("<li>👀")));
+  if (rows.length) rows[fi] = rows[fi].replace("<li>", `<li class="pmx-free1" role="button" tabindex="0">`).replace(/<\/li>$/, `<em class="pmx-tap">👆 הקישו, את זה בובי חושף בחינם</em></li>`);
   return teaserRest(rows, mc, k);
 }
 /** the group's real secrets, each with the name or text blurred */
 function secretRows() {
   const D = hasWrapped() ? P.wrapped : null, rows: string[] = [];
   if (D) {
+    if (D.crush) rows.push(`<li>😍 <span>מישהו פה מת על מישהו: ${Math.round(D.crush.share * 100)}% מהתשובות שלו הולכות לאותו אחד. ${blur(plainName(D.crush.a) + " ← " + plainName(D.crush.b))}</span></li>`);
+    if (D.ignore) rows.push(`<li>🙄 <span>מישהו מתעלם ממישהו: ענה לו רק ${fmt(D.ignore.n)} פעמים כל השנה, ולשאר ${fmt(D.ignore.others)}. ${blur(plainName(D.ignore.a) + " ← " + plainName(D.ignore.b))}</span></li>`);
     if (D.mention) rows.push(`<li>👀 <span>מישהו בקבוצה מזכיר את השם של ${blur(plainName(D.mention.to))} יותר מכל אחד אחר. ${fmt(D.mention.n)} פעמים.</span></li>`);
     if (D.duo) rows.push(`<li>🌙 <span>שניים דיברו לבד ${fmt(D.duo.n)} הודעות באמצע הלילה: ${blur(plainName(D.duo.a[0]) + " ו" + plainName(D.duo.a[1]))}</span></li>`);
     if (D.ghost) rows.push(`<li>🦗 <span>מישהו שאל שאלה ואף אחד לא ענה ${fmt(Math.round(D.ghost.g / 3600e3))} שעות: ${blur(D.ghost.t.slice(0, 26))}</span></li>`);
@@ -1168,6 +1236,8 @@ function secretRows() {
     if (D.pair && D.pair.n >= 10) rows.push(`<li>💍 <span>הזוג של הקבוצה: ${blur(plainName(D.pair.a[0]) + " ו" + plainName(D.pair.a[1]))}</span></li>`);
     if (D.missing) rows.push(`<li>🕵️ <span>מישהו נעלם ל־${fmt(D.missing.days)} ימים: ${blur(plainName(D.missing.who))}</span></li>`);
     if (D.night) rows.push(`<li>🌚 <span>ההודעה של ${new Date(D.night.ts).toTimeString().slice(0, 5)} בלילה: ${blur(D.night.msgs[0].t.slice(0, 30))}</span></li>`);
+    if (D.fan) rows.push(`<li>😂 <span>מישהו צחק מההודעות של מישהו אחר ${fmt(D.fan.n)} פעמים: ${blur(plainName(D.fan.a))}</span></li>`);
+    if (D.monologue) rows.push(`<li>🎤 <span>מישהו שלח ${fmt(D.monologue.n)} הודעות ברצף ואף אחד לא ענה: ${blur(plainName(D.monologue.who))}</span></li>`);
     if (D.stick && D.stick[1] >= 5) rows.push(`<li>👑 <span>מלך הסטיקרים: ${blur(plainName(D.stick[0]))}, עם ${fmt(D.stick[1])} סטיקרים</span></li>`);
   }
   return rows;
@@ -1234,7 +1304,9 @@ export function phoneStripHtml() {
 /** end screen, before premium: the juiciest secret of the group, blurred, right after the scores */
 export function endTeaserHtml() {
   if (P.on || !hasWrapped()) return "";
-  const D = P.wrapped, row = D.mention ? `👀 ${blur(plainName(D.mention.from))} הזכיר/ה את השם של ${blur(plainName(D.mention.to))} <b>${fmt(D.mention.n)}</b> פעמים`
+  const D = P.wrapped, row = D.crush ? `😍 ${blur(plainName(D.crush.a))} מת/ה על ${blur(plainName(D.crush.b))}: <b>${Math.round(D.crush.share * 100)}%</b> מהתשובות שלו/ה הולכות רק אליו/ה`
+    : D.ignore ? `🙄 ${blur(plainName(D.ignore.a))} ענה ל${blur(plainName(D.ignore.b))} רק <b>${fmt(D.ignore.n)}</b> פעמים כל השנה. ולשאר? ${fmt(D.ignore.others)}`
+    : D.mention ? `👀 ${blur(plainName(D.mention.from))} הזכיר/ה את השם של ${blur(plainName(D.mention.to))} <b>${fmt(D.mention.n)}</b> פעמים`
     : D.duo ? `🌙 ${blur(plainName(D.duo.a[0]) + " ו" + plainName(D.duo.a[1]))} דיברו לבד <b>${fmt(D.duo.n)}</b> הודעות באמצע הלילה`
     : D.deleted ? `🗑️ ${blur(plainName(D.deleted[0]))} מחק/ה <b>${fmt(D.deleted[1])}</b> הודעות. מה היה כתוב שם?` : "";
   return `<section class="pmx-end pmx-gold"><b class="pmx-end-h">רגע, לפני שהולכים 👀</b>${row ? `<p class="pmx-end-r">${row}</p>` : ""}
@@ -1248,7 +1320,7 @@ export function midHtml(idx: number, total: number) {
   if (P.midCache && P.midCache[0] === P.key + ":" + idx) return P.midCache[1]; // the same reveal drawn again
   const seen = store.get("pm_mid", []) as string[]; if (seen.includes(P.key)) return "";
   seen.push(P.key); store.set("pm_mid", seen.slice(-30)); bump("pm_mid_seen");
-  const D = P.wrapped, line = D.mention ? `מישהו פה הזכיר את השם של ${blur(plainName(D.mention.to))} <b>${fmt(D.mention.n)}</b> פעמים השנה` : D.night ? `מישהו כתב פה משהו ב־${new Date(D.night.ts).toTimeString().slice(0, 5)} בלילה` : `בובי מצא סודות שלא נכנסו למשחק`;
+  const D = P.wrapped, line = D.ignore ? `מישהו פה ענה ל${blur(plainName(D.ignore.b))} רק <b>${fmt(D.ignore.n)}</b> פעמים כל השנה` : D.crush ? `מישהו פה מת על ${blur(plainName(D.crush.b))}` : D.mention ? `מישהו פה הזכיר את השם של ${blur(plainName(D.mention.to))} <b>${fmt(D.mention.n)}</b> פעמים השנה` : D.night ? `מישהו כתב פה משהו ב־${new Date(D.night.ts).toTimeString().slice(0, 5)} בלילה` : `בובי מצא סודות שלא נכנסו למשחק`;
   const html = `<div class="pmx-mid"><span>🔒</span><p><b>חצי משחק עבר.</b> ${line}. מי? זה בפרימיום.</p><button id="pm-buy-mid">להציץ</button></div>`;
   P.midCache = [P.key + ":" + idx, html]; return html;
 }
@@ -1546,6 +1618,7 @@ canvas.pw-fx{position:absolute;inset:0;z-index:15;pointer-events:none;width:100%
 .pw-ph .pred div.show{opacity:1;transform:none}
 .pw-ph .pred em{font-style:normal;font-size:28px;flex:none}
 .pw-ph .pred b{color:var(--pw-yellow)}
+.pw-ph .aw.lk b{color:#7a6aa8}
 .pw-ph .lockbig{font-size:60px;opacity:0}
 .pw-ph .on .lockbig{animation:pwZoom .8s var(--pw-spring) forwards,pwShake .45s .9s 2}
 @keyframes pwShake{25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
