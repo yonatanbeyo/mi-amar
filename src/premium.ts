@@ -62,7 +62,21 @@ function taps() {
     if (el.id === "pmx-rd" && !el.classList.contains("open")) { el.classList.add("open"); ping(300, 1200); try { navigator.vibrate && navigator.vibrate(25); } catch {} const f = el.parentElement?.querySelector<HTMLElement>(".pmx-try-f"); if (f) f.hidden = false; bump("demo_file"); }
     if (el.classList.contains("pmx-free1") && !el.classList.contains("open")) { el.classList.add("open"); ping(500, 1500); try { navigator.vibrate && navigator.vibrate([20, 30, 20]); } catch {} bump("teaser_free"); }
   };
-  document.addEventListener("click", (e) => { const el = (e.target as HTMLElement).closest<HTMLElement>("#pmx-rd,.pmx-free1"); if (el) open(el); });
+  document.addEventListener("click", (e) => {
+    const t = e.target as HTMLElement, el = t.closest<HTMLElement>("#pmx-rd,.pmx-free1"); if (el) open(el);
+    const b = t.closest<HTMLElement>("#pm-buy-lobby,#pm-pc-buy,#pm-pc-open,#pm-ps,#pm-pc"); if (!b) return;
+    if (b.id === "pm-buy-lobby") { ping(400, 900); buy("lobby"); }
+    else if (b.id === "pm-pc-buy") { e.stopPropagation(); ping(400, 900); buy("card"); }
+    else if (P.myFile && (b.id === "pm-pc-open" || b.id === "pm-ps" || b.id === "pm-pc")) { ping(500, 1200); openFile(P.myFile); }
+  });
+  // the lobby ticker: one secret at a time, with a little sound-free bounce
+  setInterval(() => {
+    const ul = document.getElementById("pmx-tick"); if (!ul) return;
+    const li = [...ul.children] as HTMLElement[]; if (li.length < 2) return;
+    const i = li.findIndex((x) => x.classList.contains("on")); li[i]?.classList.remove("on"); li[i]?.classList.add("off");
+    const nx = li[(i + 1) % li.length]; nx.classList.remove("off"); nx.classList.add("on");
+    setTimeout(() => li[i]?.classList.remove("off"), 600);
+  }, 3200);
   document.addEventListener("keydown", (e) => { if (e.key !== "Enter" && e.key !== " ") return; const el = (e.target as HTMLElement).closest?.<HTMLElement>(".pmx-free1"); if (el) { e.preventDefault(); open(el); } });
 }
 export const on = (fn: (e: string) => void) => { P.listeners.push(fn); };
@@ -1138,6 +1152,13 @@ export function teaserHtml() {
     ${mc ? `<button class="pmx-free" id="pm-rev">🎙️ לעבור על המדיה של סבב המדיה (${fmt(mc)})</button>` : `<div class="pmx-nomedia"><b>⚠️ בצ'אט הזה אין מדיה</b><p>בשביל סבב המדיה מייצאים מוואטסאפ <b>"כולל מדיה"</b> ומעלים שוב. הפרימיום יזהה את הקבוצה ויישאר פתוח.</p></div>`}
     <button class="pmx-free" id="pm-files">📁 התיקים הסודיים של כל אחד</button>
     <p class="pmx-sub">🎓 התעודות מחכות בסוף המשחק. בזמן משחק, כל שחקן מקבל את התיק שלו לטלפון.</p></section>`;
+  const rows = secretRows();
+  // one real secret can be opened for free: the taste that makes you want the rest
+  if (rows.length) rows[0] = rows[0].replace("<li>", `<li class="pmx-free1" role="button" tabindex="0">`).replace(/<\/li>$/, `<em class="pmx-tap">👆 הקישו, את זה בובי חושף בחינם</em></li>`);
+  return teaserRest(rows, mc, k);
+}
+/** the group's real secrets, each with the name or text blurred */
+function secretRows() {
   const D = hasWrapped() ? P.wrapped : null, rows: string[] = [];
   if (D) {
     if (D.mention) rows.push(`<li>👀 <span>מישהו בקבוצה מזכיר את השם של ${blur(plainName(D.mention.to))} יותר מכל אחד אחר. ${fmt(D.mention.n)} פעמים.</span></li>`);
@@ -1149,8 +1170,9 @@ export function teaserHtml() {
     if (D.night) rows.push(`<li>🌚 <span>ההודעה של ${new Date(D.night.ts).toTimeString().slice(0, 5)} בלילה: ${blur(D.night.msgs[0].t.slice(0, 30))}</span></li>`);
     if (D.stick && D.stick[1] >= 5) rows.push(`<li>👑 <span>מלך הסטיקרים: ${blur(plainName(D.stick[0]))}, עם ${fmt(D.stick[1])} סטיקרים</span></li>`);
   }
-  // one real secret can be opened for free: the taste that makes you want the rest
-  if (rows.length) rows[0] = rows[0].replace("<li>", `<li class="pmx-free1" role="button" tabindex="0">`).replace(/<\/li>$/, `<em class="pmx-tap">👆 הקישו, את זה בובי חושף בחינם</em></li>`);
+  return rows;
+}
+function teaserRest(rows: string[], mc: number, k: any) {
   const vids = P.items.filter((it: Item) => (it.kind === "video" || it.kind === "gif") && it.size < 4e6).sort(() => Math.random() - .5).slice(0, 2);
   const pics = P.items.filter((it: Item) => it.kind === "image" || it.kind === "sticker").slice(-40).sort(() => Math.random() - .5).slice(0, 5 - vids.length);
   const media = mc ? `<div class="pmx-media"><div class="pmx-thumbs">${[...vids.map((it: Item) => `<span class="pmx-th vid" data-v="${esc(it.id)}"><span>▶︎</span></span>`), ...pics.map((it: Item) => `<span class="pmx-th" data-f="${esc(it.id)}"></span>`)].sort(() => Math.random() - .5).join("")}<span class="pmx-th lock">🔒</span></div>
@@ -1184,13 +1206,38 @@ export function bindTeaser() {
   document.querySelectorAll<HTMLElement>(".pmx-n:not([data-on])").forEach((el) => { el.dataset.on = "1"; const to = +el.dataset.to! || 0, t0 = performance.now(); (function f(t: number) { const k = Math.min(1, (t - t0) / 1400); el.textContent = String(Math.round(to * (1 - Math.pow(1 - k, 3)))); if (k < 1) requestAnimationFrame(f); })(t0); });
 }
 
+/** the waiting screen everyone in the room is looking at: the group's secrets roll by, blurred */
+export function lobbyHtml() {
+  if (P.on || !P.key) return "";
+  const rows = secretRows(); if (!rows.length) return "";
+  if (P.lobbyKey !== P.key) { P.lobbyKey = P.key; bump("pm_lobby_seen"); }
+  return `<section class="pmx-lobby pmx-gold" id="pmx-lobby"><div class="pmx-lobby-h"><span class="pmx-lk">🔒</span><b>בובי מצא <em>${fmt(rows.length + 6)}</em> סודות בקבוצה הזאת</b></div>
+    <ul class="pmx-tick" id="pmx-tick">${rows.map((r, i) => r.replace("<li>", `<li class="${i ? "" : "on"}">`)).join("")}</ul>
+    <div class="pmx-lobby-f"><span>ולכל אחד מכם מחכה תיק סודי לטלפון 📁</span><button class="pmx-cta sm" id="pm-buy-lobby">לפתוח לכולם ב־${PRICE} ₪</button></div></section>`;
+}
+/** on every player's phone: their own secret file, locked, with a way to open it for everyone */
+export function phoneCardHtml(name = "") {
+  const f = P.myFile; if (!f) return "";
+  if (!f.locked) return `<button class="pmx-pcard open pmx-gold" id="pm-pc-open" type="button"><span class="pmx-pc-fold">📁</span><span class="pmx-pc-t"><b>התיק הסודי שלך מוכן!</b><small>בובי עבר על כל ההודעות שלך. להציץ 👀</small></span></button>`;
+  if (P.cardKey !== (P.key || "x")) { P.cardKey = P.key || "x"; bump("pm_card_seen"); }
+  return `<section class="pmx-pcard pmx-gold" id="pm-pc"><div class="pmx-pc-top"><span class="pmx-pc-fold">📁</span><span class="pmx-pc-t"><small>סודי ביותר</small><b>התיק של ${esc(plainName(name || f.name || "שלך"))}</b></span><span class="pmx-pc-stamp">מסווג</span></div>
+    <p class="pmx-pc-l">בובי מצא עליך <b>${fmt(f.n || 5)}</b> דברים:</p>
+    <ul class="pmx-pc-list"><li>👁️ מי מזכיר אותך הכי הרבה <i></i></li><li>🙈 מי מתעלם ממך <i></i></li><li>😳 ההודעה הכי מביכה שלך <i></i></li><li>⚖️ פסק הדין של בובי <i></i></li></ul>
+    ${P.key ? `<button class="pmx-cta sm" id="pm-pc-buy" type="button">לפתוח לכולם ב־${PRICE} ₪ ✨</button><span class="pmx-pc-s">אחד משלם, וכל התיקים של כל הקבוצה נפתחים. לתמיד.</span>` : `<span class="pmx-pc-s">נפתח כשמישהו בקבוצה פותח את הפרימיום 😉</span>`}</section>`;
+}
+/** a slim reminder on the phone after each answer */
+export function phoneStripHtml() {
+  const f = P.myFile; if (!f) return "";
+  return f.locked ? `<button class="pmx-pstrip" id="pm-ps" type="button">📁 בובי מצא עליך <b>${fmt(f.n || 5)}</b> דברים <span>🔒 להציץ</span></button>`
+    : `<button class="pmx-pstrip open" id="pm-ps" type="button">📁 התיק הסודי שלך פתוח <span>להציץ 👀</span></button>`;
+}
 /** end screen, before premium: the juiciest secret of the group, blurred, right after the scores */
 export function endTeaserHtml() {
   if (P.on || !hasWrapped()) return "";
   const D = P.wrapped, row = D.mention ? `👀 ${blur(plainName(D.mention.from))} הזכיר/ה את השם של ${blur(plainName(D.mention.to))} <b>${fmt(D.mention.n)}</b> פעמים`
     : D.duo ? `🌙 ${blur(plainName(D.duo.a[0]) + " ו" + plainName(D.duo.a[1]))} דיברו לבד <b>${fmt(D.duo.n)}</b> הודעות באמצע הלילה`
     : D.deleted ? `🗑️ ${blur(plainName(D.deleted[0]))} מחק/ה <b>${fmt(D.deleted[1])}</b> הודעות. מה היה כתוב שם?` : "";
-  return `<section class="pmx-end"><b class="pmx-end-h">רגע, לפני שהולכים 👀</b>${row ? `<p class="pmx-end-r">${row}</p>` : ""}
+  return `<section class="pmx-end pmx-gold"><b class="pmx-end-h">רגע, לפני שהולכים 👀</b>${row ? `<p class="pmx-end-r">${row}</p>` : ""}
     <p class="pmx-end-r">📁 ולכל אחד מכם מחכה תיק סודי. מי מזכיר אותו, מי מתעלם ממנו וההודעה הכי מביכה שלו.</p>
     ${launchHtml()}<button class="pmx-cta" id="pm-buy-end">לגלות הכל ב־${PRICE} ₪ ✨</button>
     <span class="pmx-sub">אחד משלם, וכל הקבוצה מקבלת הכל. לתמיד.</span></section>`;
@@ -1279,6 +1326,8 @@ function gotFile(m: any) {
   // a player can open the premium for everyone from their own phone: the payment is tied to the host's chat
   if (f.locked && typeof f.k === "string" && /^[0-9a-f]{20}$/.test(f.k) && !P.msgs.length) { P.key = f.k; P.phoneKey = 1; }
   if (!f.locked && buyRoot) closeBuy(true);
+  document.querySelectorAll<HTMLElement>(".pm-pc-slot").forEach((el) => { el.innerHTML = phoneCardHtml(el.dataset.n || ""); });
+  document.querySelectorAll<HTMLElement>(".pm-ps-slot").forEach((el) => { el.innerHTML = phoneStripHtml(); });
   let fab = document.querySelector<HTMLButtonElement>(".pmf-fab");
   if (!fab) { fab = document.createElement("button"); fab.className = "pmf-fab"; document.body.append(fab); fab.onclick = () => openFile(P.myFile); }
   fab.innerHTML = f.locked ? `📁 התיק הסודי שלך <span>🔒</span>` : `📁 התיק הסודי שלך <span>חדש!</span>`;
@@ -1585,6 +1634,36 @@ function css() {
 .pm-launch{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 10px;font-weight:700;font-size:.88rem;background:#3fe0b0;border:2.5px solid #1d1636;border-radius:12px;padding:6px 10px}
 .pm-trust{list-style:none;margin:0;padding:0;display:grid;gap:5px;font-size:.88rem}.pm-trust li{display:flex;gap:7px}.pm-trust b{flex:none;color:#0e7a5c}
 .pm-me{display:flex;gap:10px;align-items:center;background:#f3efff;border:2px solid #d8cffa;border-radius:14px;padding:8px 10px}.pm-me p{margin:0;font-size:.86rem;line-height:1.4}
+/* gold, alive border for everything premium */
+@property --pmxa{syntax:"<angle>";inherits:false;initial-value:0deg}
+.pmx-gold{position:relative;border:3px solid transparent!important;background:linear-gradient(#24174d,#1a1238) padding-box,conic-gradient(from var(--pmxa),#ffd23f,#ff3d7f,#c084fc,#3fe0b0,#ffd23f) border-box!important;animation:pmxSpin 4s linear infinite;box-shadow:0 0 0 1px #0004,0 10px 30px -8px #ffd23f88}
+@keyframes pmxSpin{to{--pmxa:360deg}}
+.pmx-gold::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(105deg,transparent 35%,#ffffff2a 48%,transparent 60%) 0 0/250% 100% no-repeat;animation:pmxSheen 3.4s ease-in-out infinite}
+@keyframes pmxSheen{0%,40%{background-position:120% 0}80%,100%{background-position:-120% 0}}
+@media (prefers-reduced-motion:reduce){.pmx-gold,.pmx-gold::after{animation:none}}
+.pmx-cta.sm{padding:10px 14px;font-size:1rem}
+.pmx-lobby{border-radius:22px;padding:14px;display:grid;gap:10px;color:#fff;text-align:center;direction:rtl;overflow:hidden}
+.pmx-lobby-h{display:flex;gap:8px;align-items:center;justify-content:center}.pmx-lobby-h b{font-family:Karantina,sans-serif;font-size:1.9rem;line-height:1}.pmx-lobby-h em{font-style:normal;color:#ffd23f}
+.pmx-lk{font-size:1.6rem;animation:pmxShake 2s ease-in-out infinite;display:inline-block}
+.pmx-tick{list-style:none;margin:0;padding:0;position:relative;height:74px}
+.pmx-tick li{position:absolute;inset:0;display:flex;gap:8px;align-items:center;justify-content:center;text-align:right;font-size:1rem;line-height:1.35;background:#ffffff12;border-radius:14px;padding:6px 12px;opacity:0;transform:translateY(22px) scale(.96);transition:opacity .45s,transform .55s cubic-bezier(.2,1.4,.4,1)}
+.pmx-tick li.on{opacity:1;transform:none}.pmx-tick li.off{opacity:0;transform:translateY(-22px) scale(.96)}
+.pmx-tick li span{min-width:0}
+.pmx-lobby-f{display:grid;gap:8px;justify-items:center;font-size:.9rem;color:#e6e0ff}
+.pmx-pcard{width:100%;box-sizing:border-box;border-radius:20px;padding:14px;display:grid;gap:9px;color:#fff;text-align:right;direction:rtl;overflow:hidden;font:inherit}
+.pmx-pcard.open{display:flex;gap:12px;align-items:center;cursor:pointer;animation:pmxSpin 4s linear infinite,pmxPulse 2.2s ease-in-out infinite}
+.pmx-pc-top{display:flex;gap:10px;align-items:center}
+.pmx-pc-fold{font-size:2.6rem;line-height:1;display:inline-block;animation:pmxBob 1.4s ease-in-out infinite alternate}
+.pmx-pc-t{display:grid;flex:1;min-width:0}.pmx-pc-t small{color:#ff8fb3;font-weight:700;font-size:.78rem}.pmx-pc-t b{font-family:Karantina,sans-serif;font-size:1.8rem;line-height:1;color:#ffd23f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pmx-pcard.open .pmx-pc-t small{color:#e6e0ff;font-size:.88rem;font-weight:400}
+.pmx-pc-stamp{font-family:Karantina,sans-serif;font-size:1.4rem;color:#ff3d7f;border:3px solid #ff3d7f;border-radius:8px;padding:0 8px;transform:rotate(-12deg);opacity:.9}
+.pmx-pc-l{margin:0;font-size:.95rem}.pmx-pc-l b{color:#ffd23f}
+.pmx-pc-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.pmx-pc-list li{display:flex;gap:8px;align-items:center;background:#ffffff12;border-radius:10px;padding:7px 10px;font-size:.9rem;font-weight:700}
+.pmx-pc-list i{flex:1;height:12px;border-radius:4px;background:repeating-linear-gradient(-45deg,#0a0618 0 7px,#2a1f55 7px 14px);margin-inline-start:6px}
+.pmx-pcard .pmx-cta,.pmx-lobby .pmx-cta{justify-self:stretch;margin-inline:8px}.pmx-pc-s{font-size:.8rem;color:#c9c0f0;text-align:center}
+.pmx-pstrip{display:flex;gap:6px;align-items:center;justify-content:center;width:100%;margin-top:10px;font:inherit;font-weight:700;font-size:.92rem;color:#1d1636;background:#e9d3a2;border:2.5px solid #1d1636;border-radius:14px;padding:9px 12px;box-shadow:0 3px 0 #1d1636;cursor:pointer;direction:rtl}
+.pmx-pstrip span{background:#c81e3c;color:#fff;border-radius:99px;padding:2px 9px;font-size:.8rem;margin-inline-start:auto}.pmx-pstrip.open span{background:#0e7a5c}
 /* selling: home showcase and the setup teaser */
 .pmx-show,.pmx-hero{max-width:100%;min-width:0;width:100%;box-sizing:border-box;position:relative;isolation:isolate;overflow:hidden;border-radius:26px;padding:20px 16px 18px;display:grid;gap:12px;text-align:center;color:#fff;background:radial-gradient(120% 80% at 50% 0%,#5a3fd6 0%,#2a1f55 60%,#17112e 100%);box-shadow:0 10px 0 #0006;direction:rtl}
 .pmx-ring{position:absolute;inset:-2px;z-index:-1;border-radius:inherit;padding:3px;background:conic-gradient(from var(--pmxa,0deg),#ffd23f,#ff3d7f,#7b5cff,#3fe0b0,#ffd23f);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:pmxSpin 4s linear infinite}
