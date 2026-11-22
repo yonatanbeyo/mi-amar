@@ -208,6 +208,18 @@ body.hurry::before { content: ""; position: fixed; inset: 0; z-index: 5; pointer
 @keyframes hurry { from { opacity: .35; } to { opacity: 1; } }
 #fx { position: fixed; inset: 0; pointer-events: none; z-index: 30; width: 100%; height: 100%; }
 .crown { display: block; font-size: 3.6rem; line-height: 1; margin: -46px 0 -4px; filter: drop-shadow(0 4px 0 rgba(0,0,0,.3)); }
+
+/* the secrets round: a classified file that gets stamped */
+.intro.secret .tag { background: #ff3d5a; color: #fff; }
+.sx-file { position: relative; width: 210px; height: 150px; margin: 0 auto 6px; background: #e9d3a2; border: 4px solid var(--ink, #1d1636); border-radius: 18px; box-shadow: 0 8px 0 rgba(0,0,0,.35); display: grid; place-items: center; transform: rotate(-3deg); }
+.sx-file .buddy { --bs: 84px !important; margin: 0 !important; }
+.sx-tab { position: absolute; top: -22px; right: 14px; background: #c9a66b; border: 4px solid var(--ink, #1d1636); border-bottom: 0; border-radius: 12px 12px 0 0; padding: 0 12px; font-size: .8rem; font-weight: 700; color: #3a2a0a; }
+.sx-bar { position: absolute; left: 14px; right: 46%; bottom: 18px; height: 12px; border-radius: 4px; background: #1d1636; transform-origin: right; animation: sxBar .35s cubic-bezier(.23,1,.32,1) .25s both; }
+.sx-bar.b2 { bottom: 38px; right: 58%; animation-delay: .35s; }
+.sx-stamp { position: absolute; z-index: 2; font-family: var(--display); font-size: 2.6rem; line-height: 1; color: #ff3d5a; border: 5px solid #ff3d5a; border-radius: 10px; padding: 2px 12px 6px; background: rgba(233,211,162,.6); transform: rotate(-14deg); animation: sxStamp .32s cubic-bezier(.23,1,.32,1) .62s both; }
+@keyframes sxBar { from { transform: scaleX(0); } }
+@keyframes sxStamp { from { opacity: 0; transform: rotate(-14deg) scale(2.4); } 70% { opacity: 1; transform: rotate(-14deg) scale(.92); } }
+@media (prefers-reduced-motion: reduce) { .sx-bar, .sx-stamp { animation: none; } }
 /* ---------- WOW layer ---------- */
 /* each question type has its own accent; the whole room (aurora, timer, title) shifts to it */
 body { --accent: var(--yellow); --a1: #ff3d7f; --a2: #5fb4ff; --a3: #3fe0b0; }
@@ -220,6 +232,7 @@ body[data-kind="number"] { --accent: var(--yellow); --a1: #ffd23f; --a2: #3fe0b0
 body[data-kind="moment"] { --accent: #ff3d7f; --a1: #ff3d7f; --a2: #ffd23f; --a3: #ff9f43; }
 body[data-kind="word"]   { --accent: #ff7ad9;       --a1: #ff3d7f; --a2: #b18cff; --a3: #ffd23f; }
 body[data-kind="when"]   { --accent: var(--sky);    --a1: #1d2b6b; --a2: #5fb4ff; --a3: #b18cff; }
+body[data-kind="secret"] { --accent: #ff3d5a;       --a1: #b0123a; --a2: #1d0f33; --a3: #ff3d7f; }
 body[data-kind="ai"]     { --accent: #b18cff;       --a1: #7b3dff; --a2: #ff3d7f; --a3: #3fd0ff; }
 .aurora { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
 .aurora i { position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%; filter: blur(70px); opacity: .34; transition: background-color .9s ease; will-change: transform; }
@@ -860,8 +873,8 @@ body.yt-mini #ytmin { display: none; }
 <main class="wrap" id="app"></main>
 <div class="overlay" id="overlay" hidden></div>
 
-<script src="config.js?v=1795289146"></script>
-<script src="app.js?v=1795289146"></script>
+<script src="config.js?v=1795362513"></script>
+<script src="app.js?v=1795362513"></script>
 <script>
 (() => {
   const C = window.Chat;
@@ -1455,7 +1468,7 @@ body.yt-mini #ytmin { display: none; }
     number: "כמה פעמים?",
     media: "סבב המדיה: של מי הקול? מי שלח את התמונה?",
   };
-  const KIND_TITLE = { media: "סבב המדיה", fake: "אמיתי או מזויף? 🕵️", vs: "מי יותר? ⚔️", first: "מה היה קודם? ⏳", story: "הסיפור של הקבוצה 📖", legend: "מי אמר את זה ראשון?", day: "היום הכי משוגע", era: "מתי זה היה?", moment: "הרגע של הקבוצה", word: "של מי המילה?", when: "מתי זה נשלח?", quote: "מי אמר את זה?", finish: "איך זה נגמר?", reply: "מי ענה על זה?", phrase: "של מי הביטוי?", stat: "מי בקבוצה…", number: "כמה פעמים?", ai: "מי היה כותב את זה?" };
+  const KIND_TITLE = { secret: "🔒 סבב הסודות", media: "סבב המדיה", fake: "אמיתי או מזויף? 🕵️", vs: "מי יותר? ⚔️", first: "מה היה קודם? ⏳", story: "הסיפור של הקבוצה 📖", legend: "מי אמר את זה ראשון?", day: "היום הכי משוגע", era: "מתי זה היה?", moment: "הרגע של הקבוצה", word: "של מי המילה?", when: "מתי זה נשלח?", quote: "מי אמר את זה?", finish: "איך זה נגמר?", reply: "מי ענה על זה?", phrase: "של מי הביטוי?", stat: "מי בקבוצה…", number: "כמה פעמים?", ai: "מי היה כותב את זה?" };
 
   let S = { screen: "home" };
   let msgs = [];
@@ -2247,6 +2260,11 @@ ${samples}
       const mq = PREM.mediaQs(pool, total, S.seenQ).map((q) => ({ ...q, options: smartOptions(q.answer, pool, "") }));
       if (mq.length) { qs = qs.slice(0, Math.max(1, qs.length - mq.length)); const step = Math.max(1, Math.floor((qs.length + mq.length) / mq.length)); mq.forEach((q, i) => qs.splice(Math.min(qs.length, 1 + i * step), 0, q)); }
     }
+    // premium: the secrets round. a few spicy questions, spread out in the second half of the game
+    if (kinds.stat !== false && total >= 5) {
+      const sq = (PREM.secretQs ? PREM.secretQs(pool, S.seenQ) : []).slice(0, total >= 15 ? 3 : 2).map((q) => ({ ...q, options: smartOptions(q.answer, q.ex ? pool.filter((p) => p !== q.ex) : pool, "") }));
+      if (sq.length) { qs = qs.slice(0, Math.max(1, qs.length - sq.length)); const from = Math.max(1, Math.floor(qs.length * .4)), step = Math.max(2, Math.floor((qs.length - from) / sq.length)); sq.forEach((q, i) => qs.splice(Math.min(qs.length, from + i * step), 0, q)); }
+    }
     qs.push(fin);
     qs.forEach((q) => S.seenQ.add(qkey(q)));
 
@@ -2520,15 +2538,19 @@ ${samples}
     fake: ["אמיתי או מזויף?", "חלק מההודעות באמת נשלחו בקבוצה, וחלק הודבקו משתי הודעות שונות. מה זה?"],
     vs: ["מי יותר?", "שני אנשים מהקבוצה, הרגל אחד. מי מנצח לפי הצ'אט?"],
     first: ["מה היה קודם?", "שתי הודעות מפורסמות מהקבוצה. איזו נשלחה קודם?"],
+    secret: ["סבב הסודות", "בובי פותח את התיקים הסודיים: מי מתעלם ממי, מי מת על מי. אל תכעסו על השליח."],
     ai: ["המתחזה", "Claude כתב הודעה מזויפת בסגנון של מישהו מכם. את מי הוא מחקה?"],
   };
   function introCard(type) {
     return new Promise((done) => {
       const [title, rule] = INTRO[type] || [KIND_TITLE[type], ""];
       overlay.hidden = false;
-      overlay.innerHTML = `<div class="intro">${buddy("think")}<span class="tag">סוג שאלה חדש</span><h3>${title}</h3><p>${rule}</p><span class="tap">הקישו כדי להמשיך</span></div>`;
+      const sec = type === "secret";
+      overlay.innerHTML = sec
+        ? `<div class="intro secret"><div class="sx-file"><span class="sx-tab">תיק מס׳ 007</span>${buddy("shock")}<span class="sx-stamp">מסווג</span><i class="sx-bar"></i><i class="sx-bar b2"></i></div><span class="tag">רק בפרימיום</span><h3>${title}</h3><p>${rule}</p><span class="tap">הקישו כדי להמשיך</span></div>`
+        : `<div class="intro">${buddy("think")}<span class="tag">סוג שאלה חדש</span><h3>${title}</h3><p>${rule}</p><span class="tap">הקישו כדי להמשיך</span></div>`;
       const card = overlay.firstElementChild;
-      SFX.whoosh(); buzz(15);
+      if (sec) { SFX.drum(.7); setTimeout(() => { SFX.slam(); buzz([40, 30, 60]); }, RM ? 0 : 620); } else { SFX.whoosh(); buzz(15); }
       anim(card, [{ opacity: 0, transform: "translateY(16px) scale(.97)" }, { opacity: 1, transform: "none" }], { duration: 280, easing: EASE.out });
       let closed = false;
       const close = async () => {
@@ -2538,7 +2560,7 @@ ${samples}
       };
       const onKey = (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); e.stopPropagation(); close(); } };
       overlay.onclick = close; document.addEventListener("keydown", onKey, true);
-      setTimeout(close, RM ? 1400 : 2400);
+      setTimeout(close, RM ? 1400 : sec ? 3600 : 2400);
     });
   }
 
@@ -2551,7 +2573,7 @@ ${samples}
       : esc(q.text);
     const named = ["quote", "moment", "finish", "ai", "when", "era", "story"].includes(q.type) || q.msg;
     const sender = !named ? "" : (revealed || q.type === "when" || q.type === "era") ? `<span class="sender" style="color:${colorOf(q.type === "ai" ? q.answer : q.author)}">${esc(q.type === "ai" ? q.answer : q.author)}</span>` : `<span class="sender hidden-name">???</span>`;
-    return `${sender}${q.type === "ai" ? `<span class="ai-tag">נכתב על ידי Claude</span><br>` : ""}${body}<span class="meta">${revealed && q.ts ? fmtDate(q.ts) : q.type === "ai" ? "הודעה מזויפת בסגנון של מישהו מכם" : q.type === "moment" ? (revealed ? `${q.author} · ${fmtDate(q.ts)}` : q.hook) : q.type === "word" ? "מי כותב את זה הכי הרבה?" : q.type === "when" ? (revealed ? `${q.author} · ${fmtDate(q.ts)}` : "באיזו שעה זה נשלח?") : q.type === "stat" || q.type === "number" ? "לפי הצ'אט שלכם" : q.hook || "הודעה מהקבוצה"}</span>`;
+    return `${sender}${q.type === "ai" ? `<span class="ai-tag">נכתב על ידי Claude</span><br>` : ""}${body}<span class="meta">${revealed && q.ts ? fmtDate(q.ts) : q.type === "ai" ? "הודעה מזויפת בסגנון של מישהו מכם" : q.type === "moment" ? (revealed ? `${q.author} · ${fmtDate(q.ts)}` : q.hook) : q.type === "word" ? "מי כותב את זה הכי הרבה?" : q.type === "when" ? (revealed ? `${q.author} · ${fmtDate(q.ts)}` : "באיזו שעה זה נשלח?") : q.type === "stat" || q.type === "number" ? "לפי הצ'אט שלכם" : q.type === "secret" ? "🔒 מתוך התיקים הסודיים של בובי" : q.hook || "הודעה מהקבוצה"}</span>`;
   }
   // votes: how many picked each option (shown on the reveal), or null
   function optsHtml(q, revealed, votes, nPlayers) {
@@ -3055,7 +3077,6 @@ ${samples}
   PREM.init({ buddy: BUDDY_SVG, qr: C.qr, net: NET, music: { pause: () => { try { MUSIC.play("off"); } catch {} }, resume: () => { try { pickMusic(); } catch {} } } });
   PREM.on((e) => setTimeout(() => {
     if (e === "unlock") {
-      PREM.toast("🔓 הפרימיום נפתח לכל הקבוצה!"); try { SFX.win(); buzz([40, 30, 40]); } catch {}
       premiumMidGame();
     }
     if (S.screen === "setup" && !overlay.dataset.loading) { const y = scrollY; render(); scrollTo(0, y); }
@@ -3067,6 +3088,9 @@ ${samples}
     const have = new Set(g.questions.map((q) => q.key).filter(Boolean));
     const mq = PREM.mediaQs(g.pool, g.questions.length).filter((q) => !have.has(q.key)).map((q) => ({ ...q, options: smartOptions(q.answer, g.pool, "") }));
     let pos = from; for (const q of mq) { if (pos >= last) break; g.questions[pos] = q; pos += 2; }
+    // and the secrets round, on the questions that are left
+    const sq = (PREM.secretQs ? PREM.secretQs(g.pool, S.seenQ) : []).filter((q) => !have.has(q.key)).slice(0, 2).map((q) => ({ ...q, options: smartOptions(q.answer, q.ex ? g.pool.filter((p) => p !== q.ex) : g.pool, "") }));
+    let sp = from + 1; for (const q of sq) { while (sp < last && g.questions[sp].type === "media") sp++; if (sp >= last) break; g.questions[sp] = q; sp += 3; }
     PREM.pushManifest(); if (S.multi) hostEmit();
   }
   const mediaLine = (k) => [["audio", "הקלטות"], ["image", "תמונות"], ["sticker", "סטיקרים"], ["video", "סרטונים"], ["gif", "גיפים"]].filter(([x]) => k[x]).map(([x, t]) => `${n(k[x])} ${t}`).join(", ");

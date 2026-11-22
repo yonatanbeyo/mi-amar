@@ -132,7 +132,8 @@ function watchUnlock() {
     P.unwatch = onValue(ref(d, `unlocks/${k}`), (s) => {
       if (!s.exists() || P.key !== k) return;
       const list = store.get("pm_on", []) as string[]; if (!list.includes(k)) { list.push(k); store.set("pm_on", list.slice(-30)); }
-      if (!P.on) { P.on = true; if (buyRoot || (store.get("pm_sent", []) as string[]).includes(k)) bump("pm_unlocked"); closeBuy(true); emit("unlock"); }
+      if (!P.on) { P.on = true; const mine = !!buyRoot || (store.get("pm_sent", []) as string[]).includes(k); if (mine) bump("pm_unlocked");
+        if (buyRoot) closeBuy(true); else ceremony(inGame(), mine ? "paid" : "group"); emit("unlock"); }
     }, () => {});
   } catch {}
 }
@@ -185,6 +186,35 @@ export function mediaQs(pool: string[], total: number, seen?: Set<string>) {
   return out.map((it, i) => ({ type: "media", mf: it.id, mk: it.kind, key: "m:" + it.id, title: MTITLE[it.kind], text: "", hook: MHOOK[it.kind], answer: it.author, author: it.author, ts: it.ts,
     reveal: !P.on && i === 0 ? "🔒 עוד המון כאלה בפרימיום: הקלטות, תמונות, סטיקרים וסרטונים מהקבוצה" : "" }));
 }
+// ---------------------------------------------------------------- the secrets round (premium only, inside the game)
+// spicy questions from the same numbers as the secret files: who ignores whom, who is obsessed with whom, and so on.
+// without premium this returns nothing, so the free game stays exactly as it was.
+export function secretQs(pool: string[], seen?: Set<string>) {
+  if (!P.on || !hasWrapped()) return [];
+  const D = P.wrapped, has = (n: string) => pool.includes(n), out: any[] = [], nm = plainName;
+  const add = (key: string, ok: boolean, q: () => any) => { if (ok && !(seen && seen.has("s:" + key))) { const x = q(); out.push({ type: "secret", key: "s:" + key, title: "🔒 סבב הסודות", hook: "מתוך התיקים הסודיים של בובי", ...x, author: x.answer }); } };
+  add("crush", !!D.crush && has(D.crush.a) && has(D.crush.b), () => ({ text: `מי בקבוצה מת על ${nm(D.crush.b)}?`, answer: D.crush.a, ex: D.crush.b,
+    reveal: `${Math.round(D.crush.share * 100)}% מכל התשובות של ${nm(D.crush.a)} הולכות ל${nm(D.crush.b)}. ובחזרה? רק ${Math.round(D.crush.back * 100)}%. אאוץ' 💔` }));
+  add("ignore", !!D.ignore && has(D.ignore.a) && has(D.ignore.b), () => ({ text: `מי מתעלם הכי הרבה מ${nm(D.ignore.b)}?`, answer: D.ignore.a, ex: D.ignore.b,
+    reveal: `ענה ל${nm(D.ignore.b)} רק ${fmt(D.ignore.n)} פעמים כל השנה. לשאר הקבוצה? ${fmt(D.ignore.others)}. 🧊` }));
+  add("fan", !!D.fan && has(D.fan.a) && has(D.fan.b), () => ({ text: `מי צוחק מכל דבר ש${nm(D.fan.b)} כותב?`, answer: D.fan.a, ex: D.fan.b,
+    reveal: `צחק על ההודעות של ${nm(D.fan.b)} ${fmt(D.fan.n)} פעמים. זה כבר מועדון מעריצים 🤡` }));
+  add("mention", !!D.mention && has(D.mention.from) && has(D.mention.to), () => ({ text: `מי כותב את השם של ${nm(D.mention.to)} הכי הרבה?`, answer: D.mention.from, ex: D.mention.to,
+    reveal: `${fmt(D.mention.n)} פעמים. מישהו פה חושב על ${nm(D.mention.to)} יותר מדי 😳` }));
+  add("mono", !!D.monologue && has(D.monologue.who), () => ({ text: `מי שלח ${fmt(D.monologue.n)} הודעות ברצף, בלי שאף אחד אחר אמר מילה?`, answer: D.monologue.who,
+    reveal: `הרצאה פרטית לקבוצה. אף אחד לא העז לקטוע 🎤` }));
+  add("ghost", !!D.ghost && has(D.ghost.who), () => ({ text: `מי שאל ״${D.ghost.t}״ וחיכה ${fmt(Math.round(D.ghost.g / 3600e3))} שעות לתשובה?`, answer: D.ghost.who,
+    reveal: `כולם קראו. אף אחד לא ענה. השאלה עדיין מרחפת שם 👻` }));
+  add("deleted", !!D.deleted && has(D.deleted[0]), () => ({ text: "מי מחק הכי הרבה הודעות בקבוצה?", answer: D.deleted[0],
+    reveal: `${fmt(D.deleted[1])} הודעות נעלמו. מה היה כתוב שם? רק מי שהספיק לקרוא יודע 👀` }));
+  add("missing", !!D.missing && has(D.missing.who), () => ({ text: `מי נעלם מהקבוצה ל־${fmt(D.missing.days)} ימים בלי מילה?`, answer: D.missing.who,
+    reveal: `ופספס ${fmt(D.missing.missed)} הודעות. ברוך שובך 🕵️` }));
+  // the spiciest first, then a pinch of luck; at most three a game so it stays special
+  const spicy = ["s:crush", "s:ignore", "s:fan", "s:mention"];
+  const a = shuffle(out.filter((q) => spicy.includes(q.key))), b = shuffle(out.filter((q) => !spicy.includes(q.key)));
+  return [...a.slice(0, 2), ...b, ...a.slice(2)].slice(0, 3);
+}
+
 function shuffle<T>(a: T[]): T[] { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; }
 
 /** what the question bubble shows for a media question; the element fills itself once the file is here */
@@ -339,12 +369,100 @@ export function review(done?: () => void) {
 
 function layer(cls: string) { const d = document.createElement("div"); d.className = "pm-layer " + cls; document.body.append(d); return d; }
 
+// ---------------------------------------------------------------- the unlock ceremony
+// the moment the payment is approved: a lock shakes, bursts open, Bubbi pops out and everything that just opened lands one by one.
+// "light" is for the middle of a game or a player's phone: shorter, no buttons, closes by itself.
+let CER: HTMLElement | null = null;
+const inGame = () => !!document.querySelector(".qwrap, #opts");
+function ceremony(light = false, how: "paid" | "group" | "phone" = "paid") {
+  if (CER || W) return; // the year summary celebrates by itself
+  const D = hasWrapped() ? P.wrapped : null;
+  const rows: [string, string][] = [];
+  if (D) rows.push(["🎁", `סיכום השנה המלא: ${fmt(premiumCount(D) + 3)} שקופיות`]);
+  if (D) rows.push(["📁", `${fmt(Math.min(16, D.people.length))} תיקים סודיים, אחד לכל אחד`]);
+  else if (how === "phone") rows.push(["📁", "התיק הסודי שלך, בלי פסים שחורים"]);
+  if (P.items.length) rows.push(["🎬", `סבב המדיה: ${fmt(P.items.length)} הקלטות, תמונות וסטיקרים`]);
+  rows.push(["🔒", "סבב הסודות, בתוך המשחק"], ["🎓", "תעודה מצחיקה לכל שחקן"]);
+  const sub = how === "group" ? "מישהו מהקבוצה כבר פתח את הצ'אט הזה. כל הכבוד לו 👑" : how === "phone" ? "מישהו בחדר שילם. תגידו לו תודה 🙏" : "הפרימיום פתוח לכל הקבוצה, בכל הטלפונים.";
+  const host = layer("pmc"); CER = host; const sr = host.attachShadow({ mode: "open" });
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  sr.innerHTML = `<style>${BUD_CSS}${CCSS}</style><div class="c ${light ? "light" : ""} ${reduce ? "rm" : ""}" role="dialog" aria-label="הפרימיום נפתח">
+    <div class="rays"></div><div class="fx"></div>
+    <div class="stage">
+      <svg class="lock" viewBox="0 0 120 140" aria-hidden="true"><path class="shk" d="M32 62V42a28 28 0 0 1 56 0v20" fill="none" stroke="#1d1636" stroke-width="14" stroke-linecap="round"/><path class="shk" d="M32 62V42a28 28 0 0 1 56 0v20" fill="none" stroke="#ffd23f" stroke-width="7" stroke-linecap="round"/><rect x="12" y="58" width="96" height="76" rx="20" fill="#ffd23f" stroke="#1d1636" stroke-width="7"/><circle cx="60" cy="90" r="9" fill="#1d1636"/><rect x="56" y="92" width="8" height="20" rx="4" fill="#1d1636"/></svg>
+      <div class="bud">${budSvg("party", light ? 110 : 150)}</div>
+    </div>
+    <h2>נפתח!</h2><p class="sub">${sub}</p>
+    <ul>${rows.map((r, i) => `<li style="--i:${i}"><em>${r[0]}</em><span>${esc(r[1])}</span></li>`).join("")}</ul>
+    ${light ? `<p class="tap">הקישו כדי לחזור למשחק</p>` : `<div class="btns">${D ? `<button class="go" id="cw">🎁 לראות את הסיכום עכשיו</button>` : ""}<button class="alt" id="cx">${D ? "אחר כך, ממשיכים" : "יאללה"}</button></div>`}
+  </div>`;
+  const el = sr.querySelector(".c") as HTMLElement;
+  const close = () => { if (!CER) return; el.classList.add("out"); setTimeout(() => { host.remove(); }, 220); CER = null; };
+  if (light) { el.onclick = close; setTimeout(close, 5200); }
+  else { sr.querySelector<HTMLButtonElement>("#cx")!.onclick = close; const w = sr.querySelector<HTMLButtonElement>("#cw"); if (w) w.onclick = () => { close(); setTimeout(() => openWrapped(), 230); }; }
+  // sound: a drum roll on the shaking lock, a heavy clunk when it opens, then a bright chord with sparkles
+  try {
+    const ac = new (window.AudioContext || (window as any).webkitAudioContext)(), t = ac.currentTime + .05, out = ac.createGain(); out.gain.value = .8; out.connect(ac.destination);
+    const nb = ac.createBuffer(1, ac.sampleRate, ac.sampleRate), ch = nb.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
+    const hit = (at: number, d: number, v: number, f: number, type: BiquadFilterType = "bandpass") => { const s = ac.createBufferSource(), fl = ac.createBiquadFilter(), g = ac.createGain(); s.buffer = nb; fl.type = type; fl.frequency.value = f; g.gain.setValueAtTime(v, at); g.gain.exponentialRampToValueAtTime(.0001, at + d); s.connect(fl); fl.connect(g); g.connect(out); s.start(at); s.stop(at + d + .05); };
+    const tone = (at: number, f: number, d: number, v: number, type: OscillatorType = "triangle", f2?: number) => { const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.setValueAtTime(f, at); if (f2) o.frequency.exponentialRampToValueAtTime(f2, at + d); g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(v, at + .01); g.gain.exponentialRampToValueAtTime(.0001, at + d); o.connect(g); g.connect(out); o.start(at); o.stop(at + d + .05); };
+    const R = reduce ? .2 : .85; let x = 0, gap = .09; while (x < R) { hit(t + x, .05, .08 + .25 * (x / R), 1900); x += gap; gap = Math.max(.03, gap * .93); }
+    tone(t + R, 90, .4, .7, "sine", 40); hit(t + R, .12, .5, 900, "lowpass"); tone(t + R + .02, 1800, .06, .12, "square");
+    [523, 659, 784, 1046].forEach((f, i) => { tone(t + R + .12 + i * .07, f, .9, .1, "triangle"); tone(t + R + .12 + i * .07, f * 2, .5, .03, "sine"); });
+    for (let i = 0; i < 10; i++) tone(t + R + .3 + i * .06, 2000 + Math.random() * 2400, .12, .03, "sine");
+    rows.forEach((_, i) => tone(t + R + .9 + i * .18, 660 + i * 110, .12, .08, "sine", 990 + i * 110));
+    setTimeout(() => ac.close().catch(() => {}), 4500);
+  } catch {}
+  try { navigator.vibrate && navigator.vibrate(reduce ? 40 : [15, 60, 15, 60, 15, 60, 25, 40, 120]); } catch {}
+  // confetti made of real elements, so it lives inside the shadow and needs no canvas
+  if (!reduce) setTimeout(() => { const fx = sr.querySelector(".fx")!, cols = ["#ffd23f", "#ff3d7f", "#3fe0b0", "#5fb4ff", "#fff", "#b18cff"];
+    for (let i = 0; i < (light ? 50 : 90); i++) { const s = document.createElement("i"), a = Math.random() * Math.PI * 2, d = 120 + Math.random() * 260;
+      s.style.cssText = `--x:${Math.cos(a) * d}px;--y:${Math.sin(a) * d - 80}px;--r:${Math.random() * 720 - 360}deg;--d:${.9 + Math.random() * .9}s;background:${cols[i % cols.length]};width:${6 + Math.random() * 7}px;height:${8 + Math.random() * 10}px`; fx.append(s); } }, 900);
+}
+if (store.get("pm_qa", 0)) (window as any).__pmCeremony = ceremony; // for testing only
+const CCSS = `
+:host{all:initial}
+.c{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px 22px calc(24px + env(safe-area-inset-bottom));box-sizing:border-box;direction:rtl;text-align:center;font-family:"Varela Round",system-ui,sans-serif;color:#fff;
+  background:radial-gradient(120% 80% at 50% 34%,#7b5cff 0%,#3b2a8f 38%,#140d2c 100%);animation:cIn .22s cubic-bezier(.23,1,.32,1) both;overflow:hidden;-webkit-tap-highlight-color:transparent}
+.c.out{animation:cOut .2s ease-out forwards}
+.rays{position:absolute;left:50%;top:34%;width:900px;height:900px;margin:-450px 0 0 -450px;background:repeating-conic-gradient(from 0deg,#ffffff14 0 9deg,transparent 9deg 22deg);border-radius:50%;opacity:0;animation:rays .6s ease-out .85s forwards,spin 26s linear .85s infinite;pointer-events:none;-webkit-mask:radial-gradient(circle,#000 20%,transparent 66%);mask:radial-gradient(circle,#000 20%,transparent 66%)}
+.fx{position:absolute;left:50%;top:30%;width:0;height:0;pointer-events:none}
+.fx i{position:absolute;border-radius:2px;animation:conf var(--d) cubic-bezier(.15,.7,.3,1) forwards}
+.stage{position:relative;width:180px;height:180px;display:grid;place-items:center}
+.lock{position:absolute;width:112px;height:auto;filter:drop-shadow(0 8px 0 #0006);animation:shake .85s cubic-bezier(.36,.07,.19,.97) both,burst .3s cubic-bezier(.23,1,.32,1) .85s forwards}
+.lock .shk{transform-origin:88px 62px;animation:shackle .22s cubic-bezier(.23,1,.32,1) .8s forwards}
+.bud{position:absolute;opacity:0;transform:scale(.4) translateY(30px);animation:pop .55s cubic-bezier(.34,1.56,.64,1) .95s forwards}
+h2{margin:0;font-family:"Karantina",system-ui,sans-serif;font-weight:700;font-size:clamp(5rem,26vw,8rem);line-height:.8;color:#ffd23f;-webkit-text-stroke:7px #1d1636;paint-order:stroke fill;text-shadow:0 7px 0 #1d1636;opacity:0;transform:scale(1.8) rotate(-4deg);animation:slap .32s cubic-bezier(.23,1,.32,1) 1.05s forwards}
+.sub{margin:0;max-width:330px;font-size:1.02rem;color:#e6e0ff;opacity:0;animation:up .3s ease-out 1.3s forwards}
+ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:7px;width:min(360px,100%)}
+li{display:flex;gap:10px;align-items:center;text-align:right;background:#ffffff14;border:2px solid #ffffff26;border-radius:14px;padding:8px 12px;font-size:.95rem;opacity:0;transform:translateX(-18px);animation:row .32s cubic-bezier(.23,1,.32,1) calc(1.5s + var(--i) * .18s) forwards}
+li em{font-style:normal;font-size:1.25rem;flex:none}
+.btns{display:grid;gap:8px;width:min(360px,100%);margin-top:6px;opacity:0;animation:up .3s ease-out 2.3s forwards}
+button{font:inherit;font-weight:700;font-size:1.08rem;border-radius:16px;padding:14px;cursor:pointer;border:3px solid #1d1636;transition:transform .12s ease-out}
+button:active{transform:scale(.97)}
+.go{background:#ffd23f;color:#1d1636;box-shadow:0 5px 0 #1d1636}
+.alt{background:transparent;color:#fff;border-color:#ffffff55}
+.tap{margin:4px 0 0;font-size:.85rem;color:#e6e0ffaa;opacity:0;animation:up .3s ease-out 2.2s forwards}
+.light ul{gap:5px}.light li{padding:6px 10px;font-size:.88rem}
+@keyframes cIn{from{opacity:0}}@keyframes cOut{to{opacity:0;transform:scale(1.03)}}
+@keyframes shake{0%,100%{transform:rotate(0)}10%,50%{transform:rotate(-9deg)}30%,70%{transform:rotate(9deg)}85%{transform:rotate(-4deg) scale(1.06)}}
+@keyframes shackle{to{transform:translateY(-16px) rotate(-28deg)}}
+@keyframes burst{to{transform:scale(1.7);opacity:0}}
+@keyframes pop{to{opacity:1;transform:none}}
+@keyframes slap{70%{opacity:1;transform:scale(.94) rotate(-4deg)}to{opacity:1;transform:rotate(-4deg)}}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes row{to{opacity:1;transform:none}}
+@keyframes rays{to{opacity:1}}@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes conf{0%{transform:translate(0,0) rotate(0);opacity:1}100%{transform:translate(var(--x),calc(var(--y) + 340px)) rotate(var(--r));opacity:0}}
+.rm *,.rm{animation-duration:.01s!important;animation-delay:0s!important}
+.rm .lock{display:none}.rm .rays{display:none}`;
+
 // ---------------------------------------------------------------- buying (Bit + a code, approved by hand)
 let buyRoot: HTMLElement | null = null;
 function closeBuy(unlocked = false) {
   if (!buyRoot) return;
-  if (unlocked) { buyRoot.querySelector(".pm-sheet")!.innerHTML = `<div class="pm-done">${budSvg("party", 120)}<h3>נפתח! 🎉</h3><p>הפרימיום פתוח לכל הקבוצה. תהנו!</p><button class="pm-btn" id="pm-ok">יאללה</button></div>`; const r = buyRoot; r.querySelector<HTMLButtonElement>("#pm-ok")!.onclick = () => { r.remove(); }; buyRoot = null; return; }
   buyRoot.remove(); buyRoot = null;
+  if (unlocked) ceremony(inGame(), "paid");
 }
 function codeFor(k: string) { const all = store.get("pm_codes", {}); if (!all[k]) { all[k] = String(100000 + Math.floor(Math.random() * 900000)); store.set("pm_codes", all); } return all[k] as string; }
 function newCode(k: string) { const all = store.get("pm_codes", {}); all[k] = String(100000 + Math.floor(Math.random() * 900000)); store.set("pm_codes", all); return all[k] as string; }
@@ -556,6 +674,29 @@ function computeWrapped(msgs: Message[]) {
   };
 }
 
+// Bubbi's diagnosis of the whole group: one "type" and four meters, always the same for the same chat
+function diagnosisOf(D: any) {
+  const msgs = P.msgs.filter((m: Message) => m.ts), T = Math.max(1, msgs.length), txt = msgs.filter((m: Message) => m.text && !m.media);
+  const night = (D.hours.slice(0, 5).reduce((a: number, b: number) => a + b, 0) + D.hours[23]) / T;
+  const laugh = txt.filter((m: Message) => /חח{2,}|😂|🤣|💀/.test(m.text)).length / T;
+  const ask = txt.filter((m: Message) => /\?\s*$/.test(m.text)).length / T;
+  const stick = (D.stickN || 0) / T, perDay = D.perDay;
+  const drama = Math.min(100, Math.round(((msgs.filter((m: Message) => m.deleted || m.edited).length / T) * 900) + (D.ignore ? 22 : 0) + (D.crush ? 18 : 0) + (D.missing ? 12 : 0) + (D.ghost ? 8 : 0)));
+  const pct = (v: number) => Math.max(3, Math.min(100, Math.round(v)));
+  const meters: [string, string, number][] = [["🔥", "רמת דרמה", pct(drama)], ["🗣️", "רמת חפירה", pct(Math.log2(1 + perDay) / Math.log2(1 + 120) * 100)], ["🌙", "רמת לילה", pct(night * 380)], ["😂", "רמת צחוק", pct(laugh * 520)]];
+  const types: [number, string, string, string][] = [ // score (1 = just qualifies), emoji, name, line
+    [night / .16, "🦉", "קבוצת הינשופים", "אתם לא קבוצה, אתם משמרת לילה. מישהו פה ישן בכלל?"],
+    [laugh / .11, "😂", "מועדון הצחוקים", "חצי מההודעות פה הן ״חחחח״. החצי השני מחכה ל״חחחח״."],
+    [stick / .07, "🤡", "מפעל הסטיקרים", "למה לכתוב מילים, אם אפשר לשלוח פרצוף של חתול?"],
+    [perDay / 70, "⚙️", "המכונה שלא נחה", `${fmt(Math.round(perDay))} הודעות ביום בממוצע. מישהו פה עובד בכלל?`],
+    [ask / .14, "📋", "ועדת התכנון", "שואלים ״מי בא?״ כל יום. בסוף אף אחד לא בא."],
+    [drama / 60, "🎭", "אופרת הסבון", "נמחק, נערך, ננטש וחזר. נטפליקס צריכים לקנות את הזכויות."],
+    [perDay < 6 ? 6 / Math.max(1, perDay) : 0, "🤫", "השקטים המסוכנים", "לא מדברים הרבה. אבל כשמישהו כותב, כולם עוצרים."],
+  ];
+  const best = types.sort((a, b) => b[0] - a[0])[0];
+  const pick = best[0] >= 1 ? best : [0, "🏠", "המשפחה הלא רשמית", "רבים, צוחקים, נעלמים וחוזרים. בדיוק כמו משפחה אמיתית."] as any;
+  return { e: pick[1], t: pick[2], line: pick[3], meters };
+}
 // awards for the final card and for the certificates: one strong title per person where possible
 function awardsOf(D: any) {
   const A: [string, string, string, string, number?, string?][] = []; // emoji, who, title, reason, secret (hidden without premium), title when hidden
@@ -603,7 +744,7 @@ function titleFor(D: any, name: string, used: Set<string>) {
 }
 
 // how many premium slides this chat has (for "and N more slides")
-function premiumCount(D: any) { return [1, D.stick && D.stick[1] >= 5, D.night, D.pair && D.pair.n >= 10, D.word && D.word.n >= 10, D.emoji, D.owl, 1, D.dead, D.missing, D.voice && D.voice[1] >= 3, D.laugh && D.laugh[1] >= 3, D.fast, D.longest, D.mention, D.duo, D.ghost, D.deleted, D.firsts, D.crush, D.ignore, D.fan, D.monologue, predictionsOf(D).length >= 2].filter(Boolean).length; }
+function premiumCount(D: any) { return [1, 1, D.stick && D.stick[1] >= 5, D.night, D.pair && D.pair.n >= 10, D.word && D.word.n >= 10, D.emoji, D.owl, 1, D.dead, D.missing, D.voice && D.voice[1] >= 3, D.laugh && D.laugh[1] >= 3, D.fast, D.longest, D.mention, D.duo, D.ghost, D.deleted, D.firsts, D.crush, D.ignore, D.fan, D.monologue, predictionsOf(D).length >= 2].filter(Boolean).length; }
 // ---------------------------------------------------------------- the year summary: the story
 let W: any = null;
 export function hasWrapped() { if (!P.wrapped && P.msgs.length) P.wrapped = computeWrapped(P.msgs); return !!P.wrapped; }
@@ -874,6 +1015,14 @@ function build() {
     <div class="chat" id="pfirst">${D.firsts.map((m: any, i: number) => `<div class="msg ${i % 2 ? "me" : ""}"><small>${nm(m.a)} · ${new Date(m.ts).getDate()}.${new Date(m.ts).getMonth() + 1}.${String(new Date(m.ts).getFullYear()).slice(2)}</small>${esc(m.t)}</div>`).join("")}</div>
     <p class="lead r" style="--d:${1.1 + D.firsts.length * .9}s">תראו אותם. כל כך תמימים. עוד לא ידעו מה מחכה להם. 😭</p>`,
     enter() { later(() => sfx("whoosh"), 200); hit(300); W.root.querySelectorAll("#pfirst .msg").forEach((m: HTMLElement, i: number) => later(() => { m.classList.add("show"); sfx("pop"); vib(10); }, 900 + i * 900)); } }); }
+  { const dg = diagnosisOf(D);
+    premium.push({ bg: "#120c26", band: "#2d1b63", bt: "64%", dur: 9500, html: `<div class="stars"></div>
+    <div class="lbl r" style="--d:.1s">בובי סיים לאבחן את הקבוצה 🩺</div>
+    <div class="dg z" style="--d:.35s"><span class="dg-k">האבחנה</span><em class="dg-e">${dg.e}</em><div class="st s w" style="--c:var(--pw-yellow)">${esc(dg.t)}</div><p>${esc(dg.line)}</p>
+      <div class="dg-m">${dg.meters.map((m, i) => `<div style="--i:${i}"><span>${m[0]} ${m[1]}</span><i><b data-v="${m[2]}"></b></i><em id="dgv${i}">0</em></div>`).join("")}</div>
+      <span class="dg-stamp">מאובחן ✓</span></div>
+    <p class="sub r" style="--d:3.4s">צלמו מסך ותשלחו לקבוצה. בואו נראה מי יתווכח עם בובי 😏</p>`,
+    enter() { hit(500, "boom"); W.root.querySelectorAll(".dg-m > div").forEach((row: HTMLElement, i: number) => later(() => { const b = row.querySelector("b") as HTMLElement; b.style.width = b.dataset.v + "%"; count("#dgv" + i, +b.dataset.v!, 900); sfx("pop"); vib(12); }, 1300 + i * 420)); later(() => { sfx("slap"); vib(40); confetti(70, ["#ffd23f", "#ff3d7f", "#fff"]); }, 3000); } }); }
   const pr = predictionsOf(D);
   if (pr.length >= 2) premium.push({ bg: "#2a0f4f", band: "#5b21b6", bt: "22%", dur: 3500 + pr.length * 1500, html: `<div class="stars"></div>
     <div class="z" style="--d:.1s;font-size:78px;line-height:1">🔮</div>
@@ -1398,6 +1547,7 @@ function gotFile(m: any) {
   // a player can open the premium for everyone from their own phone: the payment is tied to the host's chat
   if (f.locked && typeof f.k === "string" && /^[0-9a-f]{20}$/.test(f.k) && !P.msgs.length) { P.key = f.k; P.phoneKey = 1; }
   if (!f.locked && buyRoot) closeBuy(true);
+  else if (!f.locked && was && was.locked) ceremony(true, "phone");
   document.querySelectorAll<HTMLElement>(".pm-pc-slot").forEach((el) => { el.innerHTML = phoneCardHtml(el.dataset.n || ""); });
   document.querySelectorAll<HTMLElement>(".pm-ps-slot").forEach((el) => { el.innerHTML = phoneStripHtml(); });
   let fab = document.querySelector<HTMLButtonElement>(".pmf-fab");
@@ -1543,6 +1693,19 @@ const BUD_CSS = `.buddy{display:inline-block;width:var(--bs,96px);aspect-ratio:1
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;transition-duration:.01s!important}}
 `;
 const WCSS = BUD_CSS + `/* the year summary */
+.pw-ph .dg{position:relative;width:min(330px,88%);background:linear-gradient(160deg,#2a1a5e,#1d1636 60%);border:4px solid var(--pw-yellow);border-radius:26px;padding:22px 18px 18px;box-shadow:0 0 0 4px var(--pw-ink),0 14px 0 var(--pw-ink),0 0 60px #ffd23f40;display:grid;gap:8px;justify-items:center}
+.pw-ph .dg-k{position:absolute;top:-15px;background:var(--pw-yellow);color:var(--pw-ink);font-weight:700;font-size:13px;padding:3px 14px;border-radius:99px;border:3px solid var(--pw-ink)}
+.pw-ph .dg-e{font-style:normal;font-size:64px;line-height:1;filter:drop-shadow(0 4px 0 #0008)}
+.pw-ph .dg p{margin:0;font-size:15px;line-height:1.35;color:#e6e0ff;max-width:270px}
+.pw-ph .dg-m{display:grid;gap:7px;width:100%;margin-top:4px}
+.pw-ph .dg-m>div{display:grid;grid-template-columns:92px 1fr 34px;align-items:center;gap:8px;font-size:13px;font-weight:700;text-align:right}
+.pw-ph .dg-m i{height:12px;border-radius:99px;background:#ffffff1f;overflow:hidden;direction:rtl}
+.pw-ph .dg-m b{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--pw-pink),var(--pw-yellow));transition:width .9s var(--pw-out)}
+.pw-ph .dg-m em{font-style:normal;color:var(--pw-yellow);text-align:left}
+.pw-ph .dg-stamp{position:absolute;left:-14px;top:18px;font-family:Karantina,sans-serif;font-weight:700;font-size:34px;color:var(--pw-mint);border:4px solid var(--pw-mint);border-radius:10px;padding:0 10px 3px;background:#1d1636;transform:rotate(-12deg) scale(2.2);opacity:0}
+.pw-ph .on .dg-stamp{animation:dgStamp .35s var(--pw-out) 3s forwards}
+@keyframes dgStamp{70%{opacity:1;transform:rotate(-12deg) scale(.92)}to{opacity:1;transform:rotate(-12deg)}}
+@media (prefers-reduced-motion:reduce){.pw-ph .dg-m b{transition:none}.pw-ph .on .dg-stamp{animation:none;opacity:1;transform:rotate(-12deg)}}
 .pmw{padding:0;background:#0c0820;backdrop-filter:none}
 .pw-ph{--pw-ink:#1d1636;--pw-cream:#fff3d1;--pw-pink:#ff3d7f;--pw-yellow:#ffd23f;--pw-mint:#3fe0b0;--pw-sky:#5fb4ff;--pw-purple:#7b5cff;--pw-spring:cubic-bezier(.2,1.5,.35,1);--pw-out:cubic-bezier(.23,1,.32,1);
  position:relative;width:100vw;height:100dvh;overflow:hidden;background:#17112e;isolation:isolate;color:#fff;user-select:none;-webkit-user-select:none}
