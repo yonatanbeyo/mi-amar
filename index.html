@@ -220,6 +220,13 @@ body.hurry::before { content: ""; position: fixed; inset: 0; z-index: 5; pointer
 @keyframes sxBar { from { transform: scaleX(0); } }
 @keyframes sxStamp { from { opacity: 0; transform: rotate(-14deg) scale(2.4); } 70% { opacity: 1; transform: rotate(-14deg) scale(.92); } }
 @media (prefers-reduced-motion: reduce) { .sx-bar, .sx-stamp { animation: none; } }
+
+/* free is free: said clearly on the home page and on the start button */
+.free-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 2px; }
+.free-row span { font-size: .84rem; font-weight: 700; color: #1d1636; background: #3fe0b0; border: 2.5px solid var(--ink, #1d1636); border-radius: 99px; padding: 4px 11px; box-shadow: 0 3px 0 var(--ink, #1d1636); }
+.free-tag { display: inline-block; vertical-align: middle; margin-inline-start: 6px; font-size: .8rem; background: #3fe0b0; color: #1d1636; border: 2px solid #1d1636; border-radius: 99px; padding: 1px 9px; transform: translateY(-2px); }
+.pm-more-h { margin-top: 26px; }
+.pm-more-p { margin: -4px 0 8px; text-align: center; }
 /* ---------- WOW layer ---------- */
 /* each question type has its own accent; the whole room (aurora, timer, title) shifts to it */
 body { --accent: var(--yellow); --a1: #ff3d7f; --a2: #5fb4ff; --a3: #3fe0b0; }
@@ -873,8 +880,8 @@ body.yt-mini #ytmin { display: none; }
 <main class="wrap" id="app"></main>
 <div class="overlay" id="overlay" hidden></div>
 
-<script src="config.js?v=1795362513"></script>
-<script src="app.js?v=1795362513"></script>
+<script src="config.js?v=1795386088"></script>
+<script src="app.js?v=1795386088"></script>
 <script>
 (() => {
   const C = window.Chat;
@@ -2342,6 +2349,7 @@ ${samples}
       <input type="file" id="file" accept=".zip,.txt,application/zip,text/plain" hidden>
       ${err ? `<p class="err" role="alert">${esc(err)}</p>` : ""}
       <div class="row"><button class="btn alt" id="demo">לנסות עם צ'אט לדוגמה</button></div>
+      <div class="free-row" aria-label="המשחק חינמי"><span>✓ המשחק חינמי לגמרי</span><span>✓ בלי הרשמה</span><span>✓ בלי אפליקציה</span></div>
       ${PREM.showcaseHtml ? PREM.showcaseHtml() : ""}
       <section class="how">
         <div class="hw"><b>1</b><strong>מייצאים</strong><span>את הצ'אט מוואטסאפ, בלי מדיה</span></div>
@@ -2364,7 +2372,8 @@ ${samples}
     anim(tq, [{ opacity: 0, transform: "rotate(-40deg) scale(2.2)" }, { opacity: 1, transform: "rotate(-4deg) scale(.95)", offset: .7 }, { opacity: 1, transform: "rotate(-8deg)" }], { duration: 700, easing: EASE.out, fill: "backwards", delay: 380 });
     const file = document.getElementById("file");
     document.getElementById("pick").onclick = () => { audio(); file.click(); };
-    { const tb = document.getElementById("pmx-top"); if (tb) tb.onclick = () => { SFX.tap(); try { NET.bump("pm_topbar"); } catch {} document.getElementById("pmx-show")?.scrollIntoView({ behavior: "smooth", block: "start" }); }; }
+    { const tb = document.getElementById("pmx-top"); if (tb) tb.onclick = () => { SFX.tap(); try { NET.bump("pm_topbar"); } catch {} PREM.pass ? PREM.pass("top") : document.getElementById("pmx-show")?.scrollIntoView({ behavior: "smooth", block: "start" }); }; }
+    { const pp = document.getElementById("pmx-pass"); if (pp) pp.onclick = () => { SFX.tap(); PREM.pass("home"); }; }
     { const g = document.getElementById("pmx-go"); if (g) g.onclick = () => { audio(); SFX.tap(); try { NET.bump("pm_home"); } catch {} file.click(); }; }
     file.onchange = async () => {
       const f = file.files[0]; if (!f) return;
@@ -2418,7 +2427,7 @@ ${samples}
         <button aria-pressed="${!!S.wantMulti}" data-m="1"><b>כל אחד מהטלפון</b><span class="small dim">השאלות על המסך הזה, כל אחד עונה מהטלפון שלו, והניקוד נספר לבד</span></button>
         <button aria-pressed="${!S.wantMulti}" data-m="0"><b>מסך אחד</b><span class="small dim">כולם צועקים תשובה, ואתם מסמנים מי צדק</span></button>
       </div>` : ""}
-      ${premPanel()}
+      ${PREM.isOn() ? premPanel() : pmStripTop()}
       <section class="panel">
         <b>מי בקבוצה עכשיו?</b>
         <p class="dim small">רק מי שמסומן יופיע בשאלות ובתשובות. מי שיצא מהקבוצה לא מופיע כאן בכלל${(S.gone || []).length ? ` (${(S.gone || []).map(esc).join(", ")})` : ""}. אפשר לסמן ולבטל בלחיצה.</p>
@@ -2440,7 +2449,8 @@ ${samples}
         <div class="toggles">${Object.entries(KINDS).map(([k, label]) => `<label class="tog"><input type="checkbox" id="k-${k}" data-k="${k}" ${S.kinds[k] ? "checked" : ""}><span>${label}</span></label>`).join("")}</div>
       </section>
       <p class="err" id="setup-err" role="alert" ${S.err ? "" : "hidden"}>${esc(S.err || "")}</p>
-      <button class="btn big" id="start">מתחילים</button>
+      <button class="btn big" id="start">מתחילים לשחק <span class="free-tag">חינם</span></button>
+      ${PREM.isOn() ? "" : `<h2 class="sec pm-more-h">⭐ ורק אם בא לכם עוד</h2><p class="dim small pm-more-p">המשחק למעלה חינמי לגמרי. כאן אפשר לפתוח תוספות לקבוצה הזאת.</p>${premPanel()}`}
       ${FINE ? `<p class="kbd-hint">על מחשב או טלוויזיה: <kbd>רווח</kbd> חושף וממשיך, <kbd>1</kbd>–<kbd>4</kbd> בוחרים תשובה, <kbd>M</kbd> משתיק, <kbd>F</kbd> מסך מלא.</p>` : ""}`;
     S.err = "";
     bindMute();
@@ -3074,7 +3084,7 @@ ${samples}
   const NET = C.createNet(window.MIAMAR_FIREBASE);
   // ---------- premium: year summary, media round, certificates, payment (all in src/premium.ts) ----------
   const PREM = window.Premium;
-  PREM.init({ buddy: BUDDY_SVG, qr: C.qr, net: NET, music: { pause: () => { try { MUSIC.play("off"); } catch {} }, resume: () => { try { pickMusic(); } catch {} } } });
+  PREM.init({ buddy: BUDDY_SVG, qr: C.qr, net: NET, pick: () => { const f = document.getElementById("file"); if (f) f.click(); else { S.screen = "home"; render(); setTimeout(() => document.getElementById("file")?.click(), 60); } }, music: { pause: () => { try { MUSIC.play("off"); } catch {} }, resume: () => { try { pickMusic(); } catch {} } } });
   PREM.on((e) => setTimeout(() => {
     if (e === "unlock") {
       premiumMidGame();
@@ -3097,11 +3107,14 @@ ${samples}
   function pmLobby() { try { return PREM.lobbyHtml ? PREM.lobbyHtml() : ""; } catch { return ""; } }
   function pmCard() { try { return PREM.phoneCardHtml ? `<div class="pm-pc-slot" data-n="${esc(S.rname || "")}" style="margin-top:12px">${PREM.phoneCardHtml(S.rname || "")}</div>` : ""; } catch { return ""; } }
   function pmStrip() { try { return PREM.phoneStripHtml ? `<div class="pm-ps-slot">${PREM.phoneStripHtml()}</div>` : ""; } catch { return ""; } }
+  function pmStripTop() { try { return PREM.stripHtml ? PREM.stripHtml() : ""; } catch { return ""; } }
   function premPanel() { try { return PREM.teaserHtml ? PREM.teaserHtml() : ""; } catch { return ""; } }
   function bindPrem() {
     const b = document.getElementById("pm-buy"); if (b) b.onclick = () => { SFX.tap(); PREM.buy("setup"); };
     const w = document.getElementById("pm-wrap"); if (w) w.onclick = () => { audio(); SFX.tap(); PREM.openWrapped(); };
     const r = document.getElementById("pm-rev"); if (r) r.onclick = () => { SFX.tap(); PREM.review(); };
+    const st = document.getElementById("pmx-strip"); if (st) st.onclick = () => { SFX.tap(); PREM.pass("strip"); };
+    const pp = document.getElementById("pm-pass"); if (pp) pp.onclick = () => { SFX.tap(); PREM.pass("panel"); };
     if (PREM.bindTeaser) PREM.bindTeaser();
   }
   const canMulti = () => true;

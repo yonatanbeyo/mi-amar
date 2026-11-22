@@ -1,6 +1,7 @@
 // Premium: the group's year summary, the media round, certificates and the Bit payment flow.
 // Everything about the chat is computed here, inside the phone. Nothing from the chat goes to the server:
 // the server only ever sees a one-way fingerprint of the chat (to remember that it was unlocked) and the payment code.
+import { openPass } from "./pass";
 import JSZip from "jszip";
 import { getApp } from "firebase/app";
 import { getDatabase, ref, set, onValue, serverTimestamp } from "firebase/database";
@@ -21,7 +22,7 @@ const DAY = 864e5;
 
 type Kind = "audio" | "image" | "sticker" | "video" | "gif";
 type Item = { id: string; kind: Kind; author: string; ts: number; size: number };
-type Opts = { buddy: string; qr: (t: string) => string; net: any; music?: { pause(): void; resume(): void }; toast?: (t: string) => void; demo?: () => boolean };
+type Opts = { buddy: string; qr: (t: string) => string; net: any; music?: { pause(): void; resume(): void }; toast?: (t: string) => void; demo?: () => boolean; pick?: () => void };
 
 const P: any = {
   opts: null as Opts | null, file: null as File | null, zipP: null as Promise<JSZip | null> | null, entries: new Map<string, any>(),
@@ -478,6 +479,7 @@ function drawBuy() {
   const root = buyRoot!; const code = codeFor(P.key);
   root.innerHTML = `<div class="pm-sheet">
     <div class="pm-head"><b>פותחים את הפרימיום 🔓</b><button class="pm-x" id="pm-close" aria-label="סגירה">✕</button></div>
+    <p class="pm-freeline">✓ המשחק הרגיל נשאר חינמי. כאן פותחים רק את התוספות.</p>
     <ul class="pm-list"><li>🎁 הסיכום המלא של השנה, בלי סימן מים</li><li>📁 תיק סודי לכל אחד בקבוצה</li><li>🎬 סבב המדיה: סרטונים, תמונות, הקלטות וסטיקרים</li><li>🎓 תעודה מצחיקה לכל שחקן, מוכנה לסטורי</li><li>🔮 התחזיות של בובי לשנה הבאה</li></ul>
     ${P.items.length || !P.msgs.length ? "" : `<p class="pm-warn">⚠️ בצ'אט שהעלית אין מדיה. בשביל סבב המדיה מייצאים מוואטסאפ <b>"כולל מדיה"</b>. אפשר לשלם עכשיו, והפרימיום יישאר פתוח גם כשתעלו את הצ'אט עם המדיה.</p>`}
     <div class="pm-price"><b>${PRICE} ₪</b><span>פעם אחת לכל הקבוצה. בלי מנוי, בלי כרטיס אשראי.</span></div>
@@ -1312,7 +1314,8 @@ export function showcaseHtml() {
   return `<section class="pmx-show" id="pmx-show" aria-label="פרימיום">
     <div class="pmx-ring"></div><div class="pmx-spark" aria-hidden="true"><i>✨</i><i>⭐</i><i>✨</i><i>💫</i><i>✨</i></div>
     <span class="pmx-stamp" aria-hidden="true">מסווג</span>
-    <span class="pmx-badge">⭐ חדש · פרימיום</span>
+    <span class="pmx-badge">⭐ תוספת פרימיום · לא חובה</span>
+    <p class="pmx-freeline">המשחק עצמו חינמי לגמרי. זה בונוס למי שרוצה עוד 👇</p>
     <h3 class="pmx-t">הצ'אט שלכם מסתיר סודות.<span>בובי מוצא את כולם 👀</span></h3>
     <ul class="pmx-secrets demo"><li>👀 <span>מישהו בקבוצה מזכיר את השם של <span class="pmx-blur">אחד מכם</span> יותר מכל אחד אחר</span></li><li>🌙 <span>שניים דיברו לבד באמצע הלילה: <span class="pmx-blur">מי ומי</span></span></li><li>🗑️ <span>מישהו מחק 9 הודעות. מה הוא הסתיר?</span></li></ul>
     <div class="pmx-try"><div class="pmx-try-h"><small>תיק לדוגמה, נסו בעצמכם</small><b>📁 התיק הסודי של נועה</b></div>
@@ -1330,11 +1333,29 @@ export function showcaseHtml() {
       <p class="pmx-note">🎬 בלי "כולל מדיה" אין סרטונים, תמונות והקלטות. כל השאר עובד גם בלי.</p></div>
     ${launchHtml()}
     <button class="pmx-cta" id="pmx-go">מעלים צ'אט ומגלים ✨</button>
+    <button class="pmx-free" id="pmx-pass" type="button">מה ההבדל בין חינם לפרימיום? ←</button>
     ${trustHtml()}
   </section>`;
 }
+
+/** the premium pass: a full page that shows what premium adds, and says clearly that the game itself is free */
+export function pass(from = "") {
+  const has = !!P.key && hasWrapped(), D = has ? P.wrapped : null, h = perHead();
+  openPass({
+    on: !!P.on, hasChat: !!P.key, price: PRICE, priceAfter: PRICE_AFTER, launch: LAUNCH(), daysLeft: Math.max(1, Math.ceil((LAUNCH_END - Date.now()) / DAY)),
+    secrets: P.key ? secretRows().length + (P.items.length ? 1 : 0) + 6 : 0, slides: D ? premiumCount(D) + 3 : 0, people: D ? Math.min(16, D.people.length) : 0, media: P.items.length,
+    group: P.key ? (P.name || "") : "", each: h ? { e: h.e, people: h.people, thing: h.thing } : null,
+    buddy: budSvg, budCss: BUD_CSS, buy: () => buy("pass" + (from ? "_" + from : "")), pick: () => P.opts?.pick?.(), wrapped: () => openWrapped(), bump,
+  }, from);
+}
 /** a small strip at the very top of the home page that jumps to the showcase */
-export function topBarHtml() { return `<button class="pmx-top" id="pmx-top"><span class="pmx-top-b">⭐ חדש</span> סיכום השנה, סבב מדיה ותיקים סודיים <span aria-hidden="true">←</span></button>`; }
+export function topBarHtml() { return `<button class="pmx-top" id="pmx-top"><span class="pmx-top-b">⭐ חדש</span> בונוס פרימיום · המשחק חינם <span aria-hidden="true">←</span></button>`; }
+/** the setup screen's slim strip: the game is free, and here is the bonus. Opens the premium pass */
+export function stripHtml() {
+  if (P.on || !P.key) return "";
+  const n = secretRows().length + (P.items.length ? 1 : 0) + 6;
+  return `<button class="pmx-strip pmx-gold" id="pmx-strip" type="button"><span class="pmx-st-l"><small>✓ המשחק חינמי. ויש גם בונוס:</small><b>בובי מצא <em>${fmt(n)}</em> סודות בצ'אט שלכם 👀</b></span><span class="pmx-st-go">להציץ <i>←</i></span></button>`;
+}
 // "only 1.35 ₪ each": the price split by the people in the group, with a jab
 function perHead() {
   const n = P.msgs.length ? new Set(P.msgs.filter((m: Message) => m.ts).map((m: Message) => m.author)).size : 0;
@@ -1413,6 +1434,7 @@ function teaserRest(rows: string[], mc: number, k: any) {
     <button class="pmx-cta" id="pm-buy">לגלות הכל ב־${PRICE} ₪ ✨</button>
     ${trustHtml()}
     <button class="pmx-free" id="pm-wrap">או לראות קודם 3 שקופיות בחינם ←</button>
+    <button class="pmx-link" id="pm-pass" type="button">מה בדיוק מקבלים? כל ההבדלים בין חינם לפרימיום</button>
     ${mc ? `<button class="pmx-link" id="pm-rev">לעבור על המדיה ולהוריד מה שלא מתאים</button>` : ""}
   </section>`;
 }
@@ -1839,6 +1861,17 @@ function css() {
   if (document.getElementById("pm-css")) return;
   const s = document.createElement("style"); s.id = "pm-css";
   s.textContent = `
+
+/* the setup strip and the "free" lines */
+.pmx-strip{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;font-family:inherit;color:#fff;text-align:right;border-radius:18px;padding:12px 14px;cursor:pointer;box-shadow:0 5px 0 #1d1636;transition:transform .12s ease-out}
+.pmx-strip:active{transform:translateY(3px)}
+.pmx-st-l{display:grid;gap:2px;min-width:0}.pmx-st-l small{font-size:.78rem;font-weight:700;color:#3fe0b0}.pmx-st-l b{font-size:1.02rem;line-height:1.3}.pmx-st-l em{font-style:normal;color:#ffd23f;font-size:1.2rem}
+.pmx-st-go{flex:none;font-weight:700;font-size:.9rem;color:#1d1636;background:linear-gradient(180deg,#ffe783,#ffc21f);border:2.5px solid #1d1636;border-radius:12px;padding:8px 12px;box-shadow:0 3px 0 #1d1636}
+.pmx-st-go i{font-style:normal;display:inline-block;animation:pmxNudge 1.2s ease-in-out infinite}
+@keyframes pmxNudge{50%{transform:translateX(-4px)}}
+.pmx-freeline{margin:2px 0 0;font-size:.88rem;font-weight:700;color:#3fe0b0;text-align:center}
+.pm-freeline{margin:-4px 0 8px;font-size:.86rem;font-weight:700;color:#0f8a63;text-align:center}
+@media (prefers-reduced-motion:reduce){.pmx-st-go i{animation:none}}
 /* launch price, trust lines, the free secret, the demo file, end and mid-game offers */
 .pmx-launch{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 10px;font-weight:700;font-size:.86rem;color:#1d1636;background:#3fe0b0;border:2.5px solid #1d1636;border-radius:12px;padding:6px 10px;box-shadow:0 3px 0 #1d1636}
 .pmx-launch span:last-child{font-weight:400}
