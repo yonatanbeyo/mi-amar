@@ -506,6 +506,7 @@ function drawBuy() {
         <div class="pmb-field note"><small>הערה</small><b dir="ltr">${code}</b><em>← כאן מדביקים</em></div>
       </div>
       <a class="pmb-bit" href="${BIT_URL}" target="_blank" rel="noopener" id="pm-bit"><span class="pmb-bit-ic">${BIT_IC}</span><span class="pmb-bit-t"><b>לתשלום בביט</b><small>הקוד יועתק לבד</small></span><span class="pmb-bit-arr" aria-hidden="true">←</span></a>
+      <button class="pmb-ask" id="pm-ask" type="button"><span class="pmb-ask-ic" aria-hidden="true">💬</span><span class="pmb-ask-t"><b>אין לכם ביט?</b><small>שולחים לחבר או להורה שישלם במקומכם</small></span><span aria-hidden="true">←</span></button>
       <details class="pmb-more"><summary>משלמים מטלפון אחר? סורקים את הקוד</summary><div class="pm-qr">${P.opts?.qr(BIT_URL) || ""}</div><p class="pm-dim">או מעבירים בביט למספר <b dir="ltr">${BIT_NUM}</b></p></details>
     </section>
     <section class="pmb-step" data-s="3">
@@ -522,6 +523,7 @@ function drawBuy() {
     <details class="pm-faq"><summary>שאלות נפוצות</summary>
       <p><b>זה בטוח?</b> כן. משלמים בביט הרגיל שלכם, והאתר לא רואה שום פרט תשלום.</p>
       <p><b>למי זה נפתח?</b> לצ'אט הזה, לכל מי שמשחק איתו, גם בטלפונים של החברים.</p>
+      <p><b>אין לי ביט.</b> מספיק שלאחד בקבוצה, או להורה של מישהו, יש. לוחצים "אין לכם ביט?" ושולחים לו את ההודעה המוכנה עם הקוד.</p>
       <p><b>שכחתי לכתוב את הקוד בהערה.</b> לא נורא, שלחו את הקוד בהודעה לאותו מספר של ביט.</p>
       <p><b>ומה אם זה לא נפתח?</b> אם זה לא נפתח תוך 48 שעות, מחזירים לכם את הכסף.</p></details></details></div>`;
   // the steps light up as you go: copied the code, went to Bit, ticked the terms
@@ -531,6 +533,14 @@ function drawBuy() {
   root.querySelector<HTMLButtonElement>("#pm-close")!.onclick = () => { if (!root.querySelector(".pmb-prog li.done")) bump("pm_close_early"); else bump("pm_close_late"); closeBuy(); };
   const copy = async () => { try { await navigator.clipboard.writeText(code); return true; } catch { return false; } };
   root.querySelector<HTMLAnchorElement>("#pm-bit")!.onclick = () => { copy().then((ok) => { if (ok) toast(`הקוד ${code} הועתק. מדביקים אותו בהערה בביט 👍`); }); try { P.opts?.net?.bump("pm_bit"); } catch {} goStep(3); try { navigator.vibrate && navigator.vibrate(15); } catch {} };
+  // no Bit? send a ready message (with the code) to someone who has it, and they pay instead
+  root.querySelector<HTMLButtonElement>("#pm-ask")!.onclick = async () => {
+    bump("pm_ask");
+    const txt = `היי 🙏 אפשר לשלם במקומי ${PRICE} ₪ בביט? זה על הפרימיום של "מי אמר את זה?" לקבוצה שלנו.\n\n1. מעבירים בביט למספר ${BIT_NUM}\n2. בהערה כותבים את הקוד: ${code}\n\nקישור ישיר לתשלום: ${BIT_URL}\n\nתגיד לי כשזה עבר 🙌`;
+    goStep(3);
+    try { if (navigator.share) { await navigator.share({ text: txt }); return; } } catch (e: any) { if (e && e.name === "AbortError") return; }
+    window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank", "noopener");
+  };
   root.querySelector<HTMLButtonElement>("#pm-copy")!.onclick = async (e) => { bump("pm_copy"); const b = e.currentTarget as HTMLButtonElement, ok = await copy(); b.classList.toggle("ok", ok); b.querySelector("span")!.textContent = ok ? "הועתק ✓" : code; if (ok) { goStep(2); try { navigator.vibrate && navigator.vibrate(12); } catch {} } };
   const chk = root.querySelector<HTMLInputElement>("#pm-ok")!, paid = root.querySelector<HTMLButtonElement>("#pm-paid")!;
   chk.onchange = () => { paid.disabled = !chk.checked; paid.classList.toggle("ready", chk.checked); if (chk.checked) { goStep(3); try { navigator.vibrate && navigator.vibrate(10); } catch {} } };
@@ -1952,6 +1962,10 @@ function css() {
 .pmb-bit .pmb-bit-ic{background:#fff2;box-shadow:none;border:2px solid #ffffff80}
 .pmb-bit-t{flex:1;display:grid;line-height:1.2}.pmb-bit-t b{font-size:1.2rem;text-shadow:0 2px 0 #0077887a}.pmb-bit-t small{font-size:.8rem;font-weight:700;opacity:.92}
 .pmb-bit-arr{font-size:1.4rem;font-weight:700;animation:pmbNudge 1.2s ease-in-out infinite}
+.pmb-ask{display:flex;align-items:center;gap:10px;width:100%;font-family:inherit;text-align:right;color:#1d1636;background:#f3efff;border:2.5px dashed #7b5cff;border-radius:16px;padding:10px 12px;cursor:pointer;transition:transform .12s ease-out,background-color .2s}
+.pmb-ask:active{transform:scale(.98)}
+.pmb-ask-ic{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#25d366;font-size:1.05rem;border:2px solid #1d1636}
+.pmb-ask-t{flex:1;display:grid;line-height:1.25}.pmb-ask-t b{font-size:.98rem}.pmb-ask-t small{font-size:.8rem;color:#5a4a8a;font-weight:700}
 .pmb-more summary{cursor:pointer;font-size:.86rem;font-weight:700;color:#5a4a8a;text-align:center}
 .pmb-terms{display:flex;gap:10px;align-items:center;font-size:.94rem;font-weight:700;cursor:pointer;background:#f3efff;border-radius:14px;padding:10px 12px}
 .pmb-terms input{position:absolute;opacity:0;width:1px;height:1px}
