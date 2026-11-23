@@ -476,6 +476,8 @@ export function buy(from = "") {
   const sent = (store.get("pm_sent", []) as string[]).includes(P.key);
   sent ? drawWait() : drawBuy();
 }
+// the group's name without the "WhatsApp chat with" part that the export adds to the file name
+function groupLabel() { return String(P.name || "").replace(/whats\s*app/gi, "").replace(/^\s*(צ'?אט|chat)\s*(עם|with|-|–)?\s*/i, "").replace(/\.(txt|zip)$/i, "").trim(); }
 function drawBuy() {
   const root = buyRoot!; const code = codeFor(P.key), h = perHead(), digits = [...code].map((d, i) => `<i style="--i:${i}">${esc(d)}</i>`).join("");
   root.classList.add("pmb");
@@ -484,9 +486,9 @@ function drawBuy() {
       <div class="pmb-bar"><span class="pmb-lock" aria-hidden="true">🔓</span><b>פותחים את הפרימיום</b><button class="pm-x" id="pm-close" aria-label="סגירה">✕</button></div>
       <p class="pmb-free">✓ המשחק הרגיל נשאר חינמי. כאן פותחים רק את התוספות.</p>
       <div class="pmb-order">
-        <div class="pmb-o-l"><small>הזמנה</small><b>פרימיום לקבוצה${P.name ? ` · ${esc(P.name)}` : ""}</b>
+        <div class="pmb-o-l"><small>הזמנה</small><b>פרימיום לקבוצה${groupLabel() ? ` · ${esc(groupLabel())}` : ""}</b>
           <div class="pmb-feat"><span>🎁 סיכום שנה</span><span>🎬 מדיה</span><span>🔒 סודות</span><span>📁 תיקים</span><span>🎓 תעודות</span></div></div>
-        <div class="pmb-o-p"><b>${PRICE}<small>₪</small></b>${LAUNCH() ? `<s>${PRICE_AFTER} ₪</s>` : ""}</div>
+        <div class="pmb-o-p"><b>${PRICE}<small>₪</small></b>${LAUNCH() ? `<span class="was">במקום <s>${PRICE_AFTER} ₪</s></span><em>מחיר השקה</em>` : ""}</div>
       </div>
       <div class="pmb-tags"><span>פעם אחת</span><span>לכל הקבוצה</span><span>בלי מנוי</span><span>בלי כרטיס אשראי</span>${h ? `<span class="hl">רק ${h.e} ₪ לכל אחד</span>` : ""}</div>
     </div>
@@ -1369,7 +1371,7 @@ export function pass(from = "") {
   openPass({
     on: !!P.on, hasChat: !!P.key, price: PRICE, priceAfter: PRICE_AFTER, launch: LAUNCH(), daysLeft: Math.max(1, Math.ceil((LAUNCH_END - Date.now()) / DAY)),
     secrets: P.key ? secretRows().length + (P.items.length ? 1 : 0) + 6 : 0, slides: D ? premiumCount(D) + 3 : 0, people: D ? Math.min(16, D.people.length) : 0, media: P.items.length,
-    group: P.key ? (P.name || "") : "", each: h ? { e: h.e, people: h.people, thing: h.thing } : null,
+    group: P.key ? groupLabel() : "", each: h ? { e: h.e, people: h.people, thing: h.thing } : null,
     buddy: budSvg, budCss: BUD_CSS, buy: () => buy("pass" + (from ? "_" + from : "")), pick: () => P.opts?.pick?.(), wrapped: () => openWrapped(), bump,
   }, from);
 }
@@ -1903,10 +1905,10 @@ function css() {
 .pmb-order{position:relative;display:flex;gap:12px;align-items:center;justify-content:space-between;background:#ffffff12;border:1.5px solid #ffffff2a;border-radius:18px;padding:10px 12px}
 .pmb-o-l{display:grid;gap:4px;min-width:0}.pmb-o-l small{font-size:.7rem;font-weight:700;color:#c9bfff}.pmb-o-l>b{font-size:.98rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pmb-feat{display:flex;flex-wrap:wrap;gap:4px}.pmb-feat span{font-size:.7rem;font-weight:700;background:#ffffff1c;border-radius:99px;padding:2px 7px;white-space:nowrap}
-.pmb-o-p{flex:none;display:grid;justify-items:center;line-height:1}
-.pmb-o-p b{font-family:Karantina,sans-serif;font-size:3.3rem;color:#ffd23f;text-shadow:0 4px 0 #1d1636;background:linear-gradient(100deg,#ffd23f 40%,#fff6c4 50%,#ffd23f 60%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:pmbGold 3.5s ease-in-out infinite}
-.pmb-o-p b small{font-size:1.5rem;margin-inline-start:2px}
-.pmb-o-p s{font-size:.85rem;color:#ffffff99;text-decoration-color:#ff3d7f;text-decoration-thickness:2px}
+.pmb-o-p{flex:none;display:grid;justify-items:center;line-height:1}.pmb-o-p em{font-style:normal;font-size:.68rem;font-weight:700;color:#3fe0b0;margin-top:4px}
+.pmb-o-p b{display:flex;align-items:baseline;gap:3px;font-family:"Varela Round",system-ui,sans-serif;font-weight:700;font-size:2rem;letter-spacing:-.5px;color:#1d1636;background:#ffd23f;border:3px solid #1d1636;border-radius:14px;padding:4px 12px 5px;box-shadow:0 4px 0 #1d1636;direction:ltr}
+.pmb-o-p b small{font-size:1.1rem}
+.pmb-o-p .was{margin-top:7px;font-size:.82rem;font-weight:700;color:#ffffffb3}.pmb-o-p s{text-decoration-color:#ff3d7f;text-decoration-thickness:2px}
 .pmb-tags{position:relative;display:flex;flex-wrap:wrap;gap:5px}.pmb-tags span{font-size:.74rem;font-weight:700;border:1.5px solid #ffffff40;border-radius:99px;padding:3px 9px}.pmb-tags .hl{background:#ffd23f;color:#1d1636;border-color:#1d1636}
 .pmb-prog{list-style:none;padding:0;display:flex;align-items:center;justify-content:center;gap:0;counter-reset:s}
 .pmb-prog li{display:flex;align-items:center;gap:6px;font-size:.82rem;font-weight:700;color:#8a7cb8}
