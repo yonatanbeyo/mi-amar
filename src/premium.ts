@@ -2,6 +2,7 @@
 // Everything about the chat is computed here, inside the phone. Nothing from the chat goes to the server:
 // the server only ever sees a one-way fingerprint of the chat (to remember that it was unlocked) and the payment code.
 import { openPass } from "./pass";
+import { openScan } from "./scan";
 import JSZip from "jszip";
 import { getApp } from "firebase/app";
 import { getDatabase, ref, set, onValue, serverTimestamp } from "firebase/database";
@@ -1393,6 +1394,31 @@ export function showcaseHtml() {
   </section>`;
 }
 
+
+/** right after an upload: Bubbi scans the group, shows a couple of findings free and the rest locked. Once per chat per device */
+export function scan() {
+  if (P.on || !P.key || !hasWrapped()) return;
+  const seen = store.get("pm_scanned", []) as string[]; if (seen.includes(P.key)) return;
+  seen.push(P.key); store.set("pm_scanned", seen.slice(-40));
+  const D = P.wrapped, nm = plainName, F: { e: string; t: string; v: string; free?: boolean }[] = [];
+  if (D.people[0]) F.push({ e: "👑", t: "החפרן של הקבוצה", v: `${nm(D.people[0][0])} · ${fmt(D.people[0][1])} הודעות`, free: true });
+  if (D.day && D.day.n) F.push({ e: "📅", t: "היום הכי מטורף בקבוצה", v: `${D.day.d}.${D.day.m} · ${fmt(D.day.n)} הודעות ביום אחד`, free: true });
+  if (D.crush) F.push({ e: "😍", t: "מי מת על מי", v: `${nm(D.crush.a)} ← ${nm(D.crush.b)}` });
+  if (D.ignore) F.push({ e: "🙄", t: "מי מתעלם ממי", v: `${nm(D.ignore.a)} מתעלם מ${nm(D.ignore.b)}` });
+  if (D.mention) F.push({ e: "👀", t: "מי מדבר על מי מאחורי הגב", v: `${nm(D.mention.from)} על ${nm(D.mention.to)}` });
+  if (D.deleted) F.push({ e: "🗑️", t: `מי מחק ${fmt(D.deleted[1])} הודעות`, v: nm(D.deleted[0]) });
+  if (D.duo) F.push({ e: "🌙", t: "השיחה הסודית של הלילה", v: `${nm(D.duo.a[0])} ו${nm(D.duo.a[1])}` });
+  if (D.missing) F.push({ e: "🕵️", t: `מי נעלם ל־${fmt(D.missing.days)} ימים`, v: nm(D.missing.who) });
+  if (D.ghost) F.push({ e: "👻", t: "השאלה שאף אחד לא ענה עליה", v: D.ghost.t.slice(0, 30) });
+  try { const dg = diagnosisOf(D); F.push({ e: "🩺", t: "האבחנה של בובי על הקבוצה", v: dg.t }); } catch {}
+  const free = F.filter((f) => f.free), lk = F.filter((f) => !f.free).slice(0, 6);
+  const findings = [...free.slice(0, 1), ...lk.slice(0, 2), ...free.slice(1), ...lk.slice(2)];
+  const total = Math.max(findings.length + 3, secretRows().length + (P.items.length ? 1 : 0) + 6); // the same number the setup strip shows
+  const lines = P.msgs.filter((m: Message) => m.ts && m.text && !m.media && m.text.length > 3 && m.text.length < 40).slice(-400);
+  const pickLines: string[] = []; for (let i = 0; i < 14 && lines.length; i++) pickLines.push(lines[Math.floor((i + .5) * lines.length / 14)].text);
+  openScan({ msgs: D.total, days: D.days, people: D.people.length, total, price: PRICE, lines: pickLines, findings,
+    buddy: budSvg, budCss: BUD_CSS, buy: () => buy("scan"), more: () => pass("scan"), bump });
+}
 /** the premium pass: a full page that shows what premium adds, and says clearly that the game itself is free */
 export function pass(from = "") {
   const has = !!P.key && hasWrapped(), D = has ? P.wrapped : null, h = perHead();

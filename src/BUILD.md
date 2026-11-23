@@ -11,6 +11,7 @@
 `firebase-rules.json` must also be pasted by hand into Firebase console → Realtime Database → Rules.
 
 ## Premium (src/premium.ts)
+- Group scan (src/scan.ts): the short show after an upload, a couple of findings free and the rest locked; once per chat.
 - Premium pass (src/pass.ts): the full-screen page that shows what premium adds and what stays free.
 - Year summary (including Bubbi's diagnosis of the group), media round, the secrets round (spicy in-game questions, premium only), certificates, the unlock ceremony and the Bit payment window. Everything about the chat runs on the device.
 - A paid chat is remembered by a one-way fingerprint (`unlocks/<key>`). Payments wait in `pay/<code>` until approved in `admin.html`.
