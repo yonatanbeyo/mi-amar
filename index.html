@@ -895,8 +895,8 @@ body.yt-mini #ytmin { display: none; }
 <main class="wrap" id="app"></main>
 <div class="overlay" id="overlay" hidden></div>
 
-<script src="config.js?v=1795467008"></script>
-<script src="app.js?v=1795467008"></script>
+<script src="config.js?v=1795467654"></script>
+<script src="app.js?v=1795467654"></script>
 <script>
 (() => {
   const C = window.Chat;
@@ -3042,7 +3042,8 @@ ${samples}
       <h2 style="font-size:2.2rem">פרסי הקבוצה</h2>
       <div class="awards">${g.awards.map(([k, v, d]) => `<div class="award"><span class="dim small">${k}</span><b>${esc(v)}</b><span class="small">${esc(d)}</span></div>`).join("")}</div>
       ${S.chatText && PREM.hasWrapped() ? `<section class="panel prem-end"><div class="row" style="justify-content:center">
-        <button class="btn" id="pm-cert">🎓 תעודה לכל שחקן${PREM.isOn() ? "" : " 🔒"}</button><button class="btn alt" id="pm-files2">📁 תיקים סודיים${PREM.isOn() ? "" : " 🔒"}</button><button class="btn alt" id="pm-wrap2">🎁 הסיכום של ${PREM.wrappedYear()}</button></div>
+        ${PREM.isOn() ? `<button class="btn" id="pm-cert">🎓 תעודה לכל שחקן</button><button class="btn alt" id="pm-files2">📁 תיקים סודיים</button><button class="btn alt" id="pm-wrap2">🎁 הסיכום של ${PREM.wrappedYear()}</button>`
+          : `<button class="btn big" id="pm-wrap2" style="width:100%">🎁 הסיכום של הקבוצה ל־${PREM.wrappedYear()} · 3 שקופיות בחינם</button><button class="btn alt" id="pm-cert">🎓 תעודות 🔒</button><button class="btn alt" id="pm-files2">📁 תיקים סודיים 🔒</button>`}</div>
         ${PREM.isOn() ? "" : (PREM.endTeaserHtml ? PREM.endTeaserHtml() : "")}</section>` : ""}
       <section class="panel story" id="story" hidden>
         <b>תמונה לסטורי</b>

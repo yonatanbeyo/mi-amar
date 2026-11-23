@@ -507,7 +507,7 @@ function drawBuy() {
       </div>
       <a class="pmb-bit" href="${BIT_URL}" target="_blank" rel="noopener" id="pm-bit"><span class="pmb-bit-ic">${BIT_IC}</span><span class="pmb-bit-t"><b>לתשלום בביט</b><small>הקוד יועתק לבד</small></span><span class="pmb-bit-arr" aria-hidden="true">←</span></a>
       <button class="pmb-ask" id="pm-ask" type="button"><span class="pmb-ask-ic" aria-hidden="true">💬</span><span class="pmb-ask-t"><b>אין לכם ביט?</b><small>שולחים לחבר או להורה שישלם במקומכם</small></span><span aria-hidden="true">←</span></button>
-      <details class="pmb-more"><summary>משלמים מטלפון אחר? סורקים את הקוד</summary><div class="pm-qr">${P.opts?.qr(BIT_URL) || ""}</div><p class="pm-dim">או מעבירים בביט למספר <b dir="ltr">${BIT_NUM}</b></p></details>
+      <details class="pmb-more" ${matchMedia("(hover: hover) and (pointer: fine)").matches ? "open" : ""}><summary>${matchMedia("(hover: hover) and (pointer: fine)").matches ? "📱 על מחשב? סורקים עם הטלפון ומשלמים בביט" : "משלמים מטלפון אחר? סורקים את הקוד"}</summary><div class="pm-qr">${P.opts?.qr(BIT_URL) || ""}</div><p class="pm-dim">או מעבירים בביט למספר <b dir="ltr">${BIT_NUM}</b></p></details>
     </section>
     <section class="pmb-step" data-s="3">
       <h4><span class="pmb-n">3</span>חוזרים לכאן ולוחצים "שילמתי"</h4>
@@ -528,11 +528,27 @@ function drawBuy() {
       <p><b>ומה אם זה לא נפתח?</b> אם זה לא נפתח תוך 48 שעות, מחזירים לכם את הכסף.</p></details></details></div>`;
   // the steps light up as you go: copied the code, went to Bit, ticked the terms
   const prog = [...root.querySelectorAll("#pmb-prog li")], steps = [...root.querySelectorAll<HTMLElement>(".pmb-step")];
+  let bitTapped = false;
   const goStep = (n: number) => { prog.forEach((li, i) => { li.classList.toggle("done", i < n - 1); li.classList.toggle("on", i === n - 1); }); steps.forEach((st, i) => st.classList.toggle("now", i === n - 1)); };
   goStep(1);
-  root.querySelector<HTMLButtonElement>("#pm-close")!.onclick = () => { if (!root.querySelector(".pmb-prog li.done")) bump("pm_close_early"); else bump("pm_close_late"); closeBuy(); };
+  root.querySelector<HTMLButtonElement>("#pm-close")!.onclick = () => { if (bitTapped || root.querySelector(".pmb-why")) { bump("pm_close_late"); closeBuy(); return; } bump("pm_close_early"); askWhy(); };
+  // before leaving: one tap to tell why. "no Bit" doesn't close, it shows the way around it
+  function askWhy() {
+    const sh = root.querySelector(".pmb-sheet") as HTMLElement;
+    const box = document.createElement("div"); box.className = "pmb-why"; box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "מה עצר אותך?");
+    box.innerHTML = `<div class="pmb-why-c">${budSvg("think", 70)}<b>רגע, מה עצר אותך?</b><span>לחיצה אחת, וזה עוזר לי לשפר 🙏</span>
+      <div class="pmb-why-o">${[["nobit", "🏦 אין לי ביט"], ["price", "💸 יקר לי"], ["worth", "🤔 לא בטוח שזה שווה"], ["later", "⏰ אחר כך"], ["look", "👀 רק הצצתי"]].map(([k, t]) => `<button data-w="${k}" type="button">${t}</button>`).join("")}</div>
+      <button class="pmb-link" data-w="skip" type="button">סגירה</button></div>`;
+    root.append(box); void sh;
+    box.querySelectorAll<HTMLButtonElement>("button").forEach((b) => (b.onclick = () => {
+      const w = b.dataset.w!; if (w !== "skip") bump("pm_why_" + w);
+      if (w === "nobit") { box.remove(); goStep(2); const a = root.querySelector<HTMLElement>("#pm-ask")!; a.scrollIntoView({ behavior: "smooth", block: "center" }); a.classList.add("pulse"); return; }
+      if (w === "price") { const h = perHead(); box.querySelector(".pmb-why-c")!.innerHTML = `${budSvg("party", 70)}<b>טיפ: מתחלקים!</b><span>אחד משלם ${PRICE} ₪ וכל הקבוצה מקבלת הכל${h ? `. זה רק ${h.e} ₪ לכל אחד מה־${h.people}` : ""}. תגידו לחברים להעביר לו את החלק שלהם 😉</span><button class="pmb-paid ready" type="button" id="pm-why-back"><span>הבנתי, ממשיכים</span></button><button class="pmb-link" type="button" id="pm-why-x">סגירה</button>`; box.querySelector<HTMLButtonElement>("#pm-why-back")!.onclick = () => box.remove(); box.querySelector<HTMLButtonElement>("#pm-why-x")!.onclick = () => closeBuy(); return; }
+      closeBuy();
+    }));
+  }
   const copy = async () => { try { await navigator.clipboard.writeText(code); return true; } catch { return false; } };
-  root.querySelector<HTMLAnchorElement>("#pm-bit")!.onclick = () => { copy().then((ok) => { if (ok) toast(`הקוד ${code} הועתק. מדביקים אותו בהערה בביט 👍`); }); try { P.opts?.net?.bump("pm_bit"); } catch {} goStep(3); try { navigator.vibrate && navigator.vibrate(15); } catch {} };
+  root.querySelector<HTMLAnchorElement>("#pm-bit")!.onclick = () => { bitTapped = true; copy().then((ok) => { if (ok) toast(`הקוד ${code} הועתק. מדביקים אותו בהערה בביט 👍`); }); try { P.opts?.net?.bump("pm_bit"); } catch {} goStep(3); try { navigator.vibrate && navigator.vibrate(15); } catch {} };
   // no Bit? send a ready message (with the code) to someone who has it, and they pay instead
   root.querySelector<HTMLButtonElement>("#pm-ask")!.onclick = async () => {
     bump("pm_ask");
@@ -870,6 +886,7 @@ function build() {
     <div class="st m slap" style="--d:.3s">מפה זה כבר רכילות כבדה</div>
     <div class="peek r" style="--d:.6s">${[["#ffa928", "👑"], ["#2a1f55", "🌙"], ["#ff3d7f", "💍"], ["#3fe0b0", "🕵️"], ["#5fb4ff", "⚡"], ["#ffd23f", "😭"]].map(([c, e]) => `<div style="background:${c}">${e}</div>`).join("")}</div>
     <p class="sub r" style="--d:.8s">עוד ${fmt(more)} שקופיות: מלך הסטיקרים, ההודעה של 3 בלילה, מי נעלם, התחזיות של בובי ועוד.</p>`) + `
+    ${(() => { try { const dg = diagnosisOf(D); return `<div class="dgt r" style="--d:.9s">🩺 האבחנה של הקבוצה שלכם מוכנה: <span class="bl">${esc(dg.t)}</span> 🔒</div>`; } catch { return ""; } })()}
     <div class="st s w r" style="--d:1s;--c:var(--pw-yellow)">${PRICE} ₪</div>${LAUNCH() ? `<p class="small r" style="--d:1.01s">🚀 מחיר השקה עד 31.12, אחר כך ${PRICE_AFTER} ₪</p>` : ""}
     ${(() => { const h = perHead(); return h ? `<p class="lead r" style="--d:1.02s;color:var(--pw-yellow)">רק ${h.e} ₪ לכל אחד מה־${h.people}. ${esc(h.thing)} 🍬</p>` : ""; })()}
     <p class="small r" style="--d:1.05s">אחד משלם, וכל הקבוצה מקבלת הכל. לתמיד.<br>כולל התיקים הסודיים, סבב המדיה והתעודות.</p>
@@ -1499,7 +1516,8 @@ export function lobbyHtml() {
   if (P.lobbyKey !== P.key) { P.lobbyKey = P.key; bump("pm_lobby_seen"); }
   return `<section class="pmx-lobby pmx-gold" id="pmx-lobby"><div class="pmx-lobby-h"><span class="pmx-lk">🔒</span><b>בובי מצא <em>${fmt(rows.length + 6)}</em> סודות בקבוצה הזאת</b></div>
     <ul class="pmx-tick" id="pmx-tick">${rows.map((r, i) => r.replace("<li>", `<li class="${i ? "" : "on"}">`)).join("")}</ul>
-    <div class="pmx-lobby-f"><span>ולכל אחד מכם מחכה תיק סודי לטלפון 📁</span><button class="pmx-cta sm" id="pm-buy-lobby">לפתוח לכולם ב־${PRICE} ₪</button></div></section>`;
+    <div class="pmx-lobby-f"><span>ולכל אחד מכם מחכה תיק סודי לטלפון 📁</span><button class="pmx-cta sm" id="pm-buy-lobby">לפתוח לכולם ב־${PRICE} ₪</button></div>
+    ${groupPayHtml()}</section>`;
 }
 /** on every player's phone: their own secret file, locked, with a way to open it for everyone */
 export function phoneCardHtml(name = "") {
@@ -1509,7 +1527,7 @@ export function phoneCardHtml(name = "") {
   return `<section class="pmx-pcard pmx-gold" id="pm-pc"><div class="pmx-pc-top"><span class="pmx-pc-fold">📁</span><span class="pmx-pc-t"><small>סודי ביותר</small><b>התיק של ${esc(plainName(name || f.name || "שלך"))}</b></span><span class="pmx-pc-stamp">מסווג</span></div>
     <p class="pmx-pc-l">בובי מצא עליך <b>${fmt(f.n || 5)}</b> דברים:</p>
     <ul class="pmx-pc-list"><li>👁️ מי מזכיר אותך הכי הרבה <i></i></li><li>🙈 מי מתעלם ממך <i></i></li><li>😳 ההודעה הכי מביכה שלך <i></i></li><li>⚖️ פסק הדין של בובי <i></i></li></ul>
-    ${P.key ? `<button class="pmx-cta sm" id="pm-pc-buy" type="button">לפתוח לכולם ב־${PRICE} ₪ ✨</button><span class="pmx-pc-s">אחד משלם, וכל התיקים של כל הקבוצה נפתחים. לתמיד.</span>` : `<span class="pmx-pc-s">נפתח כשמישהו בקבוצה פותח את הפרימיום 😉</span>`}</section>`;
+    ${P.key ? `<button class="pmx-cta sm" id="pm-pc-buy" type="button">לפתוח לכולם ב־${PRICE} ₪ ✨</button><span class="pmx-pc-s">💳 יש לך ביט? אחד משלם, וכל התיקים של כל הקבוצה נפתחים. לתמיד.</span>` : `<span class="pmx-pc-s">נפתח כשמישהו בקבוצה פותח את הפרימיום 😉</span>`}</section>`;
 }
 /** a slim reminder on the phone after each answer */
 export function phoneStripHtml() {
@@ -1528,7 +1546,12 @@ export function endTeaserHtml() {
   return `<section class="pmx-end pmx-gold"><b class="pmx-end-h">רגע, לפני שהולכים 👀</b>${row ? `<p class="pmx-end-r">${row}</p>` : ""}
     <p class="pmx-end-r">📁 ולכל אחד מכם מחכה תיק סודי. מי מזכיר אותו, מי מתעלם ממנו וההודעה הכי מביכה שלו.</p>
     ${launchHtml()}<button class="pmx-cta" id="pm-buy-end">לגלות הכל ב־${PRICE} ₪ ✨</button>
-    <span class="pmx-sub">אחד משלם, וכל הקבוצה מקבלת הכל. לתמיד.</span></section>`;
+    ${groupPayHtml()}</section>`;
+}
+/** the group pays, not the host: whoever in the room has Bit can open it for everyone, from any phone */
+function groupPayHtml() {
+  const h = perHead();
+  return `<p class="pmx-gp"><b>💳 למי בחדר יש ביט?</b> אחד משלם, וכולם מקבלים הכל${h ? `. זה ${h.e} ₪ לאחד` : ""}. אפשר לשלם גם מהטלפון של כל שחקן.</p>`;
 }
 /** one small, friendly nudge in the middle of the game (once per chat) */
 export function midHtml(idx: number, total: number) {
@@ -1838,6 +1861,7 @@ canvas.pw-fx{position:absolute;inset:0;z-index:15;pointer-events:none;width:100%
 .pw-ph .peek{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;width:100%;max-width:330px}
 .pw-ph .peek div{aspect-ratio:9/12;border-radius:12px;border:3px solid var(--pw-ink);display:grid;place-items:center;font-size:28px;filter:blur(2.5px) saturate(1.3)}
 .pw-ph .cliff{position:relative;width:100%;max-width:320px;box-sizing:border-box;background:#c81e5a;border:3.5px solid var(--pw-ink);border-radius:22px;padding:16px 14px 14px;display:grid;gap:4px;justify-items:center;box-shadow:0 7px 0 var(--pw-ink);transform:rotate(-1.5deg)}
+.pw-ph .dgt{font-size:15px;font-weight:700;background:#ffffff14;border:1.5px solid #ffffff30;border-radius:14px;padding:8px 12px}.pw-ph .dgt .bl{display:inline-block;filter:blur(6px);color:var(--pw-yellow);user-select:none;-webkit-user-select:none}
 .pw-ph .cliff .bl{font-family:Karantina,sans-serif;font-size:44px;line-height:1;color:#fff;filter:blur(9px);user-select:none;-webkit-user-select:none;max-width:100%;overflow:hidden;white-space:nowrap}
 .pw-ph .cliff small{font-size:15px;color:#ffd9e6}
 .pw-ph .cliff b{font-family:Karantina,sans-serif;font-size:76px;line-height:.9;color:var(--pw-yellow);text-shadow:0 4px 0 var(--pw-ink)}
@@ -1962,6 +1986,15 @@ function css() {
 .pmb-bit .pmb-bit-ic{background:#fff2;box-shadow:none;border:2px solid #ffffff80}
 .pmb-bit-t{flex:1;display:grid;line-height:1.2}.pmb-bit-t b{font-size:1.2rem;text-shadow:0 2px 0 #0077887a}.pmb-bit-t small{font-size:.8rem;font-weight:700;opacity:.92}
 .pmb-bit-arr{font-size:1.4rem;font-weight:700;animation:pmbNudge 1.2s ease-in-out infinite}
+.pmb-why{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:18px;background:#1d1636cc;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);border-radius:inherit;animation:pmbUp .25s cubic-bezier(.23,1,.32,1) both}
+.pmb-why-c{width:min(340px,100%);display:grid;gap:8px;justify-items:center;text-align:center;background:#fff;border:3.5px solid #1d1636;border-radius:22px;padding:16px;box-shadow:0 6px 0 #1d1636}
+.pmb-why-c>b{font-size:1.15rem}.pmb-why-c>span{font-size:.88rem;color:#5a4a8a}
+.pmb-why-o{display:grid;gap:7px;width:100%;margin-top:4px}
+.pmb-why-o button{font-family:inherit;font-weight:700;font-size:.98rem;text-align:right;background:#f3efff;border:2.5px solid #1d1636;border-radius:14px;padding:10px 12px;cursor:pointer;transition:transform .1s ease-out}
+.pmb-why-o button:active{transform:scale(.98)}
+.pmb-ask.pulse{animation:pmbAsk 1s ease-in-out 3;background:#e5fbe9;border-color:#25d366}
+@keyframes pmbAsk{50%{transform:scale(1.03);box-shadow:0 0 0 6px #25d36633}}
+.pmx-gp{margin:8px 0 0;font-size:.86rem;line-height:1.45;text-align:center;color:inherit;opacity:.95}.pmx-gp b{color:#3fe0b0}
 .pmb-ask{display:flex;align-items:center;gap:10px;width:100%;font-family:inherit;text-align:right;color:#1d1636;background:#f3efff;border:2.5px dashed #7b5cff;border-radius:16px;padding:10px 12px;cursor:pointer;transition:transform .12s ease-out,background-color .2s}
 .pmb-ask:active{transform:scale(.98)}
 .pmb-ask-ic{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#25d366;font-size:1.05rem;border:2px solid #1d1636}
