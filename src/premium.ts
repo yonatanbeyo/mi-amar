@@ -15,6 +15,7 @@ const PRICE = LAUNCH() ? "14.90" : PRICE_AFTER;
 export const price = () => PRICE;
 const BIT_URL = "https://www.bitpay.co.il/app/me/826990EF-07DF-40B2-B8AE-9A7737DEE4ED";
 const BIT_NUM = "058-646-3236";
+const BIT_IC = `<svg viewBox="0 0 32 32" aria-hidden="true"><rect x="8" y="3" width="16" height="26" rx="4" fill="#fff"/><rect x="10.5" y="6.5" width="11" height="17" rx="2" fill="#00b4c8"/><text x="16" y="19.6" text-anchor="middle" font-family="Varela Round,sans-serif" font-weight="700" font-size="10" fill="#fff">₪</text><circle cx="16" cy="26.3" r="1.2" fill="#00b4c8"/></svg>`;
 // email to the owner on every "I paid" (web3forms.com: the key is public by design and only routes mail to the owner)
 const MAIL_KEY = "af3e3f5d-a5df-452b-aae5-f0bfe9c6a60e";
 const ICE = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun.cloudflare.com:3478" }] };
@@ -476,43 +477,65 @@ export function buy(from = "") {
   sent ? drawWait() : drawBuy();
 }
 function drawBuy() {
-  const root = buyRoot!; const code = codeFor(P.key);
-  root.innerHTML = `<div class="pm-sheet">
-    <div class="pm-head"><b>פותחים את הפרימיום 🔓</b><button class="pm-x" id="pm-close" aria-label="סגירה">✕</button></div>
-    <p class="pm-freeline">✓ המשחק הרגיל נשאר חינמי. כאן פותחים רק את התוספות.</p>
-    <ul class="pm-list"><li>🎁 הסיכום המלא של השנה, בלי סימן מים</li><li>📁 תיק סודי לכל אחד בקבוצה</li><li>🎬 סבב המדיה: סרטונים, תמונות, הקלטות וסטיקרים</li><li>🎓 תעודה מצחיקה לכל שחקן, מוכנה לסטורי</li><li>🔮 התחזיות של בובי לשנה הבאה</li></ul>
+  const root = buyRoot!; const code = codeFor(P.key), h = perHead(), digits = [...code].map((d, i) => `<i style="--i:${i}">${esc(d)}</i>`).join("");
+  root.classList.add("pmb");
+  root.innerHTML = `<div class="pm-sheet pmb-sheet" role="dialog" aria-modal="true" aria-label="תשלום על הפרימיום">
+    <div class="pmb-top">
+      <div class="pmb-bar"><span class="pmb-lock" aria-hidden="true">🔓</span><b>פותחים את הפרימיום</b><button class="pm-x" id="pm-close" aria-label="סגירה">✕</button></div>
+      <p class="pmb-free">✓ המשחק הרגיל נשאר חינמי. כאן פותחים רק את התוספות.</p>
+      <div class="pmb-order">
+        <div class="pmb-o-l"><small>הזמנה</small><b>פרימיום לקבוצה${P.name ? ` · ${esc(P.name)}` : ""}</b>
+          <div class="pmb-feat"><span>🎁 סיכום שנה</span><span>🎬 מדיה</span><span>🔒 סודות</span><span>📁 תיקים</span><span>🎓 תעודות</span></div></div>
+        <div class="pmb-o-p"><b>${PRICE}<small>₪</small></b>${LAUNCH() ? `<s>${PRICE_AFTER} ₪</s>` : ""}</div>
+      </div>
+      <div class="pmb-tags"><span>פעם אחת</span><span>לכל הקבוצה</span><span>בלי מנוי</span><span>בלי כרטיס אשראי</span>${h ? `<span class="hl">רק ${h.e} ₪ לכל אחד</span>` : ""}</div>
+    </div>
+    <ol class="pmb-prog" id="pmb-prog" aria-hidden="true"><li class="on"><i>1</i><span>הקוד</span></li><li><i>2</i><span>ביט</span></li><li><i>3</i><span>שילמתי</span></li></ol>
     ${P.items.length || !P.msgs.length ? "" : `<p class="pm-warn">⚠️ בצ'אט שהעלית אין מדיה. בשביל סבב המדיה מייצאים מוואטסאפ <b>"כולל מדיה"</b>. אפשר לשלם עכשיו, והפרימיום יישאר פתוח גם כשתעלו את הצ'אט עם המדיה.</p>`}
-    <div class="pm-price"><b>${PRICE} ₪</b><span>פעם אחת לכל הקבוצה. בלי מנוי, בלי כרטיס אשראי.</span></div>
-    ${launchHtml("pm-launch")}
-    ${perHeadHtml("pm-each")}
-    ${trustHtml("pm-trust")}
+    <section class="pmb-step" data-s="1">
+      <h4><span class="pmb-n">1</span>זה הקוד שלכם</h4>
+      <div class="pmb-ticket"><div class="pmb-digits" dir="ltr" aria-label="הקוד ${code}"><span id="pm-code" class="pmb-sr">${code}</span>${digits}</div><button id="pm-copy" type="button"><span>העתקה</span></button></div>
+      <p class="pmb-hint">הקוד אומר לי לאיזה צ'אט לפתוח. בלעדיו אני לא יודע שזה אתם.</p>
+    </section>
+    <section class="pmb-step" data-s="2">
+      <h4><span class="pmb-n">2</span>משלמים בביט ומדביקים את הקוד בהערה</h4>
+      <div class="pmb-phone" aria-hidden="true">
+        <div class="pmb-ph-top"><span class="pmb-bit-ic sm">${BIT_IC}</span><b>העברה</b><span>אל: יונתן</span></div>
+        <div class="pmb-field"><small>סכום</small><b dir="ltr">${PRICE} ₪</b></div>
+        <div class="pmb-field note"><small>הערה</small><b dir="ltr">${code}</b><em>← כאן מדביקים</em></div>
+      </div>
+      <a class="pmb-bit" href="${BIT_URL}" target="_blank" rel="noopener" id="pm-bit"><span class="pmb-bit-ic">${BIT_IC}</span><span class="pmb-bit-t"><b>לתשלום בביט</b><small>הקוד יועתק לבד</small></span><span class="pmb-bit-arr" aria-hidden="true">←</span></a>
+      <details class="pmb-more"><summary>משלמים מטלפון אחר? סורקים את הקוד</summary><div class="pm-qr">${P.opts?.qr(BIT_URL) || ""}</div><p class="pm-dim">או מעבירים בביט למספר <b dir="ltr">${BIT_NUM}</b></p></details>
+    </section>
+    <section class="pmb-step" data-s="3">
+      <h4><span class="pmb-n">3</span>חוזרים לכאן ולוחצים "שילמתי"</h4>
+      <label class="pmb-terms"><input type="checkbox" id="pm-ok"><span class="pmb-box" aria-hidden="true"></span><span>קראתי ואני מסכים/ה ל<a href="terms.html" target="_blank" rel="noopener">תקנון הרכישה</a></span></label>
+      <button class="pmb-paid" id="pm-paid" disabled><span>שילמתי ✓</span></button>
+      <p class="pm-err" id="pm-err" hidden></p>
+      <p class="pmb-hint c">אני בודק שהתשלום הגיע ופותח לכם. בדרך כלל כמה דקות, ובלילה עד כמה שעות.</p>
+    </section>
+    <ul class="pmb-trust"><li><b>🔒</b><span>משלמים בביט הרגיל שלכם. האתר לא רואה שום פרט תשלום.</span></li><li><b>👥</b><span>אחד משלם, וכל הקבוצה מקבלת הכל, גם בטלפונים של החברים.</span></li><li><b>↩️</b><span>לא נפתח תוך 48 שעות? הכסף חוזר.</span></li></ul>
     <div class="pm-me">${budSvg("party", 54)}<p><b>היי, אני יונתן 👋</b> בניתי את המשחק הזה לבד. בביט יופיע השם שלי, זה בסדר, זה אני. אני בודק כל תשלום בעצמי ופותח לכם.</p></div>
-    <h4 class="pm-h">איך משלמים? 3 צעדים, דקה אחת</h4>
-    <div class="pm-step"><span class="pm-n">1</span><div><b>זה הקוד שלכם:</b><div class="pm-code"><span dir="ltr" id="pm-code">${code}</span><button id="pm-copy">העתקה</button></div></div></div>
-    <div class="pm-step"><span class="pm-n">2</span><div><b>משלמים בביט, ובהערה מדביקים את הקוד</b>
-      <div class="pm-mock" aria-hidden="true"><div><small>סכום</small><b dir="ltr">${PRICE} ₪</b></div><div><small>הערה</small><b dir="ltr">${code}</b></div></div>
-      <a class="pm-btn bit" href="${BIT_URL}" target="_blank" rel="noopener" id="pm-bit">לתשלום בביט (הקוד יועתק לבד)</a>
-      <details class="pm-more"><summary>משלמים מטלפון אחר? סורקים את הקוד</summary><div class="pm-qr">${P.opts?.qr(BIT_URL) || ""}</div><p class="pm-dim">או מעבירים בביט למספר <b dir="ltr">${BIT_NUM}</b></p></details></div></div>
-    <div class="pm-step"><span class="pm-n">3</span><div><b>חוזרים לכאן ולוחצים "שילמתי"</b><span class="pm-dim">אני בודק שהתשלום הגיע ופותח לכם. בדרך כלל זה לוקח כמה דקות, ובלילה עד כמה שעות.</span></div></div>
-    <label class="pm-terms"><input type="checkbox" id="pm-ok"><span>קראתי ואני מסכים/ה ל<a href="terms.html" target="_blank" rel="noopener">תקנון הרכישה</a></span></label>
-    <button class="pm-btn big" id="pm-paid" disabled>שילמתי ✓</button>
-    <p class="pm-err" id="pm-err" hidden></p>
     <details class="pm-faq"><summary>שאלות</summary>
       <p><b>זה בטוח?</b> כן. משלמים בביט הרגיל שלכם, והאתר לא רואה שום פרט תשלום.</p>
       <p><b>למי זה נפתח?</b> לצ'אט הזה, לכל מי שמשחק איתו, גם בטלפונים של החברים.</p>
       <p><b>שכחתי לכתוב את הקוד בהערה.</b> לא נורא, שלחו את הקוד בהודעה לאותו מספר של ביט.</p>
       <p><b>ומה אם זה לא נפתח?</b> אם זה לא נפתח תוך 48 שעות, מחזירים לכם את הכסף.</p></details></div>`;
+  // the steps light up as you go: copied the code, went to Bit, ticked the terms
+  const prog = [...root.querySelectorAll("#pmb-prog li")], steps = [...root.querySelectorAll<HTMLElement>(".pmb-step")];
+  const goStep = (n: number) => { prog.forEach((li, i) => { li.classList.toggle("done", i < n - 1); li.classList.toggle("on", i === n - 1); }); steps.forEach((st, i) => st.classList.toggle("now", i === n - 1)); };
+  goStep(1);
   root.querySelector<HTMLButtonElement>("#pm-close")!.onclick = () => closeBuy();
   const copy = async () => { try { await navigator.clipboard.writeText(code); return true; } catch { return false; } };
-  root.querySelector<HTMLAnchorElement>("#pm-bit")!.onclick = () => { copy().then((ok) => { if (ok) toast(`הקוד ${code} הועתק. מדביקים אותו בהערה בביט 👍`); }); try { P.opts?.net?.bump("pm_bit"); } catch {} };
-  root.querySelector<HTMLButtonElement>("#pm-copy")!.onclick = async (e) => { const b = e.currentTarget as HTMLButtonElement; b.textContent = (await copy()) ? "הועתק ✓" : code; };
+  root.querySelector<HTMLAnchorElement>("#pm-bit")!.onclick = () => { copy().then((ok) => { if (ok) toast(`הקוד ${code} הועתק. מדביקים אותו בהערה בביט 👍`); }); try { P.opts?.net?.bump("pm_bit"); } catch {} goStep(3); try { navigator.vibrate && navigator.vibrate(15); } catch {} };
+  root.querySelector<HTMLButtonElement>("#pm-copy")!.onclick = async (e) => { const b = e.currentTarget as HTMLButtonElement, ok = await copy(); b.classList.toggle("ok", ok); b.querySelector("span")!.textContent = ok ? "הועתק ✓" : code; if (ok) { goStep(2); try { navigator.vibrate && navigator.vibrate(12); } catch {} } };
   const chk = root.querySelector<HTMLInputElement>("#pm-ok")!, paid = root.querySelector<HTMLButtonElement>("#pm-paid")!;
-  chk.onchange = () => { paid.disabled = !chk.checked; };
+  chk.onchange = () => { paid.disabled = !chk.checked; paid.classList.toggle("ready", chk.checked); if (chk.checked) { goStep(3); try { navigator.vibrate && navigator.vibrate(10); } catch {} } };
   paid.onclick = async () => {
-    paid.disabled = true; paid.textContent = "שולח…";
+    paid.disabled = true; paid.innerHTML = "<span>שולח…</span>";
     const err = root.querySelector<HTMLElement>("#pm-err")!;
     try { await claim(); const s = store.get("pm_sent", []); s.push(P.key); store.set("pm_sent", s.slice(-30)); try { P.opts?.net?.bump("pm_paid"); } catch {} drawWait(); }
-    catch { err.hidden = false; err.textContent = "לא הצלחתי לשלוח. בודקים את האינטרנט ומנסים שוב."; paid.disabled = false; paid.textContent = "שילמתי ✓"; }
+    catch { err.hidden = false; err.textContent = "לא הצלחתי לשלוח. בודקים את האינטרנט ומנסים שוב."; paid.disabled = false; paid.innerHTML = "<span>שילמתי ✓</span>"; }
   };
 }
 async function claim() {
@@ -534,13 +557,15 @@ function notifyOwner(code: string) {
 }
 function drawWait() {
   const root = buyRoot!; const code = codeFor(P.key);
-  root.innerHTML = `<div class="pm-sheet"><div class="pm-head"><b>קיבלתי! 🙌</b><button class="pm-x" id="pm-close" aria-label="סגירה">✕</button></div>
-    <div class="pm-done">${budSvg("think", 100)}<h3>בודק את התשלום שלכם</h3></div>
-    <ol class="pm-wait"><li class="done">✓ שלחתם את הבקשה עם הקוד <b dir="ltr">${code}</b></li><li class="now"><span class="pm-dots"><i></i><i></i><i></i></span> אני בודק בביט שהתשלום הגיע</li><li>🔓 הפרימיום נפתח לבד, גם באמצע משחק</li></ol>
-    <p class="pm-dim">בדרך כלל זה לוקח כמה דקות, ובלילה עד כמה שעות. אפשר לסגור את החלון ולהמשיך לשחק, לא צריך לחכות פה.</p>
-    <p class="pm-dim">שכחתם לכתוב את הקוד בהערה? שלחו אותו בהודעה לאותו מספר של ביט.</p>
-    <button class="pm-btn" id="pm-play">סגור, ממשיכים לשחק</button>
-    <button class="pm-btn alt" id="pm-again">עוד לא שילמתי, חזרה לפרטי התשלום</button></div>`;
+  root.classList.add("pmb");
+  root.innerHTML = `<div class="pm-sheet pmb-sheet" role="dialog" aria-modal="true" aria-label="בודקים את התשלום">
+    <div class="pmb-top"><div class="pmb-bar"><span class="pmb-lock" aria-hidden="true">⏳</span><b>קיבלתי! 🙌</b><button class="pm-x" id="pm-close" aria-label="סגירה">✕</button></div>
+      <div class="pmb-wait-hero"><div class="pmb-radar" aria-hidden="true"><i></i><i></i><i></i>${budSvg("think", 84)}</div><h3>בודק את התשלום שלכם</h3><p>הקוד שלכם: <b dir="ltr">${code}</b></p></div></div>
+    <ol class="pmb-tl"><li class="done"><i>✓</i><span>שלחתם את הבקשה עם הקוד</span></li><li class="now"><i><span class="pm-dots"><b></b><b></b><b></b></span></i><span>אני בודק בביט שהתשלום הגיע</span></li><li><i>🔓</i><span>הפרימיום נפתח לבד, גם באמצע משחק, עם חגיגה קטנה</span></li></ol>
+    <p class="pmb-hint c">בדרך כלל זה לוקח כמה דקות, ובלילה עד כמה שעות. אפשר לסגור את החלון ולהמשיך לשחק בחינם, לא צריך לחכות פה.</p>
+    <p class="pmb-hint c">שכחתם לכתוב את הקוד בהערה? שלחו אותו בהודעה לאותו מספר של ביט.</p>
+    <button class="pmb-paid ready" id="pm-play"><span>סגור, ממשיכים לשחק</span></button>
+    <button class="pmb-link" id="pm-again">עוד לא שילמתי, חזרה לפרטי התשלום</button></div>`;
   root.querySelector<HTMLButtonElement>("#pm-close")!.onclick = () => closeBuy();
   root.querySelector<HTMLButtonElement>("#pm-play")!.onclick = () => closeBuy();
   root.querySelector<HTMLButtonElement>("#pm-again")!.onclick = () => drawBuy();
@@ -1862,6 +1887,98 @@ function css() {
   const s = document.createElement("style"); s.id = "pm-css";
   s.textContent = `
 
+
+/* the payment window */
+.pm-layer.pmb{place-items:end center;padding:0}
+@media (min-width:600px){.pm-layer.pmb{place-items:center;padding:20px}}
+.pm-sheet.pmb-sheet{grid-template-columns:minmax(0,1fr);box-sizing:border-box;width:min(460px,100%);max-height:94dvh;border-radius:28px 28px 0 0;border-bottom:0;padding:0 0 calc(18px + env(safe-area-inset-bottom));gap:14px;animation:pmbUp .34s cubic-bezier(.23,1,.32,1) both;overscroll-behavior:contain}
+@media (min-width:600px){.pm-sheet.pmb-sheet{border-radius:28px;border-bottom:4px solid #1d1636}}
+.pm-sheet.pmb-sheet>*:not(.pmb-top){margin-inline:16px}
+.pmb-top{position:relative;background:radial-gradient(120% 140% at 100% 0%,#7b5cff 0%,#3b2a8f 45%,#1d1636 100%);color:#fff;padding:14px 16px 14px;border-bottom:4px solid #1d1636;border-radius:24px 24px 0 0;display:grid;gap:10px;overflow:hidden}
+.pmb-top::before{content:"";position:absolute;inset:0;background:radial-gradient(1.5px 1.5px at 15% 30%,#fff8,transparent),radial-gradient(1px 1px at 60% 20%,#fff7,transparent),radial-gradient(1.5px 1.5px at 85% 70%,#fff6,transparent),radial-gradient(1px 1px at 35% 80%,#fff6,transparent);pointer-events:none}
+.pmb-bar{position:relative;display:flex;align-items:center;gap:8px;font-size:1.2rem}.pmb-bar b{flex:1}
+.pmb-lock{font-size:1.3rem;display:inline-block;animation:pmbWig 2.4s ease-in-out infinite}
+.pmb-top .pm-x{background:#ffffff22;color:#fff}
+.pmb-free{position:relative;margin:0;font-size:.84rem;font-weight:700;color:#3fe0b0}
+.pmb-order{position:relative;display:flex;gap:12px;align-items:center;justify-content:space-between;background:#ffffff12;border:1.5px solid #ffffff2a;border-radius:18px;padding:10px 12px}
+.pmb-o-l{display:grid;gap:4px;min-width:0}.pmb-o-l small{font-size:.7rem;font-weight:700;color:#c9bfff}.pmb-o-l>b{font-size:.98rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pmb-feat{display:flex;flex-wrap:wrap;gap:4px}.pmb-feat span{font-size:.7rem;font-weight:700;background:#ffffff1c;border-radius:99px;padding:2px 7px;white-space:nowrap}
+.pmb-o-p{flex:none;display:grid;justify-items:center;line-height:1}
+.pmb-o-p b{font-family:Karantina,sans-serif;font-size:3.3rem;color:#ffd23f;text-shadow:0 4px 0 #1d1636;background:linear-gradient(100deg,#ffd23f 40%,#fff6c4 50%,#ffd23f 60%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:pmbGold 3.5s ease-in-out infinite}
+.pmb-o-p b small{font-size:1.5rem;margin-inline-start:2px}
+.pmb-o-p s{font-size:.85rem;color:#ffffff99;text-decoration-color:#ff3d7f;text-decoration-thickness:2px}
+.pmb-tags{position:relative;display:flex;flex-wrap:wrap;gap:5px}.pmb-tags span{font-size:.74rem;font-weight:700;border:1.5px solid #ffffff40;border-radius:99px;padding:3px 9px}.pmb-tags .hl{background:#ffd23f;color:#1d1636;border-color:#1d1636}
+.pmb-prog{list-style:none;padding:0;display:flex;align-items:center;justify-content:center;gap:0;counter-reset:s}
+.pmb-prog li{display:flex;align-items:center;gap:6px;font-size:.82rem;font-weight:700;color:#8a7cb8}
+.pmb-prog li+li::before{content:"";width:28px;height:3px;border-radius:2px;background:#d8cffa;margin-inline:6px;transition:background-color .3s}
+.pmb-prog li.done+li::before,.pmb-prog li.on::before{background:#7b5cff}
+.pmb-prog i{font-style:normal;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:2.5px solid #d8cffa;background:#fff;color:#8a7cb8;transition:background-color .25s,border-color .25s,color .25s,transform .25s cubic-bezier(.34,1.56,.64,1)}
+.pmb-prog li.on{color:#1d1636}.pmb-prog li.on i{background:#ffd23f;border-color:#1d1636;color:#1d1636;transform:scale(1.15)}
+.pmb-prog li.done i{background:#3fe0b0;border-color:#1d1636;color:#1d1636;font-size:0}.pmb-prog li.done i::after{content:"✓";font-size:.85rem}
+.pmb-step{display:grid;gap:10px;background:#fff;border:3px solid #1d1636;border-radius:20px;padding:12px;box-shadow:0 5px 0 #1d163626;transition:box-shadow .25s,border-color .25s,transform .25s cubic-bezier(.23,1,.32,1)}
+.pmb-step.now{box-shadow:0 0 0 4px #ffd23f,0 6px 0 #1d1636;transform:translateY(-1px)}
+.pmb-step h4{display:flex;align-items:center;gap:8px;font-size:1rem;margin:0}
+.pmb-n{flex:none;width:28px;height:28px;border-radius:50%;background:#7b5cff;color:#fff;display:grid;place-items:center;font-size:.9rem;border:2.5px solid #1d1636}
+.pmb-ticket{position:relative;display:flex;align-items:center;gap:8px;min-width:0;background:#fff3d1;border:3px dashed #1d1636;border-radius:16px;padding:10px 12px}
+.pmb-ticket::before,.pmb-ticket::after{content:"";position:absolute;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;background:#fff;border:3px solid #1d1636}
+.pmb-ticket::before{right:-10px;clip-path:inset(0 50% 0 0)}.pmb-ticket::after{left:-10px;clip-path:inset(0 0 0 50%)}
+.pmb-digits{flex:1;min-width:0;display:flex;justify-content:center;gap:4px}
+.pmb-digits i{font-style:normal;font-family:Karantina,sans-serif;font-weight:700;font-size:2rem;line-height:1;flex:1;max-width:32px;min-width:0;padding:4px 0 6px;text-align:center;background:#1d1636;color:#ffd23f;border-radius:9px;box-shadow:0 3px 0 #7b5cff;animation:pmbFlip .5s cubic-bezier(.34,1.56,.64,1) calc(.25s + var(--i) * .07s) both}
+.pmb-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+#pm-copy{flex:none;font-family:inherit;font-weight:700;font-size:.9rem;border:3px solid #1d1636;background:#ffd23f;border-radius:12px;padding:8px 11px;cursor:pointer;box-shadow:0 3px 0 #1d1636;transition:transform .12s ease-out,background-color .2s}
+#pm-copy:active{transform:translateY(2px);box-shadow:0 1px 0 #1d1636}#pm-copy.ok{background:#3fe0b0}
+.pmb-hint{margin:0;font-size:.82rem;line-height:1.45;color:#6a5a99}.pmb-hint.c{text-align:center}
+.pmb-phone{background:linear-gradient(180deg,#f4fbfc,#e6f7f9);border:2.5px solid #1d1636;border-radius:18px;padding:10px;display:grid;gap:7px}
+.pmb-ph-top{display:flex;align-items:center;gap:7px;font-size:.82rem}.pmb-ph-top b{flex:1}.pmb-ph-top>span:last-child{color:#4b6b74;font-weight:700}
+.pmb-field{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #c6e3e8;border-radius:12px;padding:7px 10px}
+.pmb-field small{font-size:.72rem;color:#4b6b74;width:34px}.pmb-field b{font-size:1.08rem;letter-spacing:1px;color:#1d1636}
+.pmb-field.note{border-color:#00b4c8;box-shadow:0 0 0 3px #00b4c833;animation:pmbGlow 1.8s ease-in-out infinite}
+.pmb-field.note em{margin-inline-start:auto;font-style:normal;font-size:.75rem;font-weight:700;color:#00849a;animation:pmbNudge 1.2s ease-in-out infinite}
+.pmb-bit-ic{flex:none;width:40px;height:40px;border-radius:12px;background:#00b4c8;display:grid;place-items:center;box-shadow:inset 0 -3px 0 #0089a0}
+.pmb-bit-ic svg{width:28px;height:28px}.pmb-bit-ic.sm{width:26px;height:26px;border-radius:8px}.pmb-bit-ic.sm svg{width:18px;height:18px}
+.pmb-bit{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;text-decoration:none;color:#fff;background:linear-gradient(180deg,#21d0e0,#00a9bf);border:3.5px solid #1d1636;border-radius:18px;padding:10px 14px;box-shadow:0 6px 0 #1d1636;transition:transform .12s ease-out,box-shadow .12s ease-out}
+.pmb-bit::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,#ffffff70 48%,transparent 60%);background-size:250% 100%;animation:pmbSheen 2.8s ease-in-out infinite;pointer-events:none}
+.pmb-bit:active{transform:translateY(4px);box-shadow:0 2px 0 #1d1636}
+.pmb-bit .pmb-bit-ic{background:#fff2;box-shadow:none;border:2px solid #ffffff80}
+.pmb-bit-t{flex:1;display:grid;line-height:1.2}.pmb-bit-t b{font-size:1.2rem;text-shadow:0 2px 0 #0077887a}.pmb-bit-t small{font-size:.8rem;font-weight:700;opacity:.92}
+.pmb-bit-arr{font-size:1.4rem;font-weight:700;animation:pmbNudge 1.2s ease-in-out infinite}
+.pmb-more summary{cursor:pointer;font-size:.86rem;font-weight:700;color:#5a4a8a;text-align:center}
+.pmb-terms{display:flex;gap:10px;align-items:center;font-size:.94rem;font-weight:700;cursor:pointer;background:#f3efff;border-radius:14px;padding:10px 12px}
+.pmb-terms input{position:absolute;opacity:0;width:1px;height:1px}
+.pmb-box{flex:none;width:26px;height:26px;border-radius:8px;border:3px solid #1d1636;background:#fff;display:grid;place-items:center;transition:background-color .2s,transform .2s cubic-bezier(.34,1.56,.64,1)}
+.pmb-terms input:checked+.pmb-box{background:#3fe0b0;transform:scale(1.1)}.pmb-terms input:checked+.pmb-box::after{content:"✓";font-weight:700;color:#1d1636}
+.pmb-terms input:focus-visible+.pmb-box{outline:3px solid #7b5cff;outline-offset:2px}
+.pmb-terms a{color:#7b5cff}
+.pmb-paid{position:relative;overflow:hidden;font-family:inherit;font-weight:700;font-size:1.25rem;color:#1d1636;border:3.5px solid #1d1636;border-radius:18px;padding:15px;cursor:pointer;background:#e9e3fb;box-shadow:0 6px 0 #1d163655;transition:transform .12s ease-out,box-shadow .12s,background-color .25s}
+.pmb-paid:disabled{cursor:not-allowed;color:#1d163680}
+.pmb-paid.ready{background:linear-gradient(180deg,#ffe783,#ffc21f);box-shadow:0 6px 0 #1d1636,0 0 30px #ffc21f55;animation:pmbPop .4s cubic-bezier(.34,1.56,.64,1)}
+.pmb-paid.ready::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,#ffffffaa 48%,transparent 60%);background-size:250% 100%;animation:pmbSheen 2.6s ease-in-out infinite}
+.pmb-paid span{position:relative;z-index:1}.pmb-paid.ready:active{transform:translateY(4px);box-shadow:0 2px 0 #1d1636}
+.pmb-trust{list-style:none;padding:0;display:grid;gap:8px}.pmb-trust li{display:flex;gap:9px;align-items:flex-start;font-size:.86rem;line-height:1.4}.pmb-trust b{flex:none;font-size:1rem}
+.pmb-link{background:none;border:0;font-family:inherit;font-weight:700;font-size:.9rem;color:#7b5cff;cursor:pointer;padding:6px;justify-self:center}
+.pmb-wait-hero{position:relative;display:grid;justify-items:center;gap:4px;text-align:center;padding:4px 0}
+.pmb-wait-hero h3{margin:0;font-family:Karantina,sans-serif;font-size:2.4rem;line-height:1;color:#ffd23f}.pmb-wait-hero p{margin:0;font-size:.88rem;color:#d8cffa}
+.pmb-radar{position:relative;width:120px;height:120px;display:grid;place-items:center}
+.pmb-radar i{position:absolute;inset:0;border-radius:50%;border:2.5px solid #3fe0b0;opacity:0;animation:pmbPing 2.4s cubic-bezier(.23,1,.32,1) infinite}.pmb-radar i:nth-child(2){animation-delay:.8s}.pmb-radar i:nth-child(3){animation-delay:1.6s}
+.pmb-tl{list-style:none;padding:0;display:grid;gap:0}
+.pmb-tl li{position:relative;display:flex;gap:12px;align-items:center;padding:8px 0;font-weight:700;font-size:.94rem;color:#8a7cb8}
+.pmb-tl li:not(:last-child)::after{content:"";position:absolute;right:15px;top:42px;bottom:-6px;width:3px;border-radius:2px;background:#d8cffa}
+.pmb-tl i{flex:none;font-style:normal;width:33px;height:33px;border-radius:50%;display:grid;place-items:center;background:#fff;border:3px solid #d8cffa;font-size:.9rem}
+.pmb-tl li.done{color:#1d1636}.pmb-tl li.done i{background:#3fe0b0;border-color:#1d1636}
+.pmb-tl li.now{color:#1d1636}.pmb-tl li.now i{background:#ffd23f;border-color:#1d1636}
+.pmb-tl .pm-dots b{width:5px;height:5px;border-radius:50%;background:#1d1636;animation:pmbDot 1s ease-in-out infinite}.pmb-tl .pm-dots b:nth-child(2){animation-delay:.15s}.pmb-tl .pm-dots b:nth-child(3){animation-delay:.3s}
+.pmb-tl .pm-dots{gap:3px}
+@keyframes pmbUp{from{transform:translateY(60px);opacity:0}}
+@keyframes pmbWig{0%,80%,100%{transform:rotate(0)}85%{transform:rotate(-14deg)}90%{transform:rotate(12deg)}95%{transform:rotate(-6deg)}}
+@keyframes pmbGold{0%,30%{background-position:120% 0}70%,100%{background-position:-60% 0}}
+@keyframes pmbFlip{from{opacity:0;transform:translateY(-10px) rotateX(80deg)}}
+@keyframes pmbGlow{50%{box-shadow:0 0 0 6px #00b4c81a}}
+@keyframes pmbNudge{50%{transform:translateX(-4px)}}
+@keyframes pmbSheen{0%,25%{background-position:120% 0}70%,100%{background-position:-60% 0}}
+@keyframes pmbPop{50%{transform:scale(1.04)}}
+@keyframes pmbPing{0%{opacity:.9;transform:scale(.5)}100%{opacity:0;transform:scale(1.25)}}
+@keyframes pmbDot{50%{transform:translateY(-4px)}}
+@media (prefers-reduced-motion:reduce){.pmb-sheet,.pmb-lock,.pmb-o-p b,.pmb-digits i,.pmb-field.note,.pmb-field.note em,.pmb-bit::after,.pmb-bit-arr,.pmb-paid.ready,.pmb-paid.ready::after,.pmb-radar i,.pmb-tl .pm-dots b{animation:none}.pmb-step,.pmb-prog i,.pmb-box{transition:none}}
 /* the setup strip and the "free" lines */
 .pmx-strip{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;font-family:inherit;color:#fff;text-align:right;border-radius:18px;padding:12px 14px;cursor:pointer;box-shadow:0 5px 0 #1d1636;transition:transform .12s ease-out}
 .pmx-strip:active{transform:translateY(3px)}
