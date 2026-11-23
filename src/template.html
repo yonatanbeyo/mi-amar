@@ -227,6 +227,21 @@ body.hurry::before { content: ""; position: fixed; inset: 0; z-index: 5; pointer
 .free-tag { display: inline-block; vertical-align: middle; margin-inline-start: 6px; font-size: .8rem; background: #3fe0b0; color: #1d1636; border: 2px solid #1d1636; border-radius: 99px; padding: 1px 9px; transform: translateY(-2px); }
 .pm-more-h { margin-top: 26px; }
 .pm-more-p { margin: -4px 0 8px; text-align: center; }
+
+/* calm home: one big action, everything else quieter */
+.start-box { display: grid; gap: 8px; justify-items: center; margin-top: -4px; }
+.start-cta { width: 100%; font-size: 1.3rem; padding: 18px 16px; }
+.start-sub { margin: 0; font-size: .9rem; color: var(--dim, #c9c1ef); }
+.start-sub b { color: #3fe0b0; }
+.link-btn { background: none; border: 0; font: inherit; font-weight: 700; font-size: .95rem; color: var(--yellow, #ffd23f); padding: 8px; cursor: pointer; }
+details.fold > summary { list-style: none; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary b { flex: 1; }
+.fold-i { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.1); font-weight: 700; transition: transform .2s cubic-bezier(.23,1,.32,1); }
+details.fold[open] .fold-i { transform: rotate(45deg); }
+details.fold[open] > summary { margin-bottom: 10px; }
+details.guide .os-tabs { margin-bottom: 8px; }
+@media (prefers-reduced-motion: reduce) { .fold-i { transition: none; } }
 /* ---------- WOW layer ---------- */
 /* each question type has its own accent; the whole room (aurora, timer, title) shifts to it */
 body { --accent: var(--yellow); --a1: #ff3d7f; --a2: #5fb4ff; --a3: #3fe0b0; }
@@ -2334,7 +2349,7 @@ ${samples}
       ${PREM.topBarHtml ? PREM.topBarHtml() : ""}
       <section class="hero">
         <h1 id="title"><span class="t1">מי אמר</span> <span class="q">את זה?</span></h1>
-        <p class="lead">מעלים את הצ'אט של הקבוצה, כולם סורקים QR, וכל אחד מנחש מהטלפון שלו <b>מי כתב כל הודעה</b>.</p>
+        <p class="lead">מעלים את הצ'אט של הקבוצה, וכל אחד מנחש מהטלפון שלו <b>מי כתב כל הודעה</b>.</p>
         <div class="scene" aria-hidden="true">
           <div class="sb sb1"><small>???</small>אני כבר בדרך</div>
           <div class="sb sb2"><small>???</small>מי לקח לי את המטען</div>
@@ -2342,27 +2357,26 @@ ${samples}
           ${buddy("think", "", "hb")}
         </div>
       </section>
+      <section class="start-box">
+        <button class="btn big start-cta" id="pick"><span>📂 מעלים צ'אט ומתחילים</span></button>
+        <p class="start-sub"><b>✓ חינם</b> · בלי הרשמה · בלי אפליקציה</p>
+        <input type="file" id="file" accept=".zip,.txt,application/zip,text/plain" hidden>
+        ${err ? `<p class="err" role="alert">${esc(err)}</p>` : ""}
+        <button class="link-btn" id="demo">או לנסות קודם עם צ'אט לדוגמה ←</button>
+      </section>
       <div id="join-slot" style="display:grid;gap:10px"></div>
-      <div class="ticker" aria-hidden="true"><div>${[...TICK, ...TICK].map((t) => `<span>${esc(t)}</span>`).join("")}</div></div>
-      <h2 class="sec">פותחים משחק</h2>
-      <button class="panel drop" id="pick"><strong>להעלות צ'אט</strong><span class="dim small">קובץ ZIP או ‎.txt שמייצאים מקבוצה בוואטסאפ</span></button>
-      <input type="file" id="file" accept=".zip,.txt,application/zip,text/plain" hidden>
-      ${err ? `<p class="err" role="alert">${esc(err)}</p>` : ""}
-      <div class="row"><button class="btn alt" id="demo">לנסות עם צ'אט לדוגמה</button></div>
-      <div class="free-row" aria-label="המשחק חינמי"><span>✓ המשחק חינמי לגמרי</span><span>✓ בלי הרשמה</span><span>✓ בלי אפליקציה</span></div>
-      ${PREM.showcaseHtml ? PREM.showcaseHtml() : ""}
       <section class="how">
-        <div class="hw"><b>1</b><strong>מייצאים</strong><span>את הצ'אט מוואטסאפ, בלי מדיה</span></div>
-        <div class="hw"><b>2</b><strong>סורקים</strong><span>כל אחד נכנס מהטלפון, בלי אפליקציה</span></div>
+        <div class="hw"><b>1</b><strong>מייצאים</strong><span>את הצ'אט מוואטסאפ</span></div>
+        <div class="hw"><b>2</b><strong>סורקים</strong><span>כל אחד נכנס מהטלפון</span></div>
         <div class="hw"><b>3</b><strong>מנחשים</strong><span>מי כתב מה. הכי מהיר מנצח</span></div>
       </section>
-      <section class="panel guide" aria-labelledby="g-title">
-        <div class="row" style="justify-content:space-between"><b id="g-title">איך מוציאים את הצ'אט מוואטסאפ</b>
-          <div class="os-tabs" role="tablist">${["ios", "android"].map((o) => `<button role="tab" data-os="${o}" aria-selected="${guideOS() === o}">${o === "ios" ? "אייפון" : "אנדרואיד"}</button>`).join("")}</div>
-        </div>
+      <details class="panel guide fold" ${err ? "open" : ""}>
+        <summary><b id="g-title">איך מוציאים את הצ'אט מוואטסאפ?</b><span class="fold-i" aria-hidden="true">＋</span></summary>
+        <div class="os-tabs" role="tablist">${["ios", "android"].map((o) => `<button role="tab" data-os="${o}" aria-selected="${guideOS() === o}">${o === "ios" ? "אייפון" : "אנדרואיד"}</button>`).join("")}</div>
         <ol class="steps" id="steps">${guideSteps(guideOS())}</ol>
-      </section>
-      <p class="note">הצ'אט נקרא בתוך המכשיר שלך ולא נשמר בשום מקום. בזמן משחק רק השאלות עצמן עוברות לטלפונים של החברים, ונמחקות כשסוגרים את המשחק. תמונות והקלטות של סבב המדיה עוברות ישר מהמסך לטלפונים, בלי לעבור בשרת. משחקים רק עם צ'אט של קבוצה שאתם חלק ממנה.</p>
+      </details>
+      ${PREM.homeCardHtml ? PREM.homeCardHtml() : ""}
+      <p class="note">🔒 הצ'אט נקרא רק בתוך הטלפון שלך ולא נשמר בשום מקום. לשחקנים עוברות רק השאלות עצמן, והן נמחקות כשהמשחק נגמר.</p>
       <footer class="foot">מי אמר את זה? · משחק מסיבה לקבוצות</footer>`;
     bindMute();
     fillJoin();
@@ -2373,7 +2387,7 @@ ${samples}
     const file = document.getElementById("file");
     document.getElementById("pick").onclick = () => { audio(); file.click(); };
     { const tb = document.getElementById("pmx-top"); if (tb) tb.onclick = () => { SFX.tap(); try { NET.bump("pm_topbar"); } catch {} PREM.pass ? PREM.pass("top") : document.getElementById("pmx-show")?.scrollIntoView({ behavior: "smooth", block: "start" }); }; }
-    { const pp = document.getElementById("pmx-pass"); if (pp) pp.onclick = () => { SFX.tap(); PREM.pass("home"); }; }
+    app.querySelectorAll("#pmx-pass, #pmx-card").forEach((pp) => (pp.onclick = () => { SFX.tap(); PREM.pass("home"); }));
     { const g = document.getElementById("pmx-go"); if (g) g.onclick = () => { audio(); SFX.tap(); try { NET.bump("pm_home"); } catch {} file.click(); }; }
     file.onchange = async () => {
       const f = file.files[0]; if (!f) return;
@@ -2424,13 +2438,13 @@ ${samples}
       <div class="top"><button class="btn alt" id="back">חזרה</button><span class="dim small" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">${esc(S.chatName || "")}</span>${muteBtn()}</div>
       ${canMulti() ? `<h2>איך משחקים?</h2>
       <div class="mode" id="mode">
-        <button aria-pressed="${!!S.wantMulti}" data-m="1"><b>כל אחד מהטלפון</b><span class="small dim">השאלות על המסך הזה, כל אחד עונה מהטלפון שלו, והניקוד נספר לבד</span></button>
-        <button aria-pressed="${!S.wantMulti}" data-m="0"><b>מסך אחד</b><span class="small dim">כולם צועקים תשובה, ואתם מסמנים מי צדק</span></button>
+        <button aria-pressed="${!!S.wantMulti}" data-m="1"><b>כל אחד מהטלפון</b><span class="small dim">כל אחד עונה מהטלפון שלו</span></button>
+        <button aria-pressed="${!S.wantMulti}" data-m="0"><b>מסך אחד</b><span class="small dim">כולם צועקים, ואתם מסמנים מי צדק</span></button>
       </div>` : ""}
       ${PREM.isOn() ? premPanel() : pmStripTop()}
       <section class="panel">
         <b>מי בקבוצה עכשיו?</b>
-        <p class="dim small">רק מי שמסומן יופיע בשאלות ובתשובות. מי שיצא מהקבוצה לא מופיע כאן בכלל${(S.gone || []).length ? ` (${(S.gone || []).map(esc).join(", ")})` : ""}. אפשר לסמן ולבטל בלחיצה.</p>
+        <p class="dim small">רק מי שמסומן יופיע במשחק. לחיצה מסמנת או מבטלת.</p>
         <div class="chips" id="members">${everyone.filter((p) => !(S.gone || []).includes(p)).map((p) => `<button class="chip" aria-pressed="${!S.out.includes(p)}" data-m="${esc(p)}">${esc(p)}${S.out.includes(p) ? ` <span class="small">· ${(S.quiet || []).includes(p) ? "לא פעיל/ה מזמן" : "יצא/ה"}</span>` : ""}</button>`).join("")}</div>
       </section>
       <h2 id="who-h" ${S.wantMulti && canMulti() ? "hidden" : ""}>מי משחק?</h2>
@@ -2444,13 +2458,12 @@ ${samples}
           <div class="seg" id="rounds">${[5, 10, 15, 20].map((r) => `<button aria-pressed="${S.rounds === r}" data-r="${r}">${r}</button>`).join("")}</div>
         </div>
       </section>
-      <section class="panel">
-        <b>סוגי שאלות</b>
+      <details class="panel fold">
+        <summary><b>סוגי שאלות</b><span class="dim small" id="kinds-sum">${Object.keys(KINDS).every((k) => S.kinds[k]) ? "הכל מסומן" : "חלק מסומן"}</span><span class="fold-i" aria-hidden="true">＋</span></summary>
         <div class="toggles">${Object.entries(KINDS).map(([k, label]) => `<label class="tog"><input type="checkbox" id="k-${k}" data-k="${k}" ${S.kinds[k] ? "checked" : ""}><span>${label}</span></label>`).join("")}</div>
-      </section>
+      </details>
       <p class="err" id="setup-err" role="alert" ${S.err ? "" : "hidden"}>${esc(S.err || "")}</p>
       <button class="btn big" id="start">מתחילים לשחק <span class="free-tag">חינם</span></button>
-      ${PREM.isOn() ? "" : `<h2 class="sec pm-more-h">⭐ ורק אם בא לכם עוד</h2><p class="dim small pm-more-p">המשחק למעלה חינמי לגמרי. כאן אפשר לפתוח תוספות לקבוצה הזאת.</p>${premPanel()}`}
       ${FINE ? `<p class="kbd-hint">על מחשב או טלוויזיה: <kbd>רווח</kbd> חושף וממשיך, <kbd>1</kbd>–<kbd>4</kbd> בוחרים תשובה, <kbd>M</kbd> משתיק, <kbd>F</kbd> מסך מלא.</p>` : ""}`;
     S.err = "";
     bindMute();

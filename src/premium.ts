@@ -490,14 +490,13 @@ function drawBuy() {
           <div class="pmb-feat"><span>🎁 סיכום שנה</span><span>🎬 מדיה</span><span>🔒 סודות</span><span>📁 תיקים</span><span>🎓 תעודות</span></div></div>
         <div class="pmb-o-p"><b>${PRICE}<small>₪</small></b>${LAUNCH() ? `<span class="was">במקום <s>${PRICE_AFTER} ₪</s></span><em>מחיר השקה</em>` : ""}</div>
       </div>
-      <div class="pmb-tags"><span>פעם אחת</span><span>לכל הקבוצה</span><span>בלי מנוי</span><span>בלי כרטיס אשראי</span>${h ? `<span class="hl">רק ${h.e} ₪ לכל אחד</span>` : ""}</div>
+      <div class="pmb-tags"><span>פעם אחת</span><span>לכל הקבוצה</span><span>בלי מנוי</span>${h ? `<span class="hl">רק ${h.e} ₪ לכל אחד</span>` : ""}</div>
     </div>
     <ol class="pmb-prog" id="pmb-prog" aria-hidden="true"><li class="on"><i>1</i><span>הקוד</span></li><li><i>2</i><span>ביט</span></li><li><i>3</i><span>שילמתי</span></li></ol>
-    ${P.items.length || !P.msgs.length ? "" : `<p class="pm-warn">⚠️ בצ'אט שהעלית אין מדיה. בשביל סבב המדיה מייצאים מוואטסאפ <b>"כולל מדיה"</b>. אפשר לשלם עכשיו, והפרימיום יישאר פתוח גם כשתעלו את הצ'אט עם המדיה.</p>`}
     <section class="pmb-step" data-s="1">
       <h4><span class="pmb-n">1</span>זה הקוד שלכם</h4>
       <div class="pmb-ticket"><div class="pmb-digits" dir="ltr" aria-label="הקוד ${code}"><span id="pm-code" class="pmb-sr">${code}</span>${digits}</div><button id="pm-copy" type="button"><span>העתקה</span></button></div>
-      <p class="pmb-hint">הקוד אומר לי לאיזה צ'אט לפתוח. בלעדיו אני לא יודע שזה אתם.</p>
+      <p class="pmb-hint">ככה אני יודע לאיזה צ'אט לפתוח.</p>
     </section>
     <section class="pmb-step" data-s="2">
       <h4><span class="pmb-n">2</span>משלמים בביט ומדביקים את הקוד בהערה</h4>
@@ -516,21 +515,23 @@ function drawBuy() {
       <p class="pm-err" id="pm-err" hidden></p>
       <p class="pmb-hint c">אני בודק שהתשלום הגיע ופותח לכם. בדרך כלל כמה דקות, ובלילה עד כמה שעות.</p>
     </section>
+    ${P.items.length || !P.msgs.length ? "" : `<p class="pmb-hint c">💡 בשביל סבב המדיה מעלים את הצ'אט ״כולל מדיה״. הפרימיום יישאר פתוח גם אז.</p>`}
+    <details class="pm-faq pmb-safe"><summary>🔒 למה זה בטוח? ומי אני?</summary>
     <ul class="pmb-trust"><li><b>🔒</b><span>משלמים בביט הרגיל שלכם. האתר לא רואה שום פרט תשלום.</span></li><li><b>👥</b><span>אחד משלם, וכל הקבוצה מקבלת הכל, גם בטלפונים של החברים.</span></li><li><b>↩️</b><span>לא נפתח תוך 48 שעות? הכסף חוזר.</span></li></ul>
     <div class="pm-me">${budSvg("party", 54)}<p><b>היי, אני יונתן 👋</b> בניתי את המשחק הזה לבד. בביט יופיע השם שלי, זה בסדר, זה אני. אני בודק כל תשלום בעצמי ופותח לכם.</p></div>
-    <details class="pm-faq"><summary>שאלות</summary>
+    <details class="pm-faq"><summary>שאלות נפוצות</summary>
       <p><b>זה בטוח?</b> כן. משלמים בביט הרגיל שלכם, והאתר לא רואה שום פרט תשלום.</p>
       <p><b>למי זה נפתח?</b> לצ'אט הזה, לכל מי שמשחק איתו, גם בטלפונים של החברים.</p>
       <p><b>שכחתי לכתוב את הקוד בהערה.</b> לא נורא, שלחו את הקוד בהודעה לאותו מספר של ביט.</p>
-      <p><b>ומה אם זה לא נפתח?</b> אם זה לא נפתח תוך 48 שעות, מחזירים לכם את הכסף.</p></details></div>`;
+      <p><b>ומה אם זה לא נפתח?</b> אם זה לא נפתח תוך 48 שעות, מחזירים לכם את הכסף.</p></details></details></div>`;
   // the steps light up as you go: copied the code, went to Bit, ticked the terms
   const prog = [...root.querySelectorAll("#pmb-prog li")], steps = [...root.querySelectorAll<HTMLElement>(".pmb-step")];
   const goStep = (n: number) => { prog.forEach((li, i) => { li.classList.toggle("done", i < n - 1); li.classList.toggle("on", i === n - 1); }); steps.forEach((st, i) => st.classList.toggle("now", i === n - 1)); };
   goStep(1);
-  root.querySelector<HTMLButtonElement>("#pm-close")!.onclick = () => closeBuy();
+  root.querySelector<HTMLButtonElement>("#pm-close")!.onclick = () => { if (!root.querySelector(".pmb-prog li.done")) bump("pm_close_early"); else bump("pm_close_late"); closeBuy(); };
   const copy = async () => { try { await navigator.clipboard.writeText(code); return true; } catch { return false; } };
   root.querySelector<HTMLAnchorElement>("#pm-bit")!.onclick = () => { copy().then((ok) => { if (ok) toast(`הקוד ${code} הועתק. מדביקים אותו בהערה בביט 👍`); }); try { P.opts?.net?.bump("pm_bit"); } catch {} goStep(3); try { navigator.vibrate && navigator.vibrate(15); } catch {} };
-  root.querySelector<HTMLButtonElement>("#pm-copy")!.onclick = async (e) => { const b = e.currentTarget as HTMLButtonElement, ok = await copy(); b.classList.toggle("ok", ok); b.querySelector("span")!.textContent = ok ? "הועתק ✓" : code; if (ok) { goStep(2); try { navigator.vibrate && navigator.vibrate(12); } catch {} } };
+  root.querySelector<HTMLButtonElement>("#pm-copy")!.onclick = async (e) => { bump("pm_copy"); const b = e.currentTarget as HTMLButtonElement, ok = await copy(); b.classList.toggle("ok", ok); b.querySelector("span")!.textContent = ok ? "הועתק ✓" : code; if (ok) { goStep(2); try { navigator.vibrate && navigator.vibrate(12); } catch {} } };
   const chk = root.querySelector<HTMLInputElement>("#pm-ok")!, paid = root.querySelector<HTMLButtonElement>("#pm-paid")!;
   chk.onchange = () => { paid.disabled = !chk.checked; paid.classList.toggle("ready", chk.checked); if (chk.checked) { goStep(3); try { navigator.vibrate && navigator.vibrate(10); } catch {} } };
   paid.onclick = async () => {
@@ -1372,11 +1373,18 @@ export function pass(from = "") {
     on: !!P.on, hasChat: !!P.key, price: PRICE, priceAfter: PRICE_AFTER, launch: LAUNCH(), daysLeft: Math.max(1, Math.ceil((LAUNCH_END - Date.now()) / DAY)),
     secrets: P.key ? secretRows().length + (P.items.length ? 1 : 0) + 6 : 0, slides: D ? premiumCount(D) + 3 : 0, people: D ? Math.min(16, D.people.length) : 0, media: P.items.length,
     group: P.key ? groupLabel() : "", each: h ? { e: h.e, people: h.people, thing: h.thing } : null,
-    buddy: budSvg, budCss: BUD_CSS, buy: () => buy("pass" + (from ? "_" + from : "")), pick: () => P.opts?.pick?.(), wrapped: () => openWrapped(), bump,
+    buddy: budSvg, budCss: BUD_CSS, peek: P.key && !P.on && hasWrapped() ? () => { bump("pm_pass_peek"); openWrapped(); } : null, buy: () => buy("pass" + (from ? "_" + from : "")), pick: () => P.opts?.pick?.(), wrapped: () => openWrapped(), bump,
   }, from);
 }
 /** a small strip at the very top of the home page that jumps to the showcase */
 export function topBarHtml() { return `<button class="pmx-top" id="pmx-top"><span class="pmx-top-b">⭐ חדש</span> בונוס פרימיום · המשחק חינם <span aria-hidden="true">←</span></button>`; }
+/** the home page's one premium card: short, calm, opens the premium pass */
+export function homeCardHtml() {
+  return `<button class="pmx-hcard pmx-gold" id="pmx-card" type="button">
+    <span class="pmx-hc-ic" aria-hidden="true"><i>🎁</i><i>🎬</i><i>📁</i></span>
+    <span class="pmx-hc-t"><small>⭐ בונוס לקבוצה, לא חובה</small><b>סיכום השנה, סבב מדיה ותיקים סודיים</b><span>${PRICE} ₪ פעם אחת לכל הקבוצה. המשחק עצמו חינם.</span></span>
+    <span class="pmx-hc-go" aria-hidden="true">←</span></button>`;
+}
 /** the setup screen's slim strip: the game is free, and here is the bonus. Opens the premium pass */
 export function stripHtml() {
   if (P.on || !P.key) return "";
@@ -1982,6 +1990,11 @@ function css() {
 @keyframes pmbDot{50%{transform:translateY(-4px)}}
 @media (prefers-reduced-motion:reduce){.pmb-sheet,.pmb-lock,.pmb-o-p b,.pmb-digits i,.pmb-field.note,.pmb-field.note em,.pmb-bit::after,.pmb-bit-arr,.pmb-paid.ready,.pmb-paid.ready::after,.pmb-radar i,.pmb-tl .pm-dots b{animation:none}.pmb-step,.pmb-prog i,.pmb-box{transition:none}}
 /* the setup strip and the "free" lines */
+.pmx-hcard{display:flex;align-items:center;gap:12px;width:100%;font-family:inherit;color:#fff;text-align:right;border-radius:20px;padding:14px;cursor:pointer;box-shadow:0 5px 0 #1d1636;transition:transform .12s ease-out}
+.pmx-hcard:active{transform:translateY(3px)}
+.pmx-hc-ic{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:3px;width:56px}.pmx-hc-ic i{font-style:normal;font-size:1.2rem;width:26px;height:26px;display:grid;place-items:center;background:#ffffff1a;border-radius:8px}.pmx-hc-ic i:first-child{grid-column:1/3;justify-self:center}
+.pmx-hc-t{flex:1;display:grid;gap:2px;min-width:0}.pmx-hc-t small{font-size:.76rem;font-weight:700;color:#ffd23f}.pmx-hc-t b{font-size:1rem;line-height:1.3}.pmx-hc-t span{font-size:.8rem;color:#d8cffa}
+.pmx-hc-go{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#ffd23f;color:#1d1636;font-weight:700;border:2.5px solid #1d1636}
 .pmx-strip{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;font-family:inherit;color:#fff;text-align:right;border-radius:18px;padding:12px 14px;cursor:pointer;box-shadow:0 5px 0 #1d1636;transition:transform .12s ease-out}
 .pmx-strip:active{transform:translateY(3px)}
 .pmx-st-l{display:grid;gap:2px;min-width:0}.pmx-st-l small{font-size:.78rem;font-weight:700;color:#3fe0b0}.pmx-st-l b{font-size:1.02rem;line-height:1.3}.pmx-st-l em{font-style:normal;color:#ffd23f;font-size:1.2rem}

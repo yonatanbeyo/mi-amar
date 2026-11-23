@@ -7,7 +7,7 @@ export type PassCtx = {
   secrets: number; slides: number; people: number; media: number; group: string;
   each: null | { e: string; people: number; thing: string };
   buddy: (mood: string, size: number) => string; budCss: string;
-  buy: () => void; pick: () => void; wrapped: () => void; bump: (k: string) => void;
+  buy: () => void; pick: () => void; peek?: (() => void) | null; wrapped: () => void; bump: (k: string) => void;
 };
 
 let OPEN: HTMLElement | null = null;
@@ -91,7 +91,7 @@ export function openPass(c: PassCtx, from = "") {
     </div>
     <div class="dock">
       <button class="go" id="go"><span>${esc(cta)}</span></button>
-      <button class="free-b" id="free">${c.on ? "סגירה" : c.hasChat ? "בינתיים משחקים בחינם ←" : "או לנסות קודם את המשחק החינמי ←"}</button>
+      <div class="alts">${c.peek ? `<button class="free-b" id="peek">👀 3 שקופיות בחינם</button><i></i>` : ""}<button class="free-b" id="free">${c.on ? "סגירה" : c.hasChat ? "משחקים בחינם" : "לנסות קודם בחינם"}</button></div>
     </div>
   </div>`;
 
@@ -101,6 +101,7 @@ export function openPass(c: PassCtx, from = "") {
   document.addEventListener("keydown", key);
   sr.getElementById("x")!.onclick = close;
   sr.getElementById("free")!.onclick = () => { try { c.bump("pm_pass_free"); } catch {} close(); };
+  const pk = sr.getElementById("peek"); if (pk) pk.onclick = () => { close(); setTimeout(() => c.peek && c.peek(), 240); };
   sr.getElementById("go")!.onclick = () => { try { c.bump("pm_pass_go"); } catch {} close(); setTimeout(() => (c.on ? c.wrapped() : c.hasChat ? c.buy() : c.pick()), 240); };
 
   // the feature rail: dots follow the swipe, and only the card in view animates
@@ -235,6 +236,7 @@ h2.in{opacity:1;transform:none}
 .go::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,#ffffffcc 48%,transparent 60%);background-size:250% 100%;animation:sheen 2.6s ease-in-out infinite}
 .go span{position:relative;z-index:1}
 .go:active{transform:translateY(4px) scale(.99);box-shadow:0 2px 0 #1d1636}
+.alts{display:flex;justify-content:center;align-items:center;gap:4px}.alts>i{width:4px;height:4px;border-radius:50%;background:#ffffff50}
 .free-b{font:inherit;font-size:.92rem;font-weight:700;color:#3fe0b0;background:none;border:0;padding:8px;cursor:pointer}
 @property --a{syntax:"<angle>";inherits:false;initial-value:0deg}
 .price.in{animation:ring 5s linear infinite}
