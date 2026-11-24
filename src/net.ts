@@ -102,6 +102,7 @@ function firebaseNet(cfg: Record<string, string>): Net {
     bump(key) {
       if (!/^[a-z_]{1,24}$/.test(key)) return;
       try { if (localStorage.getItem("miamar_me") === "1") return; } catch {} // the owner's own phone is not counted
+      if (/^(localhost|127\.|192\.168\.|10\.)/.test(location.hostname)) return; // test copies on a computer are not counted
       const hh = String(new Date().getHours()).padStart(2, "0"), paths = [`stats/total/${key}`, `stats/days/${today()}/${key}`];
       if (!key.startsWith("r_")) paths.push(`stats/days/${today()}/h${hh}_${key}`);
       uid().then(() => Promise.all(paths.map((p) => runTransaction(ref(db, p), (v) => (typeof v === "number" ? v : 0) + 1)))).catch(() => {});

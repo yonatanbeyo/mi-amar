@@ -86,6 +86,7 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
     <p class="dim" id="note" style="margin:0"></p>
   </section>
   <div class="cards" id="cards"></div>
+  <section class="chart"><b>🎮 המסע של מי שנכנס לאתר</b><p class="dim" style="margin:4px 0 8px">כמה עברו מכל שלב לשלב הבא. "העלו צ'אט" נספר מ־24.11 (כולל דוגמה וקבוצות שמורות). אם "התחילו משחק" יורד מתחת ל־55% מההעלאות, משהו במסך ההכנה או בסריקה מפריע.</p><div class="rows" id="journey"></div></section>
   <section class="chart">
     <b id="daysTitle">משחקים ושחקנים לפי יום</b>
     <div class="legend"><span><i style="background:var(--pink)"></i>משחקים שהתחילו</span><span>המספר מעל: שחקנים שהצטרפו</span></div>
@@ -188,6 +189,12 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
       document.getElementById(el).innerHTML = items.length ? items.map(([k, v]) => `<div class="row"><span>${NAMES[k] || k.slice(prefix.length)}</span><span class="track"><i style="width:${(v / max) * 100}%"></i></span><b>${n(v)}</b></div>`).join("") : '<p class="dim">עוד אין נתונים</p>';
     };
     rows("src_", "src"); rows("dev_", "dev"); rows("geo_", "geo");
+    // the main journey: visit → upload → start → finish
+    { const g = (k) => t[k] || 0, pct = (a, b) => (b && a <= b ? Math.round((a / b) * 100) + "%" : "–");
+      const direct = Math.max(0, g("visit") - g("src_qr")), up = g("upload") + g("demo_start") + g("my_open");
+      const steps = [["נכנסו לאתר בעצמם (בלי מי שהגיע מקוד של משחק)", direct], ["העלו צ'אט / דוגמה / קבוצה שמורה", up, pct(up, direct)], ["· צ'אט חדש", g("upload")], ["· צ'אט לדוגמה", g("demo_start")], ["· מהרשימה \"הקבוצות שלי\"", g("my_open")], ["התחילו משחק", g("started"), pct(g("started"), up)], ["הגיעו עד הסוף", g("finished"), pct(g("finished"), g("started"))]];
+      const mx = Math.max(1, ...steps.map((x) => x[1]));
+      $("journey").innerHTML = steps.map(([l, v, p]) => `<div class="row"><span>${l}</span><span class="track"><i style="width:${(v / mx) * 100}%;background:var(--mint,#3fe0b0)"></i></span><b>${n(v)}${p ? " · " + p : ""}</b></div>`).join(""); }
     // premium funnel: does anyone care?
     { const g = (k) => t[k] || 0, pct = (a, b) => (b && a <= b ? Math.round((a / b) * 100) + "%" : "–");
       const steps = [["ראו פרימיום (אחרי שהעלו צ'אט)", g("pm_seen")], ["פתחו את חלון התשלום", g("pm_open")], ["העתיקו את הקוד", g("pm_copy")], ["לחצו על ביט / \"שולחים לחבר\"", g("pm_bit") + g("pm_ask")], ["לחצו \"שילמתי\"", g("pm_paid")], ["הפרימיום נפתח להם", g("pm_unlocked")]];

@@ -2491,7 +2491,7 @@ ${samples}
         let people = 0, total = 0; try { const P = parsedFor(text); people = P.stats.people.filter((p) => p.messages >= 3).length; total = P.msgs.length; } catch {}
         if (people >= 2) { loading(`נמצאו ${n(total)} הודעות!`, "מחפש את הרגעים הכי מטורפים בקבוצה"); SFX.pop(); await paint(500); }
         if (people < 2) { loading(null); file.value = ""; home(people === 1 ? "זה נראה כמו צ'אט של שני אנשים. המשחק צריך צ'אט של קבוצה." : `הקובץ "${f.name}" לא נראה כמו צ'אט שיוצא מוואטסאפ. בוחרים את הקובץ שוואטסאפ יצר, בדרך כלל בשם "WhatsApp Chat - שם הקבוצה".`); return; }
-        S.chatText = text; S.chatName = f.name.replace(/\.(zip|txt)$/i, "").replace(/^(whatsapp chat( with|\s*-)?|צ['׳]אט WhatsApp עם)\s*/i, "").trim(); S.players = null; S.screen = "setup"; render(); loading(null); MY.save(text, S.chatName, people, total); setTimeout(() => { try { PREM.scan && PREM.scan(); } catch {} }, 60); }
+        S.chatText = text; S.chatName = f.name.replace(/\.(zip|txt)$/i, "").replace(/^(whatsapp chat( with|\s*-)?|צ['׳]אט WhatsApp עם)\s*/i, "").trim(); S.players = null; S.screen = "setup"; render(); loading(null); NET.bump("upload"); MY.save(text, S.chatName, people, total); setTimeout(() => { try { PREM.scan && PREM.scan(); } catch {} }, 60); }
       catch (e) { loading(null); home(e.message || "לא הצלחתי לקרוא את הקובץ."); }
     };
     app.querySelectorAll(".os-tabs button").forEach((b) => (b.onclick = () => {
@@ -2500,7 +2500,7 @@ ${samples}
       const st = document.getElementById("steps"); st.innerHTML = guideSteps(S.guideOS);
       [...st.children].forEach((li, i) => anim(li, [{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], { duration: 220, delay: i * 40, easing: EASE.out, fill: "backwards" }));
     }));
-    document.getElementById("demo").onclick = () => { audio(); SFX.tap(); PREM.setFile(null); S.chatText = DEMO; S.chatName = "צ'אט לדוגמה"; S.players = null; S.screen = "setup"; render(); };
+    document.getElementById("demo").onclick = () => { audio(); SFX.tap(); NET.bump("demo_start"); PREM.setFile(null); S.chatText = DEMO; S.chatName = "צ'אט לדוגמה"; S.players = null; S.screen = "setup"; render(); };
   }
 
   function setup() {
