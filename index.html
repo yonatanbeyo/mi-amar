@@ -242,6 +242,33 @@ details.fold[open] .fold-i { transform: rotate(45deg); }
 details.fold[open] > summary { margin-bottom: 10px; }
 details.guide .os-tabs { margin-bottom: 8px; }
 @media (prefers-reduced-motion: reduce) { .fold-i { transition: none; } }
+
+/* my groups: saved on this phone */
+.mine { display: grid; gap: 8px; background: rgba(255,255,255,.06); border: 2px solid rgba(255,255,255,.14); border-radius: 20px; padding: 12px; }
+.mine-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mine-h b { font-size: 1.05rem; }
+.mine-why { font: inherit; font-size: .78rem; font-weight: 700; color: #3fe0b0; background: none; border: 0; padding: 4px; cursor: pointer; }
+.mine-info { margin: 0; font-size: .84rem; line-height: 1.5; color: var(--dim, #c9c1ef); background: rgba(0,0,0,.18); border-radius: 12px; padding: 8px 10px; }
+.mine-l { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.mine-i { display: flex; gap: 6px; align-items: stretch; }
+.mine-i[hidden] { display: none; }
+.mine-go { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; font: inherit; color: inherit; text-align: right; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.16); border-radius: 16px; padding: 9px 11px; cursor: pointer; transition: transform .12s ease-out, background-color .15s; }
+.mine-go:active { transform: scale(.98); }
+@media (hover: hover) and (pointer: fine) { .mine-go:hover { background: rgba(255,255,255,.13); } }
+.mine-ic { flex: none; width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: var(--yellow, #ffd23f); font-size: 1.1rem; border: 2px solid var(--ink, #1d1636); }
+.mine-t { flex: 1; min-width: 0; display: grid; }
+.mine-t b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mine-t small { font-size: .78rem; color: var(--dim, #c9c1ef); }
+.mine-star { flex: none; font-size: .72rem; font-weight: 700; color: #1d1636; background: var(--yellow, #ffd23f); border-radius: 99px; padding: 3px 8px; }
+.mine-arr { flex: none; font-weight: 700; opacity: .7; }
+.mine-x { flex: none; width: 40px; font: inherit; color: var(--dim, #c9c1ef); background: none; border: 2px solid rgba(255,255,255,.12); border-radius: 14px; cursor: pointer; }
+.mine-ask { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: rgba(255,61,90,.12); border: 2px solid rgba(255,61,90,.45); border-radius: 16px; padding: 9px 11px; font-size: .9rem; }
+.mine-ask span { flex: 1 1 100%; }
+.mine-ask button { font: inherit; font-weight: 700; border-radius: 12px; padding: 6px 14px; cursor: pointer; border: 2px solid var(--ink, #1d1636); }
+.mine-yes { background: #ff3d5a; color: #fff; }
+.mine-no { background: #fff; color: #1d1636; }
+.mine-more { font: inherit; font-size: .88rem; font-weight: 700; color: var(--yellow, #ffd23f); background: none; border: 0; padding: 4px; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .mine-go { transition: none; } }
 /* ---------- WOW layer ---------- */
 /* each question type has its own accent; the whole room (aurora, timer, title) shifts to it */
 body { --accent: var(--yellow); --a1: #ff3d7f; --a2: #5fb4ff; --a3: #3fe0b0; }
@@ -895,8 +922,8 @@ body.yt-mini #ytmin { display: none; }
 <main class="wrap" id="app"></main>
 <div class="overlay" id="overlay" hidden></div>
 
-<script src="config.js?v=1795468098"></script>
-<script src="app.js?v=1795468098"></script>
+<script src="config.js?v=1795534067"></script>
+<script src="app.js?v=1795534067"></script>
 <script>
 (() => {
   const C = window.Chat;
@@ -2341,6 +2368,66 @@ ${samples}
     if (!overlay.dataset.loading) { overlay.dataset.loading = "1"; overlay.hidden = false; overlay.innerHTML = `<div class="intro loadcard">${buddy("think")}<h3 id="ld-t"></h3><p id="ld-s"></p><div class="timer ld-bar"><i></i></div></div>`; }
     overlay.querySelector("#ld-t").textContent = title; overlay.querySelector("#ld-s").textContent = sub;
   }
+  // ---------- "my groups": chats saved on this phone only (text in the browser's own storage, never on a server)
+  const MY = (() => {
+    const META = "my_chats", MAX = 10;
+    const meta = () => { try { return JSON.parse(localStorage.getItem(META) || "[]"); } catch { return []; } };
+    const setMeta = (l) => { try { localStorage.setItem(META, JSON.stringify(l)); } catch {} };
+    const db = () => new Promise((ok, no) => { const r = indexedDB.open("miamar", 1); r.onupgradeneeded = () => r.result.createObjectStore("chats"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+    const run = async (mode, fn) => { const d = await db(); return new Promise((ok, no) => { const t = d.transaction("chats", mode), q = fn(t.objectStore("chats")); t.oncomplete = () => { ok(q && q.result); d.close(); }; t.onerror = t.onabort = () => { no(t.error); d.close(); }; }); };
+    const idOf = (t) => { let h = 5381; const n = Math.min(t.length, 30000); for (let i = 0; i < n; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return "c" + (h >>> 0).toString(36) + t.length.toString(36); };
+    const paid = (pk) => { try { return !!pk && JSON.parse(localStorage.getItem("pm_on") || "[]").includes(pk); } catch { return false; } };
+    return {
+      list: () => meta().map((m) => ({ ...m, star: paid(m.pk) })),
+      async save(text, name, people, total) {
+        if (!window.indexedDB || !text) return;
+        const id = idOf(text), now = Date.now(); let pk = ""; try { pk = PREM.key() || ""; } catch {}
+        let l = meta().filter((m) => m.id !== id); const old = meta().find((m) => m.id === id);
+        l.unshift({ id, name: name || "הקבוצה", people, total, added: old ? old.added : now, last: now, pk });
+        const drop = l.slice(MAX); l = l.slice(0, MAX);
+        try { for (const d of drop) await run("readwrite", (st) => st.delete(d.id)); await run("readwrite", (st) => st.put(text, id)); setMeta(l); if (!old) NET.bump("my_saved"); }
+        catch { // the phone is full: keep the newest only
+          try { for (const d of l.slice(1)) await run("readwrite", (st) => st.delete(d.id)); await run("readwrite", (st) => st.put(text, id)); setMeta(l.slice(0, 1)); } catch {} }
+      },
+      async load(id) { try { return await run("readonly", (st) => st.get(id)); } catch { return null; } },
+      async remove(id) { setMeta(meta().filter((m) => m.id !== id)); try { await run("readwrite", (st) => st.delete(id)); } catch {} },
+      touch(id) { const l = meta(), m = l.find((x) => x.id === id); if (!m) return; m.last = Date.now(); try { m.pk = PREM.key() || m.pk; } catch {} setMeta([m, ...l.filter((x) => x !== m)]); },
+    };
+  })();
+  const ago = (t) => { const d = Math.floor((Date.now() - t) / 864e5); return d <= 0 ? "היום" : d === 1 ? "אתמול" : d < 7 ? `לפני ${d} ימים` : d < 14 ? "לפני שבוע" : d < 30 ? `לפני ${Math.floor(d / 7)} שבועות` : d < 60 ? "לפני חודש" : `לפני ${Math.floor(d / 30)} חודשים`; };
+  function myChatsHtml() {
+    const l = MY.list(); if (!l.length) return "";
+    const row = (m, i) => `<li class="mine-i" data-id="${esc(m.id)}" ${i >= 3 ? "hidden" : ""}>
+        <button class="mine-go" type="button"><span class="mine-ic" aria-hidden="true">💬</span><span class="mine-t"><b>${esc(m.name)}</b><small>${m.people ? `${n(m.people)} אנשים · ` : ""}${ago(m.last)}</small></span>${m.star ? `<span class="mine-star">⭐ פרימיום</span>` : ""}<span class="mine-arr" aria-hidden="true">←</span></button>
+        <button class="mine-x" type="button" aria-label="למחוק את ${esc(m.name)} מהטלפון">✕</button></li>`;
+    return `<section class="mine" aria-label="הקבוצות שלי">
+      <div class="mine-h"><b>📂 הקבוצות שלי</b><button class="mine-why" type="button" aria-expanded="false">🔒 שמור רק בטלפון הזה</button></div>
+      <p class="mine-info" hidden>הקבוצות שהעליתם נשמרות רק בתוך הטלפון הזה, כדי שבפעם הבאה לא תצטרכו להעלות שוב. שום דבר לא נשלח לשרת. נשמר רק הטקסט, בלי התמונות וההקלטות. בשביל סבב המדיה מעלים שוב את הצ'אט המלא. אפשר למחוק כל קבוצה ב־✕.</p>
+      <ul class="mine-l">${l.map(row).join("")}</ul>
+      ${l.length > 3 ? `<button class="mine-more" type="button">עוד ${n(l.length - 3)} קבוצות</button>` : ""}
+    </section>`;
+  }
+  function bindMyChats() {
+    const box = app.querySelector(".mine"); if (!box) return;
+    box.querySelector(".mine-why").onclick = (e) => { const i = box.querySelector(".mine-info"), b = e.currentTarget; i.hidden = !i.hidden; b.setAttribute("aria-expanded", String(!i.hidden)); SFX.tap(); };
+    const more = box.querySelector(".mine-more"); if (more) more.onclick = () => { box.querySelectorAll(".mine-i[hidden]").forEach((li) => (li.hidden = false)); more.remove(); SFX.tap(); };
+    box.querySelectorAll(".mine-i").forEach((li) => {
+      const id = li.dataset.id;
+      li.querySelector(".mine-go").onclick = async () => {
+        audio(); SFX.tap(); loading("פותח את הקבוצה…", ""); await paint();
+        const text = await MY.load(id), m = MY.list().find((x) => x.id === id);
+        if (!text) { loading(null); await MY.remove(id); home("הקבוצה הזאת כבר לא שמורה בטלפון. מעלים אותה שוב, וזהו."); return; }
+        NET.bump("my_open"); PREM.setFile(null);
+        S.chatText = text; S.chatName = m ? m.name : ""; S.players = null; S.screen = "setup"; render(); loading(null); MY.touch(id);
+      };
+      li.querySelector(".mine-x").onclick = () => {
+        SFX.tap(); li.classList.add("ask");
+        li.innerHTML = `<div class="mine-ask"><span>למחוק את <b>${esc((MY.list().find((x) => x.id === id) || {}).name || "הקבוצה")}</b> מהטלפון?</span><button class="mine-yes" type="button">למחוק</button><button class="mine-no" type="button">ביטול</button></div>`;
+        li.querySelector(".mine-no").onclick = () => home();
+        li.querySelector(".mine-yes").onclick = async () => { await MY.remove(id); NET.bump("my_delete"); home(); };
+      };
+    });
+  }
   function home(err = S.err) {
     S.err = "";
     const TICK = ["אני כבר בדרך", "מי בא היום?", "חחחחחח מת", "רגע מי זה אמר", "אחי די", "שולח תמונה", "5 דקות ואני יוצא", "מישהו ער?", "סתם סתם", "איזה אגדה"];
@@ -2364,6 +2451,7 @@ ${samples}
         ${err ? `<p class="err" role="alert">${esc(err)}</p>` : ""}
         <button class="link-btn" id="demo">או לנסות קודם עם צ'אט לדוגמה ←</button>
       </section>
+      ${myChatsHtml()}
       <div id="join-slot" style="display:grid;gap:10px"></div>
       <section class="how">
         <div class="hw"><b>1</b><strong>מייצאים</strong><span>את הצ'אט מוואטסאפ</span></div>
@@ -2376,10 +2464,11 @@ ${samples}
         <ol class="steps" id="steps">${guideSteps(guideOS())}</ol>
       </details>
       ${PREM.homeCardHtml ? PREM.homeCardHtml() : ""}
-      <p class="note">🔒 הצ'אט נקרא רק בתוך הטלפון שלך ולא נשמר בשום מקום. לשחקנים עוברות רק השאלות עצמן, והן נמחקות כשהמשחק נגמר.</p>
+      <p class="note">🔒 הצ'אט נקרא ונשמר רק בתוך הטלפון שלך, לא בשום שרת. לשחקנים עוברות רק השאלות עצמן, והן נמחקות כשהמשחק נגמר.</p>
       <footer class="foot">מי אמר את זה? · משחק מסיבה לקבוצות</footer>`;
     bindMute();
     fillJoin();
+    bindMyChats();
     // the title drops in word by word, the question mark lands last with a wobble
     const t1 = app.querySelector("#title .t1"), tq = app.querySelector("#title .q");
     anim(t1, [{ opacity: 0, transform: "translateY(-40px) scale(1.2)" }, { opacity: 1, transform: "none" }], { duration: 520, easing: EASE.out, fill: "backwards", delay: 80 });
@@ -2402,7 +2491,7 @@ ${samples}
         let people = 0, total = 0; try { const P = parsedFor(text); people = P.stats.people.filter((p) => p.messages >= 3).length; total = P.msgs.length; } catch {}
         if (people >= 2) { loading(`נמצאו ${n(total)} הודעות!`, "מחפש את הרגעים הכי מטורפים בקבוצה"); SFX.pop(); await paint(500); }
         if (people < 2) { loading(null); file.value = ""; home(people === 1 ? "זה נראה כמו צ'אט של שני אנשים. המשחק צריך צ'אט של קבוצה." : `הקובץ "${f.name}" לא נראה כמו צ'אט שיוצא מוואטסאפ. בוחרים את הקובץ שוואטסאפ יצר, בדרך כלל בשם "WhatsApp Chat - שם הקבוצה".`); return; }
-        S.chatText = text; S.chatName = f.name.replace(/\.(zip|txt)$/i, "").replace(/^(whatsapp chat( with|\s*-)?|צ['׳]אט WhatsApp עם)\s*/i, "").trim(); S.players = null; S.screen = "setup"; render(); loading(null); setTimeout(() => { try { PREM.scan && PREM.scan(); } catch {} }, 60); }
+        S.chatText = text; S.chatName = f.name.replace(/\.(zip|txt)$/i, "").replace(/^(whatsapp chat( with|\s*-)?|צ['׳]אט WhatsApp עם)\s*/i, "").trim(); S.players = null; S.screen = "setup"; render(); loading(null); MY.save(text, S.chatName, people, total); setTimeout(() => { try { PREM.scan && PREM.scan(); } catch {} }, 60); }
       catch (e) { loading(null); home(e.message || "לא הצלחתי לקרוא את הקובץ."); }
     };
     app.querySelectorAll(".os-tabs button").forEach((b) => (b.onclick = () => {
