@@ -3132,7 +3132,7 @@ ${samples}
       <div class="awards">${g.awards.map(([k, v, d]) => `<div class="award"><span class="dim small">${k}</span><b>${esc(v)}</b><span class="small">${esc(d)}</span></div>`).join("")}</div>
       ${S.chatText && PREM.hasWrapped() ? `<section class="panel prem-end"><div class="row" style="justify-content:center">
         ${PREM.isOn() ? `<button class="btn" id="pm-cert">🎓 תעודה לכל שחקן</button><button class="btn alt" id="pm-files2">📁 תיקים סודיים</button><button class="btn alt" id="pm-wrap2">🎁 הסיכום של ${PREM.wrappedYear()}</button>`
-          : `<button class="btn big" id="pm-wrap2" style="width:100%">🎁 הסיכום של הקבוצה ל־${PREM.wrappedYear()} · 3 שקופיות בחינם</button><button class="btn alt" id="pm-cert">🎓 תעודות 🔒</button><button class="btn alt" id="pm-files2">📁 תיקים סודיים 🔒</button>`}</div>
+          : `<button class="btn big" id="pm-wrap2" style="width:100%">🎁 הסיכום של הקבוצה ל־${PREM.wrappedYear()} · 3 שקופיות בחינם</button><button class="btn alt" id="pm-cert">🎓 תעודות 🔒</button><button class="btn alt" id="pm-files2">📁 תיקים סודיים 🔒</button><button class="btn alt" id="pm-group" style="width:100%">📲 שולחים לקבוצה: מי פותח לכולם?</button>`}</div>
         ${PREM.isOn() ? "" : (PREM.endTeaserHtml ? PREM.endTeaserHtml() : "")}</section>` : ""}
       <section class="panel story" id="story" hidden>
         <b>תמונה לסטורי</b>
@@ -3165,10 +3165,13 @@ ${samples}
         [[.25, .25], [.75, .2], [.5, .35], [.2, .5], [.8, .45]].forEach(([fxX, fxY], i) => later(() => confetti(70, innerWidth * fxX, innerHeight * fxY, .8), (RM ? 0 : 800) + i * 260));
       }, RM ? 0 : 1300);
     }
+    // the group's year summary starts by itself: the free slides, then the lock with the group's own media
+    if (!S.autoWrap && S.chatText && !PREM.isOn() && PREM.hasWrapped() && PREM.autoWrapped) { S.autoWrap = true; later(() => { if (S.screen === "end" && !document.querySelector(".pmw, .pm-layer")) PREM.autoWrapped(); }, RM ? 1500 : 5200); }
     { const c = document.getElementById("pm-cert"); if (c) c.onclick = () => { SFX.tap(); PREM.certificates(S.players || [], S.scores || {}, "end"); };
       const w = document.getElementById("pm-wrap2"); if (w) w.onclick = () => { SFX.tap(); PREM.openWrapped(); };
       const fl = document.getElementById("pm-files2"); if (fl) fl.onclick = () => { SFX.tap(); PREM.files("end"); };
-      const be = document.getElementById("pm-buy-end"); if (be) be.onclick = () => { SFX.tap(); PREM.buy("end2"); }; }
+      const be = document.getElementById("pm-buy-end"); if (be) be.onclick = () => { SFX.tap(); PREM.buy("end2"); };
+      const pg = document.getElementById("pm-group"); if (pg) pg.onclick = () => { SFX.tap(); PREM.shareAsk("end", "group"); }; }
     document.getElementById("again").onclick = () => { SFX.tap(); if (S.multi) stopHosting(); S.screen = S.chatText ? "setup" : "home"; render(); };
     document.getElementById("home").onclick = () => { keepAwake(false); if (S.multi) stopHosting(); S = { screen: "home" }; render(); };
     document.getElementById("copy").onclick = async () => {

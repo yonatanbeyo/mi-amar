@@ -63,7 +63,7 @@ export function openPass(c: PassCtx, from = "") {
           <div class="c-code" aria-hidden="true">${Array.from({ length: 34 }, (_, i) => `<i style="width:${[1, 2, 3, 1, 2, 1, 4][i % 7]}px"></i>`).join("")}</div>
         </div></div>
         <h1><span class="free">המשחק חינמי.</span><span class="gold">הפרימיום הוא הקינוח.</span></h1>
-        <p class="lead">כל מה שיש במשחק הרגיל נשאר <b>בחינם, לתמיד</b>. הפרימיום מוסיף לקבוצה שלכם עוד 6 חוויות שאין בשום מקום אחר.</p>
+        <p class="lead">כל מה שיש במשחק הרגיל נשאר <b>בחינם, לתמיד</b>. הפרימיום מוסיף את <b class="g">הסיכום של הקבוצה ל־2026</b> ואת <b class="g">ההקלטות והתמונות האמיתיות שלכם</b> בסבב מיוחד, ועוד 4 הפתעות.</p>
       </section>
 
       <section class="feats" aria-label="מה מקבלים">
@@ -82,7 +82,7 @@ export function openPass(c: PassCtx, from = "") {
 
       ${c.on ? "" : `<section class="price">
         ${c.launch ? `<span class="launch">🚀 מחיר השקה${c.daysLeft <= 20 ? `, נשארו ${fmt(c.daysLeft)} ימים` : " עד 31.12"}</span>` : ""}
-        <div class="pr"><b>${c.price}<small>₪</small></b>${c.launch ? `<s>${c.priceAfter} ₪</s>` : ""}</div>
+        <div class="pr"><b>${c.price}<small>₪</small></b></div>${c.launch ? `<p class="after">אחרי 31.12 המחיר יעלה ל־${c.priceAfter} ₪</p>` : ""}
         <p class="once">תשלום אחד. כל הקבוצה. לתמיד.</p>
         ${c.each ? `<div class="each"><b>רק ${c.each.e} ₪ לכל אחד</b><span>${fmt(c.each.people)} אנשים בקבוצה. ${esc(c.each.thing)} 🍬</span></div>` : `<div class="each"><b>בקבוצה של 6, זה 2.49 ₪ לכל אחד</b><span>פחות מבמבה 🍬</span></div>`}
         <ul class="trust"><li>✓ אחד משלם, וכולם מקבלים הכל, גם בטלפונים של החברים</li><li>✓ הצ'אט לא יוצא מהטלפון. אף אחד לא רואה אותו</li><li>✓ לא נפתח תוך 48 שעות? הכסף חוזר</li></ul>
@@ -164,7 +164,7 @@ h1{margin:0;display:grid;gap:2px;font-family:Karantina,"Varela Round",sans-serif
 h1 .free{color:#3fe0b0}
 h1 .gold{background:linear-gradient(90deg,#ffe27a,#ffd23f,#ff9f3f,#ffd23f,#ffe27a);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:gold 4s linear infinite}
 .lead{margin:10px auto 0;max-width:340px;font-size:1rem;line-height:1.5;color:#dcd5ff}
-.lead b{color:#3fe0b0}
+.lead b{color:#3fe0b0}.lead b.g{color:#ffd23f}
 .feats{margin-top:18px}
 .rail{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 20px 14px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .rail::-webkit-scrollbar{display:none}
@@ -226,6 +226,7 @@ h2.in{opacity:1;transform:none}
 .pr{display:flex;justify-content:center;align-items:baseline;gap:12px;margin-top:8px}
 .pr b{font-family:Karantina,sans-serif;font-size:4.6rem;line-height:.85;color:#ffd23f;text-shadow:0 5px 0 #1d1636}.pr b small{font-size:2rem;margin-inline-start:3px}
 .pr s{font-size:1.1rem;color:#ffffff80;text-decoration-color:#ff3d7f;text-decoration-thickness:3px}
+.after{margin:4px 0 0;font-size:.85rem;color:#ffffffb3}
 .once{margin:6px 0 0;font-weight:700;font-size:1rem}
 .each{margin:12px auto 0;max-width:320px;display:grid;gap:2px;background:#ffffff10;border-radius:14px;padding:9px 12px}.each b{color:#3fe0b0}.each span{font-size:.82rem;color:#cfc7f5}
 .trust{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px;text-align:right;font-size:.82rem;color:#dcd5ff}
