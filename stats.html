@@ -5,239 +5,442 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#120d26">
 <title>מי אמר את זה? · נתונים</title>
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <style>
 @font-face { font-family: "Karantina"; font-weight: 700; src: url(fonts/karantina-hebrew-700-normal.woff2) format("woff2"); }
 @font-face { font-family: "Varela Round"; src: url(fonts/varela-round-hebrew-400-normal.woff2) format("woff2"); }
-:root { --bg: #17112e; --card: rgba(255,255,255,.06); --line: #3a2f66; --text: #f4efff; --dim: #b4a9d6; --yellow: #ffd23f; --pink: #ff3d7f; --mint: #3fe0b0; --sky: #5fb4ff; }
+:root {
+  --bg: #120d26; --surface: #1b1538; --surface2: #241c4a; --line: #33295f; --grid: #2a2252;
+  --text: #f4efff; --dim: #b4a9d6; --faint: #8a7fb3;
+  --c-games: #ff5c93; --c-visits: #5fb4ff; --c-players: #ffd23f; --c-money: #3fe0b0; --c-warn: #ff9f3f;
+  --good: #3fe0b0; --bad: #ff6b81;
+}
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text); font-family: "Varela Round", system-ui, sans-serif; }
-main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 18px; }
-h1 { font-family: Karantina, sans-serif; font-size: 3.4rem; line-height: .9; margin: 0; }
-h1 span { color: var(--yellow); }
-.dim { color: var(--dim); font-size: .9rem; }
-.cards { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; display: grid; gap: 2px; }
-.card b { font-family: Karantina, sans-serif; font-size: 3rem; line-height: 1; font-variant-numeric: tabular-nums; }
-.card span { color: var(--dim); font-size: .85rem; }
-.card small { color: var(--mint); font-size: .8rem; }
-.chart { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: grid; gap: 10px; }
-.bars { display: grid; grid-template-columns: repeat(14, minmax(0,1fr)); gap: 4px; align-items: end; height: 160px; }
-.bar { display: grid; gap: 4px; align-content: end; justify-items: center; height: 100%; }
-.bar i { display: block; width: 100%; border-radius: 6px 6px 2px 2px; background: var(--pink); min-height: 2px; }
-.bar em { font-style: normal; font-size: .7rem; color: var(--dim); font-variant-numeric: tabular-nums; }
-.bar u { text-decoration: none; font-size: .75rem; font-variant-numeric: tabular-nums; }
-.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .85rem; color: var(--dim); }
-.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-inline-end: 6px; vertical-align: middle; }
-.err { color: var(--pink); }
-.rows { display: grid; gap: 8px; }
-.row { display: grid; grid-template-columns: 7.5rem minmax(0,1fr) 3rem; gap: 10px; align-items: center; font-size: .9rem; }
-.row .track { height: 12px; border-radius: 99px; background: rgba(255,255,255,.06); overflow: hidden; }
-.row .track i { display: block; height: 100%; border-radius: 99px; background: var(--sky); }
-.row b { font-variant-numeric: tabular-nums; text-align: left; }
-.cards .card:first-child { grid-column: 1 / -1; }
-button { font: inherit; background: transparent; color: var(--text); border: 2px solid var(--line); border-radius: 12px; padding: 8px 14px; cursor: pointer; justify-self: start; }
-.filters { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; display: grid; gap: 12px; }
-.quick { display: flex; flex-wrap: wrap; gap: 8px; }
-.quick button { padding: 6px 12px; border-radius: 99px; font-size: .9rem; }
-.quick button.on { background: var(--yellow); color: #17112e; border-color: var(--yellow); }
-.range { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
-.range label { display: grid; gap: 4px; font-size: .85rem; color: var(--dim); }
-.range input, .range select { font: inherit; background: #221a44; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 8px; min-height: 40px; color-scheme: dark; }
-.bars.h24 { direction: ltr; grid-template-columns: repeat(24, minmax(0,1fr)); gap: 2px; }
-.live { background: linear-gradient(135deg, rgba(63,224,176,.16), rgba(95,180,255,.10)); border: 1px solid #2f7a68; border-radius: 18px; padding: 14px 16px; display: grid; gap: 10px; }
-.live h2 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
-.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 0 rgba(63,224,176,.7); animation: pulse 1.6s infinite; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: "Varela Round", system-ui, sans-serif; line-height: 1.45; }
+main { max-width: 820px; margin: 0 auto; padding: 18px 14px 60px; display: grid; gap: 14px; }
+h1 { font-family: Karantina, sans-serif; font-size: 2.6rem; line-height: .9; margin: 0; }
+h1 span { color: var(--c-players); }
+h2 { margin: 0; font-size: 1.05rem; }
+p { margin: 0; }
+.dim { color: var(--dim); }
+.small { font-size: .82rem; }
+.num { font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px; display: grid; gap: 10px; }
+
+/* header */
+.head { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.head .meta { display: flex; align-items: center; gap: 8px; }
+.icon-btn { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; font-size: 1.1rem; }
+
+/* live */
+.live { display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg, rgba(63,224,176,.14), rgba(95,180,255,.08)); border-color: #2c6e62; }
+.live > div { flex: 1; display: grid; }
+.live b { font-size: 1.05rem; }
+.dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 0 rgba(63,224,176,.7); animation: pulse 1.6s infinite; }
 @keyframes pulse { 70% { box-shadow: 0 0 0 10px rgba(63,224,176,0); } 100% { box-shadow: 0 0 0 0 rgba(63,224,176,0); } }
-@media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
-.livegrid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
-.livegrid div { background: rgba(0,0,0,.18); border-radius: 12px; padding: 10px 12px; display: grid; }
-.livegrid b { font-family: Karantina, sans-serif; font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
-.livegrid span { color: var(--dim); font-size: .82rem; }
-.livegrid .big { grid-column: 1 / -1; }
-.ins { display: grid; gap: 8px; }
-.ins div { display: flex; justify-content: space-between; gap: 10px; font-size: .92rem; border-bottom: 1px dashed var(--line); padding-bottom: 6px; }
-.ins b { font-variant-numeric: tabular-nums; }
+.live details { flex: none; }
+.live summary { list-style: none; font-size: .82rem; color: var(--dim); border: 1px solid var(--line); border-radius: 99px; padding: 4px 10px; cursor: pointer; }
+.live summary::-webkit-details-marker { display: none; }
+.livegrid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px; margin-top: 8px; }
+.livegrid div { background: rgba(0,0,0,.2); border-radius: 10px; padding: 8px 10px; display: grid; }
+.livegrid b { font-size: 1.3rem; }
+.livegrid span { color: var(--dim); font-size: .75rem; }
+
+/* period */
+.period { position: sticky; top: 0; z-index: 5; background: rgba(18,13,38,.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); margin: 0 -14px; padding: 8px 14px; display: grid; gap: 6px; border-bottom: 1px solid var(--line); }
+.chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chips button { flex: none; padding: 7px 13px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); font-size: .9rem; }
+.chips button.on { background: var(--c-players); color: #17112e; border-color: var(--c-players); font-weight: 700; }
+.range { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+.range[hidden] { display: none; }
+.range label { display: grid; gap: 3px; font-size: .8rem; color: var(--dim); }
+.range input, .range select { font: inherit; background: var(--surface2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 7px; min-height: 40px; color-scheme: dark; }
+
+/* KPI tiles */
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+@media (min-width: 640px) { .kpis { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; display: grid; gap: 2px; position: relative; overflow: hidden; }
+.kpi::before { content: ""; position: absolute; inset-inline-start: 0; top: 12px; bottom: 12px; width: 4px; border-radius: 0 4px 4px 0; background: var(--k, var(--line)); }
+.kpi .lab { font-size: .82rem; color: var(--dim); }
+.kpi .val { font-family: Karantina, sans-serif; font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.kpi .sub { font-size: .75rem; color: var(--faint); }
+.delta { font-size: .78rem; font-weight: 700; }
+.delta.up { color: var(--good); } .delta.down { color: var(--bad); } .delta.flat { color: var(--dim); }
+
+/* insights */
+.ins { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.ins li { display: flex; gap: 10px; align-items: flex-start; font-size: .92rem; background: var(--surface2); border-radius: 12px; padding: 9px 11px; }
+.ins li em { font-style: normal; flex: none; }
+
+/* chart */
+.chart-wrap { position: relative; }
+.chart-wrap svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart-wrap .axis { fill: var(--faint); font-size: 11px; font-family: inherit; }
+.chart-wrap .gl { stroke: var(--grid); stroke-width: 1; }
+.chart-wrap .barm { fill: var(--c-games); }
+.chart-wrap .barm.today { fill: #ff8fb5; }
+.chart-wrap .hit { fill: transparent; cursor: crosshair; }
+.chart-wrap .hl { fill: rgba(255,255,255,.06); }
+.tip { position: absolute; pointer-events: none; background: #0c0820; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: .8rem; min-width: 150px; box-shadow: 0 6px 20px rgba(0,0,0,.4); display: grid; gap: 2px; z-index: 3; }
+.tip[hidden] { display: none; }
+.tip b { font-size: .85rem; }
+.tip span { display: flex; justify-content: space-between; gap: 12px; }
+.tip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-inline-end: 6px; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: .8rem; color: var(--dim); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-inline-end: 6px; vertical-align: -1px; }
+
+/* sections */
+details.sec { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; }
+details.sec > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 14px; }
+details.sec > summary::-webkit-details-marker { display: none; }
+details.sec > summary h2 { flex: 1; }
+details.sec > summary .peek { font-size: .85rem; color: var(--dim); text-align: left; }
+details.sec > summary .chev { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--surface2); transition: transform .2s ease-out; font-size: .8rem; }
+details.sec[open] > summary .chev { transform: rotate(180deg); }
+.sec-body { padding: 0 14px 16px; display: grid; gap: 16px; }
+.blk { display: grid; gap: 8px; }
+.blk h3 { margin: 0; font-size: .95rem; }
+.blk .note { font-size: .78rem; color: var(--faint); }
+
+/* funnel & bar rows */
+.funnel { display: grid; gap: 6px; }
+.fs { display: grid; gap: 4px; }
+.fs .top { display: flex; justify-content: space-between; gap: 10px; font-size: .88rem; }
+.fs .top b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fs .track { height: 12px; border-radius: 99px; background: rgba(255,255,255,.05); overflow: hidden; }
+.fs .track i { display: block; height: 100%; border-radius: 99px; background: var(--fc, var(--c-visits)); min-width: 2px; }
+.fs .conv { font-size: .75rem; color: var(--dim); }
+.fs.worst .conv { color: var(--c-warn); font-weight: 700; }
+.fs.sub .top { font-size: .8rem; color: var(--dim); padding-inline-start: 14px; }
+.fs.sub .track { height: 6px; margin-inline-start: 14px; }
+.rows { display: grid; gap: 7px; }
+.row { display: grid; grid-template-columns: minmax(0, 9rem) minmax(0,1fr) auto; gap: 10px; align-items: center; font-size: .86rem; }
+.row .track { height: 10px; border-radius: 99px; background: rgba(255,255,255,.05); overflow: hidden; }
+.row .track i { display: block; height: 100%; border-radius: 99px; background: var(--rc, var(--c-visits)); min-width: 2px; }
+.row b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kv { display: grid; gap: 0; }
+.kv div { display: flex; justify-content: space-between; gap: 10px; font-size: .86rem; padding: 7px 0; border-bottom: 1px dashed var(--line); }
+.kv div:last-child { border-bottom: 0; }
+.kv b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.empty { color: var(--faint); font-size: .85rem; }
+.hours svg .barh { fill: var(--c-visits); }
+.tools { display: grid; gap: 8px; }
+.tools button { justify-self: start; background: var(--surface2); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
+.err { color: var(--bad); }
+@media (prefers-reduced-motion: reduce) { .dot { animation: none; } details.sec > summary .chev { transition: none; } }
 </style>
 </head>
 <body>
 <main>
-  <h1>מי אמר <span>את זה?</span> · נתונים</h1>
-  <p class="dim" id="upd">טוען…</p>
-  <section class="live" aria-live="polite">
-    <h2><span class="dot"></span>עכשיו, בזמן אמת</h2>
-    <div class="livegrid">
-      <div class="big"><b id="lvPeople">–</b><span>אנשים משחקים עכשיו</span></div>
-      <div><b id="lvGames">–</b><span>משחקים פעילים</span></div>
-      <div><b id="lvLobby">–</b><span>לובים שמחכים לשחקנים</span></div>
-      <div><b id="lvPhones">–</b><span>טלפונים מחוברים למשחק</span></div>
-      <div><b id="lvSite">–</b><span>מסתכלים באתר (עוד לא משחקים)</span></div>
-    </div>
-    <p class="dim" id="lvNote" style="margin:0">מתחבר…</p>
-    <button id="lvTest" type="button">🧪 בדיקה: תספור גם אותי</button>
+  <header class="head">
+    <div><h1>מי אמר <span>את זה?</span></h1><p class="dim small" id="upd">טוען…</p></div>
+    <div class="meta"><button class="icon-btn" id="again" aria-label="רענון">↻</button></div>
+  </header>
+
+  <section class="card live" aria-live="polite">
+    <span class="dot" aria-hidden="true"></span>
+    <div><b id="lvHead">מתחבר…</b><span class="dim small" id="lvNote"></span></div>
+    <details><summary>פירוט</summary>
+      <div class="livegrid">
+        <div><b id="lvGames" class="num">–</b><span>משחקים פעילים</span></div>
+        <div><b id="lvLobby" class="num">–</b><span>לובים שמחכים</span></div>
+        <div><b id="lvPhones" class="num">–</b><span>טלפונים במשחק</span></div>
+        <div><b id="lvSite" class="num">–</b><span>מסתכלים באתר</span></div>
+      </div>
+    </details>
   </section>
-  <section class="filters">
-    <div class="quick" id="quick"><button data-q="today">היום</button><button data-q="yday">אתמול</button><button data-q="7">7 ימים</button><button data-q="since">מאז 4.11</button><button data-q="all">הכל</button></div>
-    <div class="range">
+
+  <section class="period" aria-label="טווח זמן">
+    <div class="chips" id="quick">
+      <button data-q="today">היום</button><button data-q="yday">אתמול</button><button data-q="7">7 ימים</button><button data-q="30">30 ימים</button><button data-q="all">מההתחלה</button><button data-q="custom">📅 מותאם</button>
+    </div>
+    <div class="range" id="range" hidden>
       <label>מתאריך<input type="date" id="dFrom"></label><label>עד תאריך<input type="date" id="dTo"></label>
       <label>משעה<select id="hFrom"></select></label><label>עד שעה<select id="hTo"></select></label>
     </div>
-    <p class="dim" id="note" style="margin:0"></p>
+    <p class="dim small" id="note"></p>
   </section>
-  <div class="cards" id="cards"></div>
-  <section class="chart"><b>🎮 המסע של מי שנכנס לאתר</b><p class="dim" style="margin:4px 0 8px">כמה עברו מכל שלב לשלב הבא. "העלו צ'אט" נספר מ־24.11 (כולל דוגמה וקבוצות שמורות). אם "התחילו משחק" יורד מתחת ל־55% מההעלאות, משהו במסך ההכנה או בסריקה מפריע.</p><div class="rows" id="journey"></div></section>
-  <section class="chart">
-    <b id="daysTitle">משחקים ושחקנים לפי יום</b>
-    <div class="legend"><span><i style="background:var(--pink)"></i>משחקים שהתחילו</span><span>המספר מעל: שחקנים שהצטרפו</span></div>
-    <div class="bars" id="bars"></div>
+
+  <section class="kpis" id="kpis" aria-label="המספרים החשובים"></section>
+
+  <section class="card"><h2>💡 מה רואים</h2><ul class="ins" id="ins"></ul></section>
+
+  <section class="card">
+    <h2 id="trendTitle">משחקים לפי יום</h2>
+    <div class="legend"><span><i style="background:var(--c-games)"></i>משחקים שהתחילו</span><span class="dim">נגיעה בעמודה מראה את כל הפרטים של אותו יום</span></div>
+    <div class="chart-wrap" id="trend"></div>
   </section>
-  <section class="chart">
-    <b>כניסות לפי שעה</b>
-    <div class="legend"><span><i style="background:var(--sky)"></i>כניסות לאתר</span><span>המספר מעל: משחקים שהתחילו</span></div>
-    <div class="bars h24" id="hours"></div>
-  </section>
-  <section class="chart"><b>⭐ פרימיום: יש עניין?</b><p class="dim" style="margin:4px 0 8px">כל שלב, וכמה מהשלב הקודם המשיכו אליו. נאסף מ־20.11. אלה לחיצות, לא תשלומים: תשלום אמיתי מופיע בלוח הניהול ובמייל.</p>
-    <button id="meBtn" type="button" style="margin-bottom:10px"></button><div class="rows" id="pmFunnel"></div>
-    <b style="display:block;margin-top:14px">מאיפה פתחו את חלון התשלום</b><div class="rows" id="pmFrom"></div>
-    <b style="display:block;margin-top:14px">🚪 למה עזבו את חלון התשלום (לפני ביט)</b><p class="dim" style="font-size:.8rem;margin:2px 0 6px">השאלה שמופיעה כשסוגרים את חלון התשלום. "אין לי ביט" לא סוגר: הוא מראה את הכפתור "שולחים לחבר".</p><div class="rows" id="pmWhy"></div>
-    <b style="display:block;margin-top:14px">🔍 הסריקה של בובי (אחרי העלאת צ'אט)</b><div class="rows" id="pmScan"></div>
-    <b style="display:block;margin-top:14px">⭐ דף הפרימיום</b><div class="rows" id="pmPass"></div>
-    <b style="display:block;margin-top:14px">עוד לחיצות על פרימיום</b><div class="ins" id="pmMore"></div></section>
-  <section class="chart"><b>תובנות לטווח שבחרת</b><div class="ins" id="ins"></div></section>
-  <section class="chart"><b>איזה שאלות אהבו (👍 מתוך כל הדירוגים)</b><div class="rows" id="rates"></div></section>
-  <section class="chart"><b>מאיפה הגיעו</b><div class="rows" id="src"></div></section>
-  <section class="chart"><b>מכשירים</b><div class="rows" id="dev"></div></section>
-  <section class="chart"><b>מדינות (לפי אזור הזמן בטלפון)</b><div class="rows" id="geo"></div></section>
-  <button id="again">רענון</button>
-  <p class="dim">הנתונים נספרים מרגע שהמונה הופעל. לא נשמר כאן שום דבר מהצ'אטים ושום פרט מזהה, רק מספרים. טיפ: בביו של טיקטוק שימו mi-amar.co.il/?ref=tiktok ובאינסטגרם ?ref=instagram, כדי לראות בדיוק מאיפה כל אחד הגיע.</p>
+
+  <details class="sec" open>
+    <summary><h2>🎮 המשחק</h2><span class="peek" id="pkGame"></span><span class="chev" aria-hidden="true">▾</span></summary>
+    <div class="sec-body">
+      <div class="blk"><h3>המסע של מי שנכנס בעצמו</h3><p class="note">בלי מי שהגיע מסריקה של משחק. "העלו" כולל צ'אט חדש, דוגמה וקבוצה שמורה, ונספר מ־24.11.</p><div class="funnel" id="fGame"></div></div>
+      <div class="blk"><h3>⏰ כניסות לפי שעה</h3><div class="chart-wrap hours" id="hours"></div></div>
+    </div>
+  </details>
+
+  <details class="sec" open>
+    <summary><h2>💰 הפרימיום</h2><span class="peek" id="pkPm"></span><span class="chev" aria-hidden="true">▾</span></summary>
+    <div class="sec-body">
+      <div class="blk"><h3>מסע הקנייה</h3><p class="note">מהשלב "ראו פרימיום" ועד שהפרימיום נפתח. "שילמתי" זו לחיצה, לא תשלום: התשלום האמיתי הוא "נפתח".</p><div class="funnel" id="fPm"></div></div>
+      <div class="blk"><h3>🚪 למה עזבו את חלון התשלום</h3><p class="note">התשובות לשאלה שמופיעה כשסוגרים את החלון לפני ביט.</p><div class="rows" id="pmWhy"></div></div>
+      <div class="blk"><h3>מאיפה פתחו את חלון התשלום</h3><div class="rows" id="pmFrom"></div></div>
+      <div class="blk"><h3>🔍 הסריקה של בובי</h3><div class="rows" id="pmScan"></div></div>
+      <div class="blk"><h3>🎁 סיכום השנה</h3><div class="kv" id="pmWrap"></div></div>
+      <div class="blk"><h3>⭐ דף הפרימיום</h3><div class="rows" id="pmPass"></div></div>
+      <div class="blk"><h3>עוד</h3><div class="kv" id="pmMore"></div></div>
+    </div>
+  </details>
+
+  <details class="sec">
+    <summary><h2>🌱 צמיחה</h2><span class="peek" id="pkGrow"></span><span class="chev" aria-hidden="true">▾</span></summary>
+    <div class="sec-body">
+      <div class="blk"><h3>שחקנים שהופכים למארחים</h3><div class="kv" id="grow"></div></div>
+      <div class="blk"><h3>מאיפה הגיעו</h3><div class="rows" id="src"></div></div>
+      <div class="blk"><h3>מכשירים</h3><div class="rows" id="dev"></div></div>
+      <div class="blk"><h3>מדינות</h3><p class="note">לפי אזור הזמן בטלפון.</p><div class="rows" id="geo"></div></div>
+    </div>
+  </details>
+
+  <details class="sec">
+    <summary><h2>👍 איזה שאלות אוהבים</h2><span class="peek" id="pkRate"></span><span class="chev" aria-hidden="true">▾</span></summary>
+    <div class="sec-body"><p class="note">אחוז ה־👍 מכל הדירוגים, מכל הזמנים.</p><div class="rows" id="rates"></div></div>
+  </details>
+
+  <details class="sec">
+    <summary><h2>🔧 כלים</h2><span class="chev" aria-hidden="true">▾</span></summary>
+    <div class="sec-body tools">
+      <button id="meBtn" type="button"></button>
+      <button id="lvTest" type="button">🧪 בדיקה של המונה החי: תספור גם אותי</button>
+      <p class="note">לא נשמר כאן שום דבר מהצ'אטים ושום פרט מזהה, רק מספרים. טיפ: בביו של טיקטוק שימו mi-amar.co.il/?ref=tiktok, ובאינסטגרם ?ref=instagram, כדי לראות בדיוק מאיפה הגיעו.</p>
+    </div>
+  </details>
 </main>
 <script src="config.js"></script>
 <script src="app.js"></script>
 <script>
 (() => {
   const net = window.Chat.createNet(window.MIAMAR_FIREBASE);
+  const PRICE = 14.9;
+  const $ = (id) => document.getElementById(id);
   const n = (x) => Number(x || 0).toLocaleString("he-IL");
-  const key = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  const LABELS = [["visit", "כניסות לאתר", ""], ["started", "משחקים שהתחילו", "כל המצבים"], ["players", "שחקנים שהצטרפו מטלפון", ""], ["finished", "משחקים שהגיעו עד הסוף", ""], ["games", "לובים שנפתחו", "מצב טלפונים"]];
-  const $ = (id) => document.getElementById(id), pad = (h) => String(h).padStart(2, "0"), HOURLY_SINCE = "2026-11-07";
+  const pad = (h) => String(h).padStart(2, "0");
+  const key = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const addDays = (k, a) => { const d = new Date(k + "T12:00"); d.setDate(d.getDate() + a); return key(d); };
+  const dayDiff = (a, b) => Math.round((new Date(b + "T12:00") - new Date(a + "T12:00")) / 864e5);
+  const fmtD = (k) => k.split("-").reverse().slice(0, 2).map(Number).join(".");
+  const pctN = (a, b) => (b ? (a / b) * 100 : null);
+  const pct = (a, b) => { const p = pctN(a, b); return p == null || p > 100 ? "–" : (p < 10 && p > 0 ? p.toFixed(1) : Math.round(p)) + "%"; };
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const START = "2026-11-04";
+
   ["hFrom", "hTo"].forEach((id, j) => { $(id).innerHTML = Array.from({ length: 24 }, (_, h) => `<option value="${h}">${pad(h)}:${j ? "59" : "00"}</option>`).join(""); });
   $("hTo").value = 23;
-  let S = null, Q = "since";
-  const setQuick = (q) => { Q = q; const d = new Date(), y = new Date(); y.setDate(y.getDate() - 1); const w = new Date(); w.setDate(w.getDate() - 6);
-    const from = { today: key(d), yday: key(y), 7: key(w), since: "2026-11-04", all: "2020-01-01" }[q], to = q === "yday" ? key(y) : key(d);
-    $("dFrom").value = from; $("dTo").value = to; $("hFrom").value = 0; $("hTo").value = 23; render(); };
-  $("quick").onclick = (e) => { const q = e.target.dataset && e.target.dataset.q; if (q) setQuick(q); };
-  ["dFrom", "dTo", "hFrom", "hTo"].forEach((id) => { $(id).onchange = () => { Q = ""; render(); }; });
+  let S = null, Q = "today";
+  const setQuick = (q) => {
+    Q = q; $("range").hidden = q !== "custom";
+    if (q !== "custom") {
+      const t = key(new Date());
+      const from = { today: t, yday: addDays(t, -1), 7: addDays(t, -6), 30: addDays(t, -29), all: START }[q];
+      $("dFrom").value = from; $("dTo").value = q === "yday" ? addDays(t, -1) : t; $("hFrom").value = 0; $("hTo").value = 23;
+    }
+    render();
+  };
+  $("quick").onclick = (e) => { const q = e.target.closest("button")?.dataset.q; if (q) setQuick(q); };
+  ["dFrom", "dTo", "hFrom", "hTo"].forEach((id) => { $(id).onchange = () => render(); });
+
   async function load() {
+    $("upd").textContent = "טוען…";
     S = await net.readStats();
     if (!S) { $("upd").innerHTML = '<span class="err">לא הצלחתי לקרוא את הנתונים.</span>'; return; }
-    if (!$("dFrom").value) setQuick("since"); else render();
-    $("upd").textContent = "עודכן עכשיו · " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+    if (!$("dFrom").value) setQuick("today"); else render();
+    $("upd").textContent = "עודכן " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
   }
+
+  // sum every counter over a date range and an hour window (hourly keys look like h09_visit)
+  const HK = /^h(\d\d)_(.+)$/;
+  function sum(from, to, hf = 0, ht = 23) {
+    const t = {}, all = hf === 0 && ht === 23, inH = (h) => (hf <= ht ? h >= hf && h <= ht : h >= hf || h <= ht);
+    for (const [d, o] of Object.entries(S.days || {})) {
+      if (d < from || d > to) continue;
+      for (const [k, v] of Object.entries(o)) {
+        const m = HK.exec(k);
+        if (m) { if (!all && inH(+m[1])) t[m[2]] = (t[m[2]] || 0) + (v || 0); }
+        else if (all && !k.startsWith("r_")) t[k] = (t[k] || 0) + (v || 0);
+      }
+    }
+    return t;
+  }
+  const started = (t) => (t.started || 0) + (t.single || 0);
+
   function render() {
     if (!S) return;
     document.querySelectorAll("#quick button").forEach((b) => b.classList.toggle("on", b.dataset.q === Q));
-    const s = S, days = s.days || {}, td = days[key(new Date())] || {};
-    let from = $("dFrom").value || "2020-01-01", to = $("dTo").value || key(new Date()); if (from > to) [from, to] = [to, from];
-    const hf = +$("hFrom").value, ht = +$("hTo").value, allHours = hf === 0 && ht === 23;
-    const inH = (h) => (hf <= ht ? h >= hf && h <= ht : h >= hf || h <= ht);
-    const t = {}, hourVisits = Array(24).fill(0), hourGames = Array(24).fill(0);
-    const isH = /^h(\d\d)_(.+)$/;
-    for (const [d, o] of Object.entries(days)) {
-      if (d < from || d > to) continue;
-      for (const [k, v] of Object.entries(o)) {
-        const m = isH.exec(k);
-        if (m) { const h = +m[1]; if (m[2] === "visit") hourVisits[h] += v || 0; if (m[2] === "started" || m[2] === "single") hourGames[h] += v || 0; if (!allHours && inH(h)) t[m[2]] = (t[m[2]] || 0) + (v || 0); }
-        else if (allHours && !k.startsWith("r_")) t[k] = (t[k] || 0) + (v || 0);
-      }
-    }
-    Object.entries(s.total || {}).forEach(([k, v]) => { if (k.startsWith("r_")) t[k] = v; });
-    const fmt = (x) => x.split("-").reverse().slice(0, 2).join(".");
-    $("note").textContent = (from === to ? `יום ${fmt(from)}` : `${fmt(from)} עד ${fmt(to)}`) + (allHours ? " · כל השעות" : ` · בין ${pad(hf)}:00 ל-${pad(ht)}:59`) + ". נתונים לפי שעה נאספים מ-7.11. הדירוגים 👍/👎 תמיד מכל הזמנים.";
-    const started = (o) => (o.started || 0) + (o.single || 0);
-    $("cards").innerHTML = LABELS.map(([k, label, note]) => {
-      const total = k === "started" ? started(t) : t[k], today = k === "started" ? started(td) : td[k];
-      return `<div class="card"><b>${n(total)}</b><span>${label}${note ? ` · ${note}` : ""}</span><small>היום: ${n(today)}</small></div>`;
-    }).join("");
-    const list = []; const end = new Date(to + "T12:00"), start = new Date(from + "T12:00");
-    for (let d = new Date(Math.max(start, end - 30 * 864e5)); d <= end; d.setDate(d.getDate() + 1)) { const o = days[key(d)] || {}; list.push({ d: new Date(d), g: started(o), p: o.players || 0 }); }
-    $("daysTitle").textContent = `משחקים ושחקנים לפי יום (${list.length} ימים)`;
-    $("bars").style.gridTemplateColumns = `repeat(${list.length}, minmax(0,1fr))`;
-    const max = Math.max(1, ...list.map((x) => x.g));
-    $("bars").innerHTML = list.map((x) => `<div class="bar" title="${x.d.toLocaleDateString("he-IL")}"><u>${x.p ? n(x.p) : ""}</u><i style="height:${(x.g / max) * 120}px"></i><em>${x.d.getDate()}</em></div>`).join("");
-    const hmax = Math.max(1, ...hourVisits);
-    $("hours").innerHTML = hourVisits.map((v, h) => `<div class="bar" title="${pad(h)}:00 · ${v} כניסות · ${hourGames[h]} משחקים" style="opacity:${inH(h) ? 1 : .3}"><u>${hourGames[h] || ""}</u><i style="height:${(v / hmax) * 120}px;background:var(--sky)"></i><em>${h % 3 ? "" : pad(h)}</em></div>`).join("");
-    { const v = t.visit || 0, st = started(t), fin = t.finished || 0, lob = t.games || 0, pl = t.players || 0, pct = (a, b) => (b ? Math.round((a / b) * 100) + "%" : "–");
-      const peakH = hourVisits.indexOf(Math.max(...hourVisits)), hasH = hourVisits.some((x) => x);
-      const y = new Date(); y.setDate(y.getDate() - 1); const yd = days[key(y)] || {};
-      const srcs = Object.entries(t).filter(([k]) => k.startsWith("src_")).sort((a, b) => b[1] - a[1]);
-      const items = [
-        ["מתוך מי שנכנס, כמה התחיל לשחק", pct(st, v)],
-        ["מתוך מי שהתחיל, כמה סיים משחק", pct(fin, st)],
-        ["ממוצע שחקנים בכל לובי (מצב טלפונים)", lob ? (pl / lob).toFixed(1) : "–"],
-        ["כניסות היום לעומת אתמול", `${n(td.visit)} / ${n(yd.visit)}`],
-        ["השעה הכי עמוסה", hasH ? `${pad(peakH)}:00` : "–"],
-        ["מקור התנועה המוביל", srcs.length ? (({ src_tiktok: "טיקטוק", src_instagram: "אינסטגרם", src_whatsapp: "וואטסאפ", src_direct: "ישירות", src_google: "גוגל", src_qr: "QR / קישור משחק" })[srcs[0][0]] || srcs[0][0].slice(4)) + ` (${n(srcs[0][1])})` : "–"],
-      ];
-      $("ins").innerHTML = items.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join(""); }
-    const NAMES = { src_tiktok: "טיקטוק", src_instagram: "אינסטגרם", src_whatsapp: "וואטסאפ", src_facebook: "פייסבוק", src_google: "גוגל", src_x: "X / טוויטר", src_qr: "QR / קישור משחק", src_direct: "ישירות", src_other: "אתרים אחרים",
-      dev_ios: "אייפון", dev_android: "אנדרואיד", dev_desktop: "מחשב", geo_il: "ישראל", geo_am: "אמריקה", geo_eu: "אירופה", geo_other: "אחר", geo_unknown: "לא ידוע" };
-    const rows = (prefix, el) => {
-      const items = Object.entries(t).filter(([k]) => k.startsWith(prefix)).sort((a, b) => b[1] - a[1]);
-      const max = Math.max(1, ...items.map((x) => x[1]));
-      document.getElementById(el).innerHTML = items.length ? items.map(([k, v]) => `<div class="row"><span>${NAMES[k] || k.slice(prefix.length)}</span><span class="track"><i style="width:${(v / max) * 100}%"></i></span><b>${n(v)}</b></div>`).join("") : '<p class="dim">עוד אין נתונים</p>';
+    const today = key(new Date());
+    let from = $("dFrom").value || START, to = $("dTo").value || today; if (from > to) [from, to] = [to, from];
+    const hf = +$("hFrom").value, ht = +$("hTo").value, allH = hf === 0 && ht === 23;
+    const t = sum(from, to, hf, ht), g = (k) => t[k] || 0;
+
+    // the comparison period: today vs yesterday up to the same hour; otherwise the same number of days before
+    let cmp, cmpLabel;
+    if (from === today && to === today && allH) { const h = new Date().getHours(); cmp = sum(addDays(today, -1), addDays(today, -1), 0, h); cmpLabel = `לעומת אתמול עד ${pad(h + 1 > 23 ? 23 : h + 1)}:00`; }
+    else { const len = dayDiff(from, to) + 1; cmp = sum(addDays(from, -len), addDays(from, -1), hf, ht); cmpLabel = len === 1 ? "לעומת היום שלפני" : `לעומת ${len} הימים שלפני`; }
+    const hasCmp = Object.keys(cmp).length > 0 && addDays(from, -1) >= START;
+    $("note").textContent = (from === to ? `${fmtD(from)}` : `${fmtD(from)} עד ${fmtD(to)}`) + (allH ? "" : ` · ${pad(hf)}:00–${pad(ht)}:59`) + (hasCmp ? ` · השינוי מחושב ${cmpLabel}` : "");
+
+    // KPI tiles
+    const sales = g("pm_unlocked"), fin = g("finished"), cs = cmp.pm_unlocked || 0, cf = cmp.finished || 0;
+    const delta = (a, b, isPct) => {
+      if (!hasCmp || b == null) return "";
+      if (!b && !a) return `<span class="delta flat">— ללא שינוי</span>`;
+      if (!b) return `<span class="delta up">▲ חדש</span>`;
+      const d = isPct ? a - b : ((a - b) / b) * 100; if (Math.abs(d) < (isPct ? .05 : 1)) return `<span class="delta flat">— ללא שינוי</span>`;
+      return `<span class="delta ${d > 0 ? "up" : "down"}">${d > 0 ? "▲" : "▼"} ${isPct ? Math.abs(d).toFixed(1) + " נק׳" : Math.round(Math.abs(d)) + "%"}</span>`;
     };
-    rows("src_", "src"); rows("dev_", "dev"); rows("geo_", "geo");
-    // the main journey: visit → upload → start → finish
-    { const g = (k) => t[k] || 0, pct = (a, b) => (b && a <= b ? Math.round((a / b) * 100) + "%" : "–");
-      const direct = Math.max(0, g("visit") - g("src_qr")), up = g("upload") + g("demo_start") + g("my_open");
-      const steps = [["נכנסו לאתר בעצמם (בלי מי שהגיע מקוד של משחק)", direct], ["העלו צ'אט / דוגמה / קבוצה שמורה", up, pct(up, direct)], ["· צ'אט חדש", g("upload")], ["· צ'אט לדוגמה", g("demo_start")], ["· מהרשימה \"הקבוצות שלי\"", g("my_open")], ["התחילו משחק", g("started"), pct(g("started"), up)], ["הגיעו עד הסוף", g("finished"), pct(g("finished"), g("started"))], ["📂 שחקנים שלחצו \"מעלים קבוצה אחרת\"", g("p_host_cta"), pct(g("p_host_cta"), g("src_qr"))], ["· מהם העלו צ'אט בפועל (שחקנים שהפכו למארחים)", g("player_hosted"), pct(g("player_hosted"), g("p_host_cta"))], ["📲 לחצו \"לשמור במסך הבית\" / התקינו", g("a2hs_click"), g("a2hs_ok") ? "התקינו " + n(g("a2hs_ok")) : ""]];
-      const mx = Math.max(1, ...steps.map((x) => x[1]));
-      $("journey").innerHTML = steps.map(([l, v, p]) => `<div class="row"><span>${l}</span><span class="track"><i style="width:${(v / mx) * 100}%;background:var(--mint,#3fe0b0)"></i></span><b>${n(v)}${p ? " · " + p : ""}</b></div>`).join(""); }
-    // premium funnel: does anyone care?
-    { const g = (k) => t[k] || 0, pct = (a, b) => (b && a <= b ? Math.round((a / b) * 100) + "%" : "–");
-      const steps = [["ראו פרימיום (אחרי שהעלו צ'אט: סריקה או כרטיס)", g("pm_seen") + g("pm_scan")], ["פתחו את חלון התשלום", g("pm_open")], ["העתיקו את הקוד", g("pm_copy")], ["לחצו על ביט / \"שולחים לחבר\"", g("pm_bit") + g("pm_ask")], ["לחצו \"שילמתי\"", g("pm_paid")], ["הפרימיום נפתח להם", g("pm_unlocked")]];
-      const mx = Math.max(1, ...steps.map((x) => x[1]));
-      $("pmFunnel").innerHTML = steps.map(([l, v], i) => `<div class="row"><span>${l}</span><span class="track"><i style="width:${(v / mx) * 100}%;background:${i >= 4 ? "var(--mint,#3fe0b0)" : "var(--yellow,#ffd23f)"}"></i></span><b>${n(v)}${i ? ` · ${pct(v, steps[i - 1][1])}` : ""}</b></div>`).join("");
-      const FROM = { pm_from_setup: "כרטיס הפרימיום במסך ההגדרות", pm_from_wrapped: "השקופית הנעולה בסיכום", pm_from_end: "סוף המשחק (תעודות)", pm_from_file: "תיק סודי נעול", pm_from_end2: "סוף המשחק (סוד מטושטש)", pm_from_mid: "באמצע המשחק", pm_from_lobby: "מסך ההמתנה (סודות מתחלפים)", pm_from_card: "התיק בטלפון של שחקן", pm_from_scan: "הסריקה של בובי", pm_from_pass: "דף הפרימיום", pm_from_pass_top: "דף הפרימיום (מהפס בעמוד הבית)", pm_from_pass_home: "דף הפרימיום (מהכרטיס בעמוד הבית)", pm_from_pass_strip: "דף הפרימיום (מהרצועה במסך ההכנה)", pm_from_pass_panel: "דף הפרימיום (מהחלון במסך ההכנה)", pm_from_pass_scan: "דף הפרימיום (מהסריקה)" };
-      const fr = Object.entries(t).filter(([k]) => k.startsWith("pm_from_")).sort((a, b) => b[1] - a[1]), fm = Math.max(1, ...fr.map((x) => x[1]));
-      $("pmFrom").innerHTML = fr.length ? fr.map(([k, v]) => `<div class="row"><span>${FROM[k] || k.slice(8)}</span><span class="track"><i style="width:${(v / fm) * 100}%"></i></span><b>${n(v)}</b></div>`).join("") : '<p class="dim">עוד אין נתונים</p>';
-      const more = [["ראו את הסודות במסך ההמתנה", g("pm_lobby_seen")], ["ראו את התיק הנעול בטלפון", g("pm_card_seen")], ["ראו את ההצצה באמצע המשחק", g("pm_mid_seen")], ["העלו צ'אט עם מדיה (מתוך מי שראה פרימיום)", `${n(g("pm_seen_media"))} · ${pct(g("pm_seen_media"), g("pm_seen"))}`],
-        ["סיימו את הסיכום החינמי עד הסוף", g("wrapped_end_free")], ["שמרו סיכום לסטורי (חינם / פרימיום)", `${n(g("story_save_free"))} / ${n(g("story_save"))}`], ["פתחו תיקים סודיים במסך הראשי", g("files_open")],
-        ["שחקנים בטלפון שקיבלו תיק נעול / פתחו אותו", `${n(g("file_fab_locked"))} / ${n(g("file_locked"))}`], ["פתחו תיק מלא", g("file_open")], ["פתחו תעודות", g("certs_open")], ["🎁 הסיכום התחיל לבד בסוף משחק", g("wrapped_auto")], ["💬 שלחו הודעה למי שיש לו ביט: מחלון התשלום / מהסיכום / מסוף המשחק לקבוצה", `${n(g("pm_ask_sheet"))} / ${n(g("pm_ask_wrapped"))} / ${n(g("pm_ask_end"))}`], ["לחצו \"כבר שילמנו מטלפון אחר\"", g("pm_already")],
-        ["📂 קבוצות שנשמרו בטלפון / נפתחו מהרשימה / נמחקו", `${n(g("my_saved"))} / ${n(g("my_open"))} / ${n(g("my_delete"))}`]];
-      const bars = (el, list, col) => { const m = Math.max(1, ...list.map((x) => x[1])); $(el).innerHTML = list.some((x) => x[1]) ? list.map(([l, v, sub]) => `<div class="row"><span>${l}</span><span class="track"><i style="width:${(v / m) * 100}%${col ? ";background:" + col : ""}"></i></span><b>${n(v)}${sub ? " · " + sub : ""}</b></div>`).join("") : '<p class="dim">עוד אין נתונים</p>'; };
-      const why = [["🏦 אין לי ביט", g("pm_why_nobit")], ["💸 יקר לי", g("pm_why_price")], ["🤔 לא בטוח שזה שווה", g("pm_why_worth")], ["⏰ אחר כך", g("pm_why_later")], ["👀 רק הצצתי", g("pm_why_look")]], whyAll = why.reduce((a, x) => a + x[1], 0);
-      bars("pmWhy", [...why.map(([l, v]) => [l, v, pct(v, whyAll)]), ["סגרו לפני ביט (סך הכל)", g("pm_close_early")], ["סגרו אחרי שלחצו ביט", g("pm_close_late")], ["💬 לחצו \"אין לכם ביט? שולחים לחבר\"", g("pm_ask")]], "#ff9f3f");
-      bars("pmScan", [["ראו את הסריקה", g("pm_scan")], ["דילגו", g("pm_scan_skip"), pct(g("pm_scan_skip"), g("pm_scan"))], ["🎮 לחצו \"מתחילים לשחק\"", g("pm_scan_play"), pct(g("pm_scan_play"), g("pm_scan"))], ["🔓 לחצו \"לפתוח את כולם\"", g("pm_scan_buy"), pct(g("pm_scan_buy"), g("pm_scan"))], ["לחצו על ממצא נעול", g("pm_scan_item"), pct(g("pm_scan_item"), g("pm_scan"))], ["לחצו \"מה עוד יש בפרימיום\"", g("pm_scan_more")]], "#3fe0b0");
-      bars("pmPass", [["פתחו את דף הפרימיום", g("pm_pass")], ["· מהפס בעמוד הבית", g("pm_pass_top")], ["· מהכרטיס בעמוד הבית", g("pm_pass_home")], ["· מהרצועה במסך ההכנה", g("pm_pass_strip")], ["· מהסריקה", g("pm_pass_scan")], ["לחצו על הכפתור הזהוב (לשלם / להעלות צ'אט)", g("pm_pass_go"), pct(g("pm_pass_go"), g("pm_pass"))], ["👀 \"3 שקופיות בחינם\"", g("pm_pass_peek")], ["בחרו לשחק בחינם", g("pm_pass_free")]]);
-      $("pmMore").innerHTML = more.map(([a, b]) => `<div><span>${a}</span><b>${typeof b === "number" ? n(b) : b}</b></div>`).join(""); }
-    // 👍/👎 per question kind, best first
-    { const KN = { wtf: "רגע של WTF", story: "הסיפור של הקבוצה", legend: "מי אמר את זה ראשון", inside: "מי התחיל את המילה", first: "ההודעה הראשונה", day_topic: "על מה השתגעו ביום", day_who: "מי הדליק את הבלגן", moment: "הרגע של הקבוצה", quote: "מי אמר את זה", finish: "איך זה נגמר", phrase: "של מי הביטוי", word: "של מי המילה", stat: "מי בקבוצה…", number: "כמה פעמים", when: "באיזו שעה", era: "באיזו תקופה", ai: "המתחזה" };
-      const r = {}; for (const [k, v] of Object.entries(s.total || {})) { const m = /^r_(.+)_(up|down)$/.exec(k); if (m) { (r[m[1]] ||= { up: 0, down: 0 })[m[2]] = v; } }
-      const list = Object.entries(r).map(([k, x]) => [k, x.up, x.up + x.down]).sort((a, b) => b[1] / b[2] - a[1] / a[2]);
-      document.getElementById("rates").innerHTML = list.length ? list.map(([k, up, all]) => `<div class="row"><span>${KN[k] || k}</span><span class="track"><i style="width:${(up / all) * 100}%"></i></span><b>${Math.round((up / all) * 100)}% · ${n(all)}</b></div>`).join("") : '<p class="dim">עוד אין דירוגים. הם מופיעים אחרי שמשחקים ולוחצים 👍/👎 בסוף שאלה</p>'; }
+    const buyRate = fin ? (sales / fin) * 100 : null, cBuy = cf ? (cs / cf) * 100 : null;
+    const K = [
+      ["כניסות לאתר", n(g("visit")), delta(g("visit"), cmp.visit || 0), "var(--c-visits)", `${n(g("src_qr"))} מהן דרך סריקה במשחק`],
+      ["משחקים שהתחילו", n(started(t)), delta(started(t), started(cmp)), "var(--c-games)", `${n(fin)} הגיעו עד הסוף`],
+      ["שחקנים מטלפונים", n(g("players")), delta(g("players"), cmp.players || 0), "var(--c-players)", g("games") ? `בממוצע ${(g("players") / g("games")).toFixed(1)} בכל לובי` : ""],
+      ["💰 קניות", n(sales), delta(sales, cs), "var(--c-money)", `הפרימיום נפתח ל־${n(sales)} קבוצות`],
+      ["💰 הכנסה משוערת", `${n(Math.round(sales * PRICE))} ₪`, delta(sales, cs), "var(--c-money)", `לפי ${PRICE} ₪ לקנייה`],
+      ["אחוז קנייה", buyRate == null ? "–" : buyRate.toFixed(1) + "%", buyRate == null || cBuy == null ? "" : delta(buyRate, cBuy, true), "var(--c-money)", "מתוך משחקים שהגיעו לסוף"],
+    ];
+    $("kpis").innerHTML = K.map(([l, v, d, c, s]) => `<div class="kpi" style="--k:${c}"><span class="lab">${l}</span><span class="val">${v}</span>${d}<span class="sub">${s}</span></div>`).join("");
+
+    // the game journey
+    const direct = Math.max(0, g("visit") - g("src_qr")), up = g("upload") + g("demo_start") + g("my_open");
+    const fGame = [["נכנסו בעצמם", direct], ["העלו צ'אט", up], ["· צ'אט חדש", g("upload"), 1], ["· דוגמה", g("demo_start"), 1], ["· מ\"הקבוצות שלי\"", g("my_open"), 1], ["התחילו משחק", started(t)], ["הגיעו עד הסוף", fin]];
+    funnel("fGame", fGame, "var(--c-visits)");
+    $("pkGame").textContent = `${n(started(t))} משחקים`;
+
+    // the premium journey
+    const seen = g("pm_seen") + g("pm_scan");
+    const fPm = [["ראו פרימיום", seen], ["פתחו את חלון התשלום", g("pm_open")], ["עברו לביט או שלחו לחבר", g("pm_bit") + g("pm_ask")], ["לחצו \"שילמתי\"", g("pm_paid")], ["💰 הפרימיום נפתח", sales]];
+    const worstPm = funnel("fPm", fPm, "var(--c-money)");
+    $("pkPm").textContent = `${n(sales)} קניות · ${n(Math.round(sales * PRICE))} ₪`;
+
+    const why = [["🏦 אין לי ביט", g("pm_why_nobit")], ["💸 יקר לי", g("pm_why_price")], ["🤔 לא בטוח שזה שווה", g("pm_why_worth")], ["⏰ אחר כך", g("pm_why_later")], ["👀 רק הצצתי", g("pm_why_look")]];
+    const whyAll = why.reduce((a, x) => a + x[1], 0);
+    bars("pmWhy", why.map(([l, v]) => [l, v, pct(v, whyAll)]), "var(--c-warn)", `${n(whyAll)} ענו מתוך ${n(g("pm_close_early"))} שסגרו לפני ביט`);
+    const FROM = { pm_from_setup: "כרטיס במסך ההכנה", pm_from_wrapped: "שקופית הנעילה בסיכום", pm_from_end: "סוף המשחק", pm_from_end2: "סוף המשחק (סוד מטושטש)", pm_from_file: "תיק סודי נעול", pm_from_mid: "באמצע המשחק", pm_from_lobby: "מסך ההמתנה", pm_from_card: "התיק בטלפון של שחקן", pm_from_scan: "הסריקה של בובי", pm_from_pass: "דף הפרימיום", pm_from_pass_top: "דף הפרימיום (פס בבית)", pm_from_pass_home: "דף הפרימיום (כרטיס בבית)", pm_from_pass_strip: "דף הפרימיום (רצועה בהכנה)", pm_from_pass_panel: "דף הפרימיום (חלון בהכנה)", pm_from_pass_scan: "דף הפרימיום (מהסריקה)" };
+    bars("pmFrom", Object.entries(t).filter(([k]) => k.startsWith("pm_from_")).sort((a, b) => b[1] - a[1]).map(([k, v]) => [FROM[k] || k.slice(8), v]), "var(--c-players)");
+    bars("pmScan", [["ראו את הסריקה", g("pm_scan")], ["🎮 בחרו לשחק בחינם", g("pm_scan_play"), pct(g("pm_scan_play"), g("pm_scan"))], ["🔓 לחצו \"לפתוח את כולם\"", g("pm_scan_buy"), pct(g("pm_scan_buy"), g("pm_scan"))], ["לחצו על ממצא נעול", g("pm_scan_item"), pct(g("pm_scan_item"), g("pm_scan"))], ["דילגו", g("pm_scan_skip"), pct(g("pm_scan_skip"), g("pm_scan"))]], "var(--c-money)");
+    kv("pmWrap", [["התחיל לבד בסוף משחק", n(g("wrapped_auto"))], ["נפתח בלחיצה", n(g("wrapped_open"))], ["הגיעו לשקופית הנעולה", n(g("wrapped_lock"))], ["סיימו את השקופיות החינמיות", n(g("wrapped_end_free"))], ["שמרו לסטורי (חינם / פרימיום)", `${n(g("story_save_free"))} / ${n(g("story_save"))}`]]);
+    bars("pmPass", [["פתחו את הדף", g("pm_pass")], ["· מהפס בבית", g("pm_pass_top")], ["· מהכרטיס בבית", g("pm_pass_home")], ["· מהרצועה בהכנה", g("pm_pass_strip")], ["· מהסריקה", g("pm_pass_scan")], ["לחצו על הכפתור הזהוב", g("pm_pass_go"), pct(g("pm_pass_go"), g("pm_pass"))], ["👀 3 שקופיות בחינם", g("pm_pass_peek")], ["בחרו לשחק בחינם", g("pm_pass_free")]], "var(--c-players)");
+    kv("pmMore", [["💬 שלחו למי שיש לו ביט (חלון / סיכום / סוף משחק)", `${n(g("pm_ask_sheet"))} / ${n(g("pm_ask_wrapped"))} / ${n(g("pm_ask_end"))}`], ["\"כבר שילמנו מטלפון אחר\"", n(g("pm_already"))], ["העתיקו את הקוד", n(g("pm_copy"))], ["ראו סודות במסך ההמתנה", n(g("pm_lobby_seen"))], ["ראו את ההצצה באמצע המשחק", n(g("pm_mid_seen"))], ["שחקנים שקיבלו תיק נעול / פתחו אותו", `${n(g("file_fab_locked"))} / ${n(g("file_locked"))}`], ["פתחו תעודות / תיקים", `${n(g("certs_open"))} / ${n(g("files_open"))}`]]);
+
+    // growth
+    kv("grow", [["לחצו \"מעלים קבוצה אחרת\"", `${n(g("p_host_cta"))} · ${pct(g("p_host_cta"), g("src_qr"))} מהשחקנים`], ["⭐ העלו צ'אט בפועל (הפכו למארחים)", n(g("player_hosted"))], ["קבוצות שנשמרו / נפתחו מהרשימה / נמחקו", `${n(g("my_saved"))} / ${n(g("my_open"))} / ${n(g("my_delete"))}`], ["\"לשמור במסך הבית\": לחצו / התקינו", `${n(g("a2hs_click"))} / ${n(g("a2hs_ok"))}`]]);
+    $("pkGrow").textContent = `${n(g("player_hosted"))} שחקנים הפכו למארחים`;
+    const NAMES = { src_tiktok: "טיקטוק", src_instagram: "אינסטגרם", src_ig: "אינסטגרם", src_whatsapp: "וואטסאפ", src_facebook: "פייסבוק", src_google: "גוגל", src_x: "טוויטר", src_qr: "סריקה במשחק", src_direct: "ישירות", src_other: "אתרים אחרים", src_chatgptcom: "צ'אט ג'י־פי־טי", src_bing: "בינג",
+      dev_ios: "אייפון", dev_android: "אנדרואיד", dev_desktop: "מחשב", geo_il: "ישראל", geo_am: "אמריקה", geo_eu: "אירופה", geo_other: "אחר", geo_unknown: "לא ידוע" };
+    const byPrefix = (p) => Object.entries(t).filter(([k]) => k.startsWith(p)).sort((a, b) => b[1] - a[1]);
+    const tot = (p) => byPrefix(p).reduce((a, x) => a + x[1], 0);
+    ["src_", "dev_", "geo_"].forEach((p, i) => bars(["src", "dev", "geo"][i], byPrefix(p).map(([k, v]) => [NAMES[k] || k.slice(p.length), v, pct(v, tot(p))]), "var(--c-visits)"));
+
+    // ratings (all time)
+    const KN = { wtf: "רגע של מה קורה פה", story: "הסיפור של הקבוצה", legend: "מי אמר את זה ראשון", inside: "מי התחיל את המילה", first: "ההודעה הראשונה", day_topic: "על מה השתגעו ביום", day_who: "מי הדליק את הבלגן", moment: "הרגע של הקבוצה", quote: "מי אמר את זה", finish: "איך זה נגמר", phrase: "של מי הביטוי", word: "של מי המילה", stat: "מי בקבוצה…", number: "כמה פעמים", when: "באיזו שעה", era: "באיזו תקופה", fake: "המזויפת", media: "סבב המדיה", secret: "סבב הסודות", vs: "מי מול מי", ai: "המתחזה" };
+    const r = {}; for (const [k, v] of Object.entries(S.total || {})) { const m = /^r_(.+)_(up|down)$/.exec(k); if (m) (r[m[1]] ||= { up: 0, down: 0 })[m[2]] = v; }
+    const rl = Object.entries(r).map(([k, x]) => [k, x.up, x.up + x.down]).filter((x) => x[2] >= 3).sort((a, b) => b[1] / b[2] - a[1] / a[2]);
+    bars("rates", rl.map(([k, up, all]) => [KN[k] || k, Math.round((up / all) * 100), `${n(all)} דירוגים`]), "var(--c-money)", "", true);
+    $("pkRate").textContent = rl.length ? `הכי אהוב: ${KN[rl[0][0]] || rl[0][0]}` : "";
+
+    // insights: a few plain sentences about the period
+    const ins = [];
+    if (started(t)) ins.push(["🎮", `${n(started(t))} משחקים התחילו, ו־${pct(fin, started(t))} מהם הגיעו עד הסוף.`]);
+    if (seen) ins.push(["💰", sales ? `${n(sales)} קבוצות קנו: ${buyRate.toFixed(1)}% מהמשחקים שהסתיימו, בערך ${n(Math.round(sales * PRICE))} ₪.` : "עוד אין קניות בטווח הזה."]);
+    if (worstPm) ins.push(["⚠️", `בפרימיום, הכי הרבה נושרים בשלב "${worstPm.to}": רק ${worstPm.p} ממי ש${worstPm.fromVerb}.`]);
+    if (whyAll >= 3) { const top = why.slice().sort((a, b) => b[1] - a[1])[0]; ins.push(["🚪", `הסיבה הנפוצה לעזוב את התשלום: ${top[0].slice(2).trim()} (${pct(top[1], whyAll)} מהתשובות).`]); }
+    const src = byPrefix("src_").filter(([k]) => k !== "src_qr" && k !== "src_direct");
+    if (src.length) ins.push(["📣", `מקור התנועה המוביל (בלי סריקות וכניסות ישירות): ${NAMES[src[0][0]] || src[0][0].slice(4)}, ${n(src[0][1])} כניסות.`]);
+    $("ins").innerHTML = ins.length ? ins.map(([e, s]) => `<li><em>${e}</em><span>${s}</span></li>`).join("") : '<li><em>⏳</em><span>אין עדיין נתונים בטווח הזה.</span></li>';
+
+    trend(from, to);
+    hours(from, to, hf, ht);
   }
 
-  // live: who is here right now (presence entries refreshed every minute while the page is open)
-  { let rows = [];
-    const draw = () => {
-      const now = Date.now(), fresh = rows.filter((r) => now - r.t < 150000);
-      const c = (st) => fresh.filter((r) => r.s === st);
-      const single = c("single"), host = c("host"), phones = c("phone");
-      const people = single.reduce((a, r) => a + (r.n || 1), 0) + host.length + phones.length;
-      $("lvPeople").textContent = n(people); $("lvGames").textContent = n(single.length + host.length);
-      $("lvLobby").textContent = n(c("lobby").length); $("lvPhones").textContent = n(phones.length); $("lvSite").textContent = n(c("site").length);
-      if (denied) { $("lvNote").textContent = "⚠️ Firebase חוסם את המונה: החוקים החדשים עוד לא נשמרו (Realtime Database ← Rules ← Publish)."; return; }
-      $("lvNote").textContent = `סה"כ ${n(fresh.length)} מכשירים באתר כרגע · מתעדכן לבד · ${new Date().toLocaleTimeString("he-IL")}`;
+  // a funnel: each step with its count and how many of the previous step went on; the worst step is marked
+  function funnel(el, steps, color) {
+    const main = steps.filter((s) => !s[2]), top = Math.max(1, main[0] ? main[0][1] : 1, ...steps.map((s) => s[1]));
+    let prev = null, worst = null;
+    const conv = steps.map((s) => { if (s[2]) return null; const c = prev && prev[1] ? s[1] / prev[1] : null; const o = { c, from: prev }; prev = s; return o; });
+    conv.forEach((o, i) => { if (o && o.c != null && o.c <= 1 && (!worst || o.c < worst.c)) worst = { c: o.c, i }; });
+    $(el).innerHTML = steps.some((s) => s[1]) ? steps.map((s, i) => {
+      const o = conv[i], w = worst && worst.i === i;
+      return `<div class="fs ${s[2] ? "sub" : ""} ${w ? "worst" : ""}"><div class="top"><span>${esc(s[0])}</span><b>${n(s[1])}</b></div><div class="track"><i style="width:${(s[1] / top) * 100}%;--fc:${color}"></i></div>${o && o.c != null ? `<span class="conv">${w ? "⚠️ כאן הכי הרבה נושרים · " : ""}${pct(s[1], o.from[1])} מהשלב הקודם</span>` : ""}</div>`;
+    }).join("") : '<p class="empty">עוד אין נתונים בטווח הזה</p>';
+    if (!worst) return null;
+    const ws = steps[worst.i], pv = conv[worst.i].from;
+    return { to: ws[0].replace(/^[^\p{L}"]+/u, ""), p: pct(ws[1], pv[1]), fromVerb: { "ראו פרימיום": "ראו פרימיום המשיכו", "פתחו את חלון התשלום": "פתחו את חלון התשלום המשיכו", "עברו לביט או שלחו לחבר": "עברו לביט לחצו", "לחצו \"שילמתי\"": "לחצו \"שילמתי\" באמת שילמו" }[pv[0]] || "היו בשלב הקודם המשיכו" };
+  }
+  function bars(el, list, color, note = "", isPct = false) {
+    const m = Math.max(1, ...list.map((x) => x[1]));
+    $(el).innerHTML = (list.some((x) => x[1]) ? list.map(([l, v, sub]) => `<div class="row"><span>${esc(l)}</span><span class="track"><i style="width:${((isPct ? v / 100 : v / m)) * 100}%;--rc:${color}"></i></span><b>${isPct ? v + "%" : n(v)}${sub ? ` <span class="dim">· ${sub}</span>` : ""}</b></div>`).join("") : '<p class="empty">עוד אין נתונים בטווח הזה</p>') + (note ? `<p class="note">${note}</p>` : "");
+  }
+  function kv(el, list) { $(el).innerHTML = list.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join(""); }
+
+  // games per day (up to 30 days), bars with a tooltip holding the whole day
+  function trend(from, to) {
+    const end = to, start = dayDiff(from, to) < 13 ? addDays(to, -13) : (dayDiff(from, to) > 29 ? addDays(to, -29) : from);
+    const days = []; for (let d = start < START ? START : start; d <= end; d = addDays(d, 1)) { const o = (S.days || {})[d] || {}; days.push({ d, g: started(o), v: o.visit || 0, p: o.players || 0, s: o.pm_unlocked || 0, f: o.finished || 0 }); }
+    $("trendTitle").textContent = `משחקים לפי יום · ${days.length} ימים אחרונים`;
+    const W = 720, H = 220, L = 34, B = 26, T = 10, max = Math.max(1, ...days.map((x) => x.g)), step = Math.pow(10, Math.floor(Math.log10(max)));
+    const tick = [1, 2, 5, 10].map((k) => k * step).find((s) => max / s <= 4) || step * 10, top = Math.ceil(max / tick) * tick;
+    const bw = (W - L) / days.length, y = (v) => T + (H - T - B) * (1 - v / top);
+    let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="משחקים שהתחילו לפי יום">`;
+    for (let v = 0; v <= top; v += tick) svg += `<line class="gl" x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text class="axis" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${n(v)}</text>`;
+    days.forEach((x, i) => {
+      const cx = L + i * bw, h = Math.max(0, y(0) - y(x.g)), w = Math.max(3, bw - 4), bx = cx + (bw - w) / 2;
+      svg += `<rect class="hl" data-i="${i}" x="${cx}" y="${T}" width="${bw}" height="${H - T - B}" opacity="0"/>`;
+      if (x.g) svg += `<path class="barm ${x.d === key(new Date()) ? "today" : ""}" d="M${bx},${y(0)} v${-(h - Math.min(4, h))} q0,-${Math.min(4, h)} ${Math.min(4, w / 2)},-${Math.min(4, h)} h${w - 2 * Math.min(4, w / 2)} q${Math.min(4, w / 2)},0 ${Math.min(4, w / 2)},${Math.min(4, h)} v${h - Math.min(4, h)} z"/>`;
+      if (days.length <= 14 || i % 2 === (days.length - 1) % 2) svg += `<text class="axis" x="${cx + bw / 2}" y="${H - 8}" text-anchor="middle">${fmtD(x.d)}</text>`;
+      svg += `<rect class="hit" data-i="${i}" x="${cx}" y="0" width="${bw}" height="${H}"/>`;
+    });
+    svg += `</svg><div class="tip" hidden></div>`;
+    const box = $("trend"); box.innerHTML = svg;
+    const tip = box.querySelector(".tip"), sv = box.querySelector("svg");
+    const show = (i, ev) => {
+      const x = days[i]; box.querySelectorAll(".hl").forEach((r) => r.setAttribute("opacity", r.dataset.i == i ? 1 : 0));
+      tip.innerHTML = `<b>${new Date(x.d + "T12:00").toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "numeric" })}</b><span><span><i style="background:var(--c-games)"></i>משחקים</span><b>${n(x.g)}</b></span><span><span>הגיעו לסוף</span><b>${n(x.f)}</b></span><span><span>כניסות</span><b>${n(x.v)}</b></span><span><span>שחקנים</span><b>${n(x.p)}</b></span><span><span>💰 קניות</span><b>${n(x.s)}</b></span>`;
+      tip.hidden = false; const r = box.getBoundingClientRect(), px = ((L + (i + .5) * bw) / W) * r.width;
+      tip.style.top = "4px"; tip.style.left = Math.min(Math.max(0, px - tip.offsetWidth / 2), r.width - tip.offsetWidth) + "px";
     };
-    let denied = false;
+    sv.querySelectorAll(".hit").forEach((h) => { h.addEventListener("pointerenter", (e) => show(+h.dataset.i, e)); h.addEventListener("pointerdown", (e) => show(+h.dataset.i, e)); });
+    sv.addEventListener("pointerleave", () => { tip.hidden = true; box.querySelectorAll(".hl").forEach((r) => r.setAttribute("opacity", 0)); });
+  }
+
+  // visits by hour over the chosen days
+  function hours(from, to, hf, ht) {
+    const v = Array(24).fill(0), gm = Array(24).fill(0);
+    for (const [d, o] of Object.entries(S.days || {})) { if (d < from || d > to) continue; for (const [k, x] of Object.entries(o)) { const m = HK.exec(k); if (!m) continue; if (m[2] === "visit") v[+m[1]] += x || 0; if (m[2] === "started" || m[2] === "single") gm[+m[1]] += x || 0; } }
+    const W = 720, H = 150, B = 22, T = 8, max = Math.max(1, ...v), bw = W / 24, inH = (h) => (hf <= ht ? h >= hf && h <= ht : h >= hf || h <= ht);
+    let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="כניסות לפי שעה" style="direction:ltr">`;
+    v.forEach((x, h) => { const bh = ((H - T - B) * x) / max, w = bw - 4; svg += `<rect class="barh" x="${h * bw + 2}" y="${H - B - bh}" width="${w}" height="${bh}" rx="3" opacity="${inH(h) ? 1 : .3}"><title>${pad(h)}:00 · ${n(x)} כניסות · ${n(gm[h])} משחקים</title></rect>`; if (h % 3 === 0) svg += `<text class="axis" x="${h * bw + bw / 2}" y="${H - 6}" text-anchor="middle">${pad(h)}</text>`; });
+    const peak = v.indexOf(max);
+    $("hours").innerHTML = v.some((x) => x) ? svg + `</svg><p class="note">הכי עמוס: ${pad(peak)}:00 · ${n(max)} כניסות.</p>` : '<p class="empty">עוד אין נתונים בטווח הזה</p>';
+  }
+
+  // live: who is here right now
+  { let rows = [], denied = false;
+    const draw = () => {
+      const now = Date.now(), fresh = rows.filter((r) => now - r.t < 150000), c = (st) => fresh.filter((r) => r.s === st);
+      const single = c("single"), host = c("host"), phones = c("phone");
+      const people = single.reduce((a, r) => a + (r.n || 1), 0) + host.length + phones.length, games = single.length + host.length;
+      $("lvHead").textContent = `עכשיו: ${n(games)} משחקים · ${n(people)} אנשים משחקים`;
+      $("lvGames").textContent = n(games); $("lvLobby").textContent = n(c("lobby").length); $("lvPhones").textContent = n(phones.length); $("lvSite").textContent = n(c("site").length);
+      $("lvNote").textContent = denied ? "⚠️ חוקי מסד הנתונים חוסמים את המונה החי" : `${n(fresh.length)} מכשירים באתר כרגע · מתעדכן לבד`;
+    };
     net.watchLive((r, d) => { rows = r; denied = !!d; draw(); });
     setInterval(draw, 5000);
-    $("lvTest").onclick = () => { net.live("site"); $("lvTest").textContent = "✓ נספרת. תוך כמה שניות \"מסתכלים באתר\" יעלה ב-1"; $("lvTest").disabled = true; }; }
-  document.getElementById("again").onclick = load;
-  { const b = document.getElementById("meBtn"), isMe = () => { try { return localStorage.getItem("miamar_me") === "1"; } catch { return false; } };
+    $("lvTest").onclick = () => { net.live("site"); $("lvTest").textContent = "✓ נספרת. תוך כמה שניות \"מסתכלים באתר\" יעלה ב־1"; $("lvTest").disabled = true; }; }
+  $("again").onclick = load;
+  { const b = $("meBtn"), isMe = () => { try { return localStorage.getItem("miamar_me") === "1"; } catch { return false; } };
     const draw = () => { b.textContent = isMe() ? "✓ הטלפון הזה לא נספר בנתונים (לחיצה מחזירה)" : "🙈 זה הטלפון שלי: לא לספור את מה שאני עושה באתר"; };
     b.onclick = () => { try { isMe() ? localStorage.removeItem("miamar_me") : localStorage.setItem("miamar_me", "1"); } catch {} draw(); }; draw(); }
   load();
