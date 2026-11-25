@@ -269,6 +269,15 @@ details.guide .os-tabs { margin-bottom: 8px; }
 .mine-no { background: #fff; color: #1d1636; }
 .mine-more { font: inherit; font-size: .88rem; font-weight: 700; color: var(--yellow, #ffd23f); background: none; border: 0; padding: 4px; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .mine-go { transition: none; } }
+
+/* players → hosts */
+.host-cta { margin-top: 14px; display: grid; gap: 10px; justify-items: center; text-align: center; padding: 16px 14px; border-radius: 22px; background: linear-gradient(160deg, rgba(63,224,176,.18), rgba(123,92,255,.18)); border: 2.5px solid rgba(63,224,176,.6); }
+.hc-top { display: flex; align-items: center; gap: 10px; text-align: right; }
+.hc-top b { display: block; font-size: 1.12rem; line-height: 1.3; }
+.hc-top span { display: block; font-size: .88rem; color: #e6e0ff; margin-top: 2px; }
+.host-cta .hc-bud { --bs: 64px; flex: none; }
+.host-cta .btn.big { width: 100%; }
+.a2hs-help { margin: 0; font-size: .86rem; line-height: 1.5; background: rgba(0,0,0,.2); border-radius: 12px; padding: 8px 10px; }
 /* ---------- WOW layer ---------- */
 /* each question type has its own accent; the whole room (aurora, timer, title) shifts to it */
 body { --accent: var(--yellow); --a1: #ff3d7f; --a2: #5fb4ff; --a3: #3fe0b0; }
@@ -922,8 +931,8 @@ body.yt-mini #ytmin { display: none; }
 <main class="wrap" id="app"></main>
 <div class="overlay" id="overlay" hidden></div>
 
-<script src="config.js?v=1795557775"></script>
-<script src="app.js?v=1795557775"></script>
+<script src="config.js?v=1795628429"></script>
+<script src="app.js?v=1795628429"></script>
 <script>
 (() => {
   const C = window.Chat;
@@ -2491,7 +2500,7 @@ ${samples}
         let people = 0, total = 0; try { const P = parsedFor(text); people = P.stats.people.filter((p) => p.messages >= 3).length; total = P.msgs.length; } catch {}
         if (people >= 2) { loading(`נמצאו ${n(total)} הודעות!`, "מחפש את הרגעים הכי מטורפים בקבוצה"); SFX.pop(); await paint(500); }
         if (people < 2) { loading(null); file.value = ""; home(people === 1 ? "זה נראה כמו צ'אט של שני אנשים. המשחק צריך צ'אט של קבוצה." : `הקובץ "${f.name}" לא נראה כמו צ'אט שיוצא מוואטסאפ. בוחרים את הקובץ שוואטסאפ יצר, בדרך כלל בשם "WhatsApp Chat - שם הקבוצה".`); return; }
-        S.chatText = text; S.chatName = f.name.replace(/\.(zip|txt)$/i, "").replace(/^(whatsapp chat( with|\s*-)?|צ['׳]אט WhatsApp עם)\s*/i, "").trim(); S.players = null; S.screen = "setup"; render(); loading(null); NET.bump("upload"); MY.save(text, S.chatName, people, total); setTimeout(() => { try { PREM.scan && PREM.scan(); } catch {} }, 60); }
+        S.chatText = text; S.chatName = f.name.replace(/\.(zip|txt)$/i, "").replace(/^(whatsapp chat( with|\s*-)?|צ['׳]אט WhatsApp עם)\s*/i, "").trim(); S.players = null; S.screen = "setup"; render(); loading(null); NET.bump("upload"); try { if (sessionStorage.getItem("from_player")) { sessionStorage.removeItem("from_player"); NET.bump("player_hosted"); } } catch {} MY.save(text, S.chatName, people, total); setTimeout(() => { try { PREM.scan && PREM.scan(); } catch {} }, 60); }
       catch (e) { loading(null); home(e.message || "לא הצלחתי לקרוא את הקובץ."); }
     };
     app.querySelectorAll(".os-tabs button").forEach((b) => (b.onclick = () => {
@@ -3211,6 +3220,33 @@ ${samples}
   }
   const mediaLine = (k) => [["audio", "הקלטות"], ["image", "תמונות"], ["sticker", "סטיקרים"], ["video", "סרטונים"], ["gif", "גיפים"]].filter(([x]) => k[x]).map(([x, t]) => `${n(k[x])} ${t}`).join(", ");
   function pmLobby() { try { return PREM.lobbyHtml ? PREM.lobbyHtml() : ""; } catch { return ""; } }
+  // players become hosts: after a game on someone else's chat, an invitation to play with another group of yours
+  let A2HS = null; addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); A2HS = e; });
+  const standalone = () => { try { return matchMedia("(display-mode: standalone)").matches || !!navigator.standalone; } catch { return false; } };
+  function hostCta() {
+    return `<section class="host-cta">
+      <div class="hc-top">${buddy("party", "hc-bud")}<div><b>נהניתם? 🔥 תעשו את זה עם קבוצה אחרת שלכם</b><span>המשפחה, הכיתה, החברים מהחוג. 30 שניות ואתם בפנים, בחינם.</span></div></div>
+      <button class="btn big" id="host-own" type="button">📂 מעלים קבוצה אחרת</button>
+      ${standalone() ? "" : `<button class="link-btn" id="a2hs" type="button">📲 לשמור את המשחק במסך הבית</button><p class="a2hs-help" id="a2hs-help" hidden></p>`}
+    </section>`;
+  }
+  function bindHostCta(leaveRoom) {
+    const ho = document.getElementById("host-own");
+    if (ho) ho.onclick = () => {
+      SFX.tap(); NET.bump("p_host_cta"); try { sessionStorage.setItem("from_player", "1"); } catch {}
+      leaveRoom(); S = { screen: "home" }; render();
+      const f = document.getElementById("file"); if (f) f.click(); // still inside the tap, so the file picker opens
+    };
+    const a = document.getElementById("a2hs");
+    if (a) a.onclick = async () => {
+      SFX.tap(); NET.bump("a2hs_click");
+      if (A2HS) { const ev = A2HS; A2HS = null; ev.prompt(); try { const r = await ev.userChoice; if (r && r.outcome === "accepted") NET.bump("a2hs_ok"); } catch {} return; }
+      const h = document.getElementById("a2hs-help"), ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      h.innerHTML = ios ? "באייפון: לוחצים על כפתור השיתוף <b>⬆️</b> בספארי, ואז על <b>\"הוספה למסך הבית\"</b>." : "לוחצים על התפריט <b>⋮</b> בדפדפן, ואז על <b>\"הוספה למסך הבית\"</b> או <b>\"התקנת האפליקציה\"</b>.";
+      h.hidden = false;
+    };
+  }
+  if (location.hash === "#qa") { window.__hc = hostCta; window.__bhc = bindHostCta; }
   function pmCard() { try { return PREM.phoneCardHtml ? `<div class="pm-pc-slot" data-n="${esc(S.rname || "")}" style="margin-top:12px">${PREM.phoneCardHtml(S.rname || "")}</div>` : ""; } catch { return ""; } }
   function pmStrip() { try { return PREM.phoneStripHtml ? `<div class="pm-ps-slot">${PREM.phoneStripHtml()}</div>` : ""; } catch { return ""; } }
   function pmStripTop() { try { return PREM.stripHtml ? PREM.stripHtml() : ""; } catch { return ""; } }
@@ -3568,7 +3604,7 @@ ${samples}
       const podium = top3.length >= 2 ? `<div class="podium">${[top3[1], top3[0], top3[2]].map((r, k) => r ? `<div class="step ${["p2", "p1", "p3"][k]}">${k === 1 ? `<span class="crown">👑</span>` : ""}<span class="medal">${["2", "1", "3"][k]}</span><b>${esc(r[0])}</b><span class="small">${n(r[1])}</span></div>` : "<div></div>").join("")}</div>` : "";
       body = `<div class="rcard ${won ? "ok" : "miss"}" id="rres">${buddy(won ? "party" : "laugh")}<div class="rbig">${won ? "ניצחת! 👑" : r && r.pts > 0 ? `מקום ${r.pos}` : "המשחק נגמר"}<small>${r ? `${n(r.pts)} נקודות` : ""}</small></div></div>
         ${rows[0] && rows[0][1] > 0 ? `<h2>${esc(rows[0][0])} מכיר/ה את הקבוצה הכי טוב</h2>` : ""}
-        ${podium}${pmCard()}${rows.length > 3 ? boardHtml(rows.slice(3, 12), 3) : ""}
+        ${podium}${pmCard()}${hostCta()}${rows.length > 3 ? boardHtml(rows.slice(3, 12), 3) : ""}
         ${d.bq ? `<div class="bubble small-b">${esc(d.bq.text)}<span class="meta">הציטוט של הערב · ${esc(d.bq.author)}${d.bq.laughs ? ` · ${d.bq.laughs} צחוקים אחריו` : ""}</span></div>` : ""}
         ${(d.aw || []).length ? `<h2 style="font-size:2rem">פרסי הקבוצה</h2><div class="awards">${d.aw.map(([k, v, x]) => `<div class="award"><span class="dim small">${esc(k)}</span><b>${esc(v)}</b><span class="small">${esc(x)}</span></div>`).join("")}</div>` : ""}
         <section class="panel story" id="story" hidden><b>תמונה לסטורי</b><img id="story-img" alt="תמונת סיכום של המשחק: הפודיום והציטוט של הערב"><div class="row" style="justify-content:center"><button class="btn" id="save-story" hidden>לשמור את התמונה</button></div><p class="note" id="story-note" aria-live="polite" style="text-align:center"></p></section>`;
@@ -3576,6 +3612,7 @@ ${samples}
     }
     app.innerHTML = top + body;
     bindMute(); remoteNotice();
+    bindHostCta(() => { if (room) { room.close().catch(() => {}); room = null; } keepAwake(false); history.replaceState(null, "", location.pathname); });
     const lv = document.getElementById("leave");
     lv.onclick = () => {
       // during the game a stray tap must not throw you out: tap twice

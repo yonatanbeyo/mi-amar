@@ -192,7 +192,7 @@ button { font: inherit; background: transparent; color: var(--text); border: 2px
     // the main journey: visit → upload → start → finish
     { const g = (k) => t[k] || 0, pct = (a, b) => (b && a <= b ? Math.round((a / b) * 100) + "%" : "–");
       const direct = Math.max(0, g("visit") - g("src_qr")), up = g("upload") + g("demo_start") + g("my_open");
-      const steps = [["נכנסו לאתר בעצמם (בלי מי שהגיע מקוד של משחק)", direct], ["העלו צ'אט / דוגמה / קבוצה שמורה", up, pct(up, direct)], ["· צ'אט חדש", g("upload")], ["· צ'אט לדוגמה", g("demo_start")], ["· מהרשימה \"הקבוצות שלי\"", g("my_open")], ["התחילו משחק", g("started"), pct(g("started"), up)], ["הגיעו עד הסוף", g("finished"), pct(g("finished"), g("started"))]];
+      const steps = [["נכנסו לאתר בעצמם (בלי מי שהגיע מקוד של משחק)", direct], ["העלו צ'אט / דוגמה / קבוצה שמורה", up, pct(up, direct)], ["· צ'אט חדש", g("upload")], ["· צ'אט לדוגמה", g("demo_start")], ["· מהרשימה \"הקבוצות שלי\"", g("my_open")], ["התחילו משחק", g("started"), pct(g("started"), up)], ["הגיעו עד הסוף", g("finished"), pct(g("finished"), g("started"))], ["📂 שחקנים שלחצו \"מעלים קבוצה אחרת\"", g("p_host_cta"), pct(g("p_host_cta"), g("src_qr"))], ["· מהם העלו צ'אט בפועל (שחקנים שהפכו למארחים)", g("player_hosted"), pct(g("player_hosted"), g("p_host_cta"))], ["📲 לחצו \"לשמור במסך הבית\" / התקינו", g("a2hs_click"), g("a2hs_ok") ? "התקינו " + n(g("a2hs_ok")) : ""]];
       const mx = Math.max(1, ...steps.map((x) => x[1]));
       $("journey").innerHTML = steps.map(([l, v, p]) => `<div class="row"><span>${l}</span><span class="track"><i style="width:${(v / mx) * 100}%;background:var(--mint,#3fe0b0)"></i></span><b>${n(v)}${p ? " · " + p : ""}</b></div>`).join(""); }
     // premium funnel: does anyone care?
