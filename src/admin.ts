@@ -4,9 +4,11 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "firebase/auth";
 import { getDatabase, ref, onValue, update, serverTimestamp } from "firebase/database";
 
-const ADMIN = "yonatan.beyo@gmail.com";
 const PRICE = 14.9; // launch price until the end of 2026, 19.90 after
-const priceAt = (ts: number) => (ts && ts >= new Date(2027, 0, 1).getTime() ? 19.9 : PRICE);
+// Black Friday (26.11 16:00 – 30.11 23:59 Israel time) was 9.90. Same window as premium.ts
+const SALE_FROM = Date.UTC(2026, 10, 26, 14), SALE_END = Date.UTC(2026, 10, 30, 21, 59, 59);
+const priceAt = (ts: number) => (ts >= SALE_FROM && ts < SALE_END ? 9.9 : ts >= new Date(2027, 0, 1).getTime() ? 19.9 : PRICE);
+const money = (n: number) => n.toFixed(2);
 const MORNING = "https://app.greeninvoice.co.il/";
 const cfg = (window as any).MIAMAR_FIREBASE;
 const app = initializeApp(cfg), auth = getAuth(app), db = getDatabase(app);
@@ -24,15 +26,18 @@ function draw() {
   document.title = wait.length ? `(${wait.length}) לוח ניהול` : "לוח ניהול";
   $("#sum").innerHTML = `
     <div class="kpi"><b>${ok.length}</b><span>מכירות</span></div>
-    <div class="kpi"><b>${ok.reduce((a: number, [, v]: any) => a + priceAt(v.t || 0), 0).toFixed(2)} ₪</b><span>הכנסות</span></div>
+    <div class="kpi"><b>${money(ok.reduce((a: number, [, v]: any) => a + priceAt(v.t || 0), 0))} ₪</b><span>הכנסות</span></div>
     <div class="kpi ${wait.length ? "hot" : ""}"><b>${wait.length}</b><span>מחכים לאישור</span></div>
     <div class="kpi ${noRec.length ? "warn" : ""}"><b>${noRec.length}</b><span>בלי קבלה</span></div>`;
+  const now = priceAt(Date.now()), bf = ok.filter(([, v]) => priceAt(v.t || 0) === 9.9).length;
+  $("#price").innerHTML = now === 9.9 ? `🖤 בלאק פריידיי עכשיו: מחפשים בביט העברה של <b>9.90 ₪</b> (עד שני 30.11 ב־23:59, אחר כך שוב 14.90 ₪)${bf ? ` · ${bf} מכירות במבצע עד עכשיו` : ""}` : `מחפשים בביט העברה של <b>${money(now)} ₪</b>${bf ? ` · בבלאק פריידיי היו ${bf} מכירות ב־9.90 ₪` : ""}`;
+  $("#price").className = now === 9.9 ? "bf" : "";
   $("#rec").hidden = !noRec.length;
   $("#rec").innerHTML = `🧾 יש ${noRec.length} תשלומים שעוד לא הוצאת עליהם קבלה. <a href="${MORNING}" target="_blank" rel="noopener">להוצאת קבלה במורנינג</a>, ואז מסמנים כאן "הוצאתי קבלה".`;
   const list = rows.filter(([, v]) => filter === "all" || (filter === "rec" ? v.s === "ok" && !v.r : v.s === filter)).sort((a, b) => (b[1].t || 0) - (a[1].t || 0));
   document.querySelectorAll<HTMLButtonElement>("#tabs button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.f === filter)));
   $("#list").innerHTML = list.length ? list.map(([code, v]) => `<div class="row st-${v.s}">
-      <div class="main"><b class="code" dir="ltr">${esc(code)}</b><span class="dim">${when(v.t)} · ${ago(v.t)}</span><span class="dim small">קבוצה ${esc(String(v.c).slice(0, 6))}</span></div>
+      <div class="main"><b class="code" dir="ltr">${esc(code)}</b><span class="amt">${money(priceAt(v.t || 0))} ₪${priceAt(v.t || 0) === 9.9 ? " · 🖤 בלאק פריידיי" : ""}</span><span class="dim">${when(v.t)} · ${ago(v.t)}</span><span class="dim small">קבוצה ${esc(String(v.c).slice(0, 6))}</span></div>
       <div class="acts">${v.s === "wait" ? `<button class="ok" data-ok="${esc(code)}">אשר ✓</button><button class="no" data-no="${esc(code)}">דחייה</button>`
         : v.s === "ok" ? `<span class="tag ok">אושר ${when(v.a)}</span><label class="rc"><input type="checkbox" data-r="${esc(code)}" ${v.r ? "checked" : ""}> הוצאתי קבלה</label>`
         : `<span class="tag no">נדחה</span><button class="ghost" data-ok="${esc(code)}">לאשר בכל זאת</button>`}<button class="del" data-del="${esc(code)}" aria-label="מחיקה מהרשימה">🗑</button></div></div>`).join("")
@@ -53,16 +58,6 @@ async function approve(code: string, b: HTMLButtonElement) {
 function fail(e: any) { toast("משהו נכשל: " + (e && e.code ? e.code : "בודקים את החוקים בפיירבייס")); }
 function toast(t: string) { const d = $("#toast"); d.textContent = t; d.classList.add("show"); setTimeout(() => d.classList.remove("show"), 3500); }
 
-function watch() {
-  off = onValue(ref(db, "pay"), (s) => {
-    rows = Object.entries(s.val() || {});
-    const waitNow = rows.filter(([, v]) => v.s === "wait").map(([c]) => c);
-    const fresh = waitNow.filter((c) => !seenWait.has(c));
-    if (!first && fresh.length) { ding(); try { if ("Notification" in window && Notification.permission === "granted") new Notification("תשלום חדש מחכה לאישור", { body: `קוד ${fresh[0]}` }); } catch {} }
-    seenWait = new Set(waitNow); first = false; draw();
-  }, (e) => { $("#list").innerHTML = `<p class="empty">אין הרשאה לקרוא את התשלומים. צריך להדביק את החוקים החדשים בפיירבייס. (${esc(e.message)})</p>`; });
-}
-
 $("#login").onclick = async () => { try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (e: any) { if (/popup/.test(e?.code || "")) signInWithRedirect(auth, new GoogleAuthProvider()); else toast("ההתחברות נכשלה: " + (e?.code || "")); } };
 $("#out").onclick = () => signOut(auth);
 $("#notif").onclick = () => { try { Notification.requestPermission().then((p) => toast(p === "granted" ? "התראות פועלות ✓" : "ההתראות חסומות בדפדפן")); } catch {} };
@@ -71,9 +66,17 @@ getRedirectResult(auth).catch(() => {});
 onAuthStateChanged(auth, (u) => {
   if (off) { off(); off = null; }
   const me = u && !u.isAnonymous ? (u.email || "").toLowerCase() : "";
-  $("#gate").hidden = me === ADMIN; $("#panel").hidden = me !== ADMIN;
-  $("#who").textContent = me && me !== ADMIN ? `מחובר כ־${me}. ללוח הזה נכנסים רק עם החשבון של בעל האתר.` : "";
-  $("#out").hidden = !me;
-  if (me === ADMIN) watch();
+  $("#out").hidden = !me; $("#who").textContent = "";
+  $("#gate").hidden = false; $("#panel").hidden = true;
+  if (!me) return;
+  // the database rules decide who is the owner: if this account may read the payments, it is the owner
+  off = onValue(ref(db, "pay"), (s) => {
+    $("#gate").hidden = true; $("#panel").hidden = false;
+    rows = Object.entries(s.val() || {});
+    const waitNow = rows.filter(([, v]) => v.s === "wait").map(([c]) => c);
+    const fresh = waitNow.filter((c) => !seenWait.has(c));
+    if (!first && fresh.length) { ding(); try { if ("Notification" in window && Notification.permission === "granted") new Notification("תשלום חדש מחכה לאישור", { body: `קוד ${fresh[0]}` }); } catch {} }
+    seenWait = new Set(waitNow); first = false; draw();
+  }, () => { $("#gate").hidden = false; $("#panel").hidden = true; $("#who").textContent = `מחובר כ־${me}. ללוח הזה נכנסים רק עם החשבון של בעל האתר.`; });
 });
 setInterval(() => { if (rows.length) draw(); }, 60000);

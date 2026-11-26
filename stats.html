@@ -295,7 +295,9 @@ details.sec[open] > summary .chev { transform: rotate(180deg); }
 
     // KPI tiles
     const priceOn = (d) => (d >= "2026-11-26" && d <= "2026-11-30" ? 9.9 : d >= "2027-01-01" ? 19.9 : PRICE);
-    let REV = 0; for (const [d, o] of Object.entries(S.days || {})) if (d >= from && d <= to) REV += (o.pm_unlocked || 0) * priceOn(d);
+    // the sale began on 26.11 at 16:00, so that day's earlier sales were still 14.90 (hourly counters tell them apart)
+    const revDay = (d, o) => { const all = o.pm_unlocked || 0; if (d !== "2026-11-26") return all * priceOn(d); let late = 0; for (let h = 16; h < 24; h++) late += o[`h${pad(h)}_pm_unlocked`] || 0; return late * 9.9 + (all - late) * PRICE; };
+    let REV = 0; for (const [d, o] of Object.entries(S.days || {})) if (d >= from && d <= to) REV += revDay(d, o);
     const sales = g("pm_unlocked"), fin = g("finished"), cs = cmp.pm_unlocked || 0, cf = cmp.finished || 0;
     const delta = (a, b, isPct) => {
       if (!hasCmp || b == null) return "";

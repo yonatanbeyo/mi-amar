@@ -41,6 +41,10 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #5fb4
 .ok{background:#3fe0b0}.del{background:transparent;border-color:#3a2f66;box-shadow:none;padding:8px 10px;color:#fff}.no{background:#fff;color:#c81e3c}
 .tag{font-size:.82rem;padding:4px 10px;border-radius:99px}.tag.ok{background:#3fe0b033;color:#3fe0b0}.tag.no{background:#ff3d7f33;color:#ff8aa8}
 .rc{display:flex;gap:6px;align-items:center;font-size:.9rem;cursor:pointer}.rc input{width:20px;height:20px;accent-color:#3fe0b0}
+.amt{font-weight:700;color:#ffd23f;font-size:.95rem}
+#price{background:#2a1f55;border:2px solid #3a2f66;border-radius:14px;padding:10px 12px;margin-bottom:12px;line-height:1.5}
+#price b{color:#ffd23f}
+#price.bf{background:#0b0b0f;border-color:#ffd23f}
 .empty{text-align:center;color:#b4a9d6;padding:30px}
 .foot{margin-top:16px;color:#b4a9d6;font-size:.85rem;line-height:1.6}
 #toast{position:fixed;bottom:20px;left:50%;translate:-50% 20px;background:#fff3d1;color:#1d1636;padding:10px 16px;border-radius:14px;font-weight:700;opacity:0;transition:.3s;max-width:90vw;text-align:center}
@@ -57,13 +61,14 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid #5fb4
 </section>
 <section id="panel" hidden>
   <div id="sum"></div>
+  <div id="price"></div>
   <div id="rec" hidden></div>
   <div id="tabs"><button data-f="wait">מחכים</button><button data-f="ok">אושרו</button><button data-f="rec">בלי קבלה</button><button data-f="no">נדחו</button><button data-f="all">הכל</button></div>
   <div id="list"></div>
-  <p class="foot">איך מאשרים: פותחים את ביט, מוצאים העברה של 14.90 ₪ (מ־1.1.2027: 19.90 ₪) עם הקוד בשדה הסיבה, ולוחצים "אשר". הפרימיום נפתח מיד לכל מי שמשחק עם הצ'אט הזה, גם באמצע משחק. אחר כך מוציאים קבלה במורנינג ומסמנים "הוצאתי קבלה".<br><button class="ghost" id="notif" style="margin-top:8px">להפעיל התראה על תשלום חדש</button></p>
+  <p class="foot">איך מאשרים: פותחים את ביט, מוצאים העברה בסכום שכתוב למעלה ובשורה של הקוד, עם הקוד בשדה הסיבה, ולוחצים "אשר". הפרימיום נפתח מיד לכל מי שמשחק עם הצ'אט הזה, גם באמצע משחק. אחר כך מוציאים קבלה במורנינג ומסמנים "הוצאתי קבלה".<br><button class="ghost" id="notif" style="margin-top:8px">להפעיל התראה על תשלום חדש</button></p>
 </section>
 <div id="toast" role="status"></div>
-<script src="config.js?v=4"></script>
-<script src="admin.js?v=4"></script>
+<script src="config.js?v=5"></script>
+<script src="admin.js?v=5"></script>
 </body>
 </html>
