@@ -5,7 +5,7 @@
 
 export type Finding = { e: string; t: string; v: string; free?: boolean };
 export type ScanCtx = {
-  msgs: number; days: number; people: number; total: number; price: string;
+  msgs: number; days: number; people: number; total: number; price: string; was?: string;
   lines: string[]; findings: Finding[];
   buddy: (mood: string, size: number) => string; budCss: string;
   buy: () => void; more: () => void; bump: (k: string) => void;
@@ -39,6 +39,7 @@ export function openScan(c: ScanCtx) {
         ${c.total > c.findings.length ? `<li class="lk more" style="--i:${c.findings.length}" role="button" tabindex="0"><em>➕</em><span class="tt">ועוד ${fmt(c.total - c.findings.length)} דברים, תיק סודי לכל אחד וסבב סודות במשחק</span><span class="tag">🔒</span></li>` : ""}</ul>
       <div class="cta" id="cta">
         <button class="play" id="play" type="button">🎮 מתחילים לשחק <span>חינם</span></button>
+        ${c.was ? `<div class="bf">🖤 בלאק פריידיי · <b>${esc(c.price)} ₪</b> במקום <s>${esc(c.was)} ₪</s></div>` : ""}
         <button class="gold" id="buy" type="button"><span>🔓 לפתוח את כל ה־${fmt(c.total)} ב־${esc(c.price)} ₪</span></button>
         <button class="link" id="more" type="button">מה עוד יש בפרימיום?</button>
       </div>
@@ -127,6 +128,7 @@ const CSS = `
 .gold{position:relative;overflow:hidden;font-size:1.02rem;color:#1d1636;background:linear-gradient(180deg,#ffe783,#ffc21f);border:3px solid #1d1636;padding:12px;box-shadow:0 5px 0 #1d1636}
 .gold::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,#ffffffaa 48%,transparent 60%);background-size:250% 100%;animation:sheen 2.6s ease-in-out infinite}
 .gold span{position:relative;z-index:1}
+.bf{justify-self:center;font-size:.9rem;font-weight:700;background:#0b0b0f;color:#fff;border:1.5px solid #ffd23f;border-radius:99px;padding:5px 12px}.bf b{color:#ffd23f}.bf s{opacity:.6;text-decoration-color:#ff3d7f}
 .link{background:none;border:0;color:#d8cffa;font-size:.9rem;padding:6px}
 @keyframes in{from{opacity:0}}@keyframes out{to{opacity:0;transform:scale(1.02)}}
 @keyframes feed{to{transform:translateY(-50%)}}

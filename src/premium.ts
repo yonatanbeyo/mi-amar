@@ -12,7 +12,13 @@ import type { Message } from "./lib/parser";
 const LAUNCH_END = new Date(2027, 0, 1).getTime();
 const LAUNCH = () => Date.now() < LAUNCH_END;
 const PRICE_AFTER = "19.90";
-const PRICE = LAUNCH() ? "14.90" : PRICE_AFTER;
+// Black Friday: 9.90 from 26.11 until Monday 30.11 23:59 (Israel time), then back to the launch price by itself
+const SALE_END = Date.UTC(2026, 10, 30, 21, 59, 59);
+const SALE = () => Date.now() < SALE_END && Date.now() >= Date.UTC(2026, 10, 26, 14, 0, 0);
+const PRICE_WAS = "14.90";
+const PRICE = SALE() ? "9.90" : LAUNCH() ? PRICE_WAS : PRICE_AFTER;
+/** time left in the sale, in plain Hebrew ("2 ימים ו־5 שעות") */
+function saleLeft() { const ms = Math.max(0, SALE_END - Date.now()), d = Math.floor(ms / 864e5), h = Math.floor((ms % 864e5) / 36e5), m = Math.floor((ms % 36e5) / 6e4); return d ? `${d === 1 ? "יום" : d + " ימים"}${h ? ` ו־${h === 1 ? "שעה" : h + " שעות"}` : ""}` : h ? `${h === 1 ? "שעה" : h + " שעות"}${m ? ` ו־${m} דק׳` : ""}` : `${m} דקות`; }
 export const price = () => PRICE;
 const BIT_URL = "https://www.bitpay.co.il/app/me/826990EF-07DF-40B2-B8AE-9A7737DEE4ED";
 const BIT_NUM = "058-646-3236";
@@ -516,7 +522,7 @@ function drawBuy() {
       <div class="pmb-order">
         <div class="pmb-o-l"><small>הזמנה</small><b>הסיכום של הקבוצה + ההקלטות שלכם${groupLabel() ? ` · ${esc(groupLabel())}` : ""}</b>
           <div class="pmb-feat"><span>🎁 סיכום שנה</span><span>🎬 מדיה</span><span>🔒 סודות</span><span>📁 תיקים</span><span>🎓 תעודות</span></div></div>
-        <div class="pmb-o-p"><b>${PRICE}<small>₪</small></b>${LAUNCH() ? `<em>מחיר השקה עד 31.12</em><span class="was">אחר כך ${PRICE_AFTER} ₪</span>` : ""}</div>
+        <div class="pmb-o-p"><b>${PRICE}<small>₪</small></b>${SALE() ? `<em class="bf">🖤 בלאק פריידיי</em><span class="was">במקום <s>${PRICE_WAS} ₪</s></span><span class="was">נגמר בעוד ${saleLeft()}</span>` : LAUNCH() ? `<em>מחיר השקה עד 31.12</em><span class="was">אחר כך ${PRICE_AFTER} ₪</span>` : ""}</div>
       </div>
       <div class="pmb-tags"><span>פעם אחת</span><span>לכל הקבוצה</span><span>בלי מנוי</span>${h ? `<span class="hl">רק ${h.e} ₪ לכל אחד</span>` : ""}</div>
     </div>
@@ -936,7 +942,7 @@ function build() {
     ${(() => { const k = D.kinds || {}, m = [[k.audio, "🎙️", "הקלטות"], [k.image, "📸", "תמונות"], [(k.video || 0) + (k.gif || 0), "🎬", "סרטונים"]].filter((x) => x[0]);
       if (m.length) return `<div class="dgt r" style="--d:.9s">${m.map((x) => `${x[1]} ${fmt(x[0])} ${x[2]}`).join(" · ")}<br><small>האמיתיים שלכם, בסבב המדיה 🔒</small></div>`;
       try { const dg = diagnosisOf(D); return `<div class="dgt r" style="--d:.9s">🩺 האבחנה של הקבוצה שלכם מוכנה: <span class="bl">${esc(dg.t)}</span> 🔒</div>`; } catch { return ""; } })()}
-    <div class="st s w r" style="--d:1s;--c:var(--pw-yellow)">${PRICE} ₪</div>${LAUNCH() ? `<p class="small r" style="--d:1.01s">🚀 מחיר השקה עד 31.12, אחר כך ${PRICE_AFTER} ₪</p>` : ""}
+    <div class="st s w r" style="--d:1s;--c:var(--pw-yellow)">${PRICE} ₪</div>${SALE() ? `<p class="small r" style="--d:1.01s">🖤 בלאק פריידיי: במקום ${PRICE_WAS} ₪, נגמר בעוד ${saleLeft()}</p>` : LAUNCH() ? `<p class="small r" style="--d:1.01s">🚀 מחיר השקה עד 31.12, אחר כך ${PRICE_AFTER} ₪</p>` : ""}
     ${(() => { const h = perHead(); return h ? `<p class="lead r" style="--d:1.02s;color:var(--pw-yellow)">רק ${h.e} ₪ לכל אחד מה־${h.people}. ${esc(h.thing)} 🍬</p>` : ""; })()}
     <p class="small r" style="--d:1.05s">אחד משלם, וכל הקבוצה מקבלת הכל. לתמיד.</p>
     <button class="pw-btn r" style="--d:1.2s" id="punlock">לפתוח לכולם 🔓</button>
@@ -1465,33 +1471,35 @@ export function scan() {
   const total = Math.max(findings.length + 3, secretRows().length + (P.items.length ? 1 : 0) + 6); // the same number the setup strip shows
   const lines = P.msgs.filter((m: Message) => m.ts && m.text && !m.media && m.text.length > 3 && m.text.length < 40).slice(-400);
   const pickLines: string[] = []; for (let i = 0; i < 14 && lines.length; i++) pickLines.push(lines[Math.floor((i + .5) * lines.length / 14)].text);
-  openScan({ msgs: D.total, days: D.days, people: D.people.length, total, price: PRICE, lines: pickLines, findings,
+  openScan({ msgs: D.total, days: D.days, people: D.people.length, total, price: PRICE, was: SALE() ? PRICE_WAS : "", lines: pickLines, findings,
     buddy: budSvg, budCss: BUD_CSS, buy: () => buy("scan"), more: () => pass("scan"), bump });
 }
 /** the premium pass: a full page that shows what premium adds, and says clearly that the game itself is free */
 export function pass(from = "") {
   const has = !!P.key && hasWrapped(), D = has ? P.wrapped : null, h = perHead();
   openPass({
-    on: !!P.on, hasChat: !!P.key, price: PRICE, priceAfter: PRICE_AFTER, launch: LAUNCH(), daysLeft: Math.max(1, Math.ceil((LAUNCH_END - Date.now()) / DAY)),
+    on: !!P.on, hasChat: !!P.key, price: PRICE, priceAfter: PRICE_AFTER, launch: LAUNCH(), sale: SALE() ? { was: PRICE_WAS, left: saleLeft() } : null, daysLeft: Math.max(1, Math.ceil((LAUNCH_END - Date.now()) / DAY)),
     secrets: P.key ? secretRows().length + (P.items.length ? 1 : 0) + 6 : 0, slides: D ? premiumCount(D) + 3 : 0, people: D ? Math.min(16, D.people.length) : 0, media: P.items.length,
     group: P.key ? groupLabel() : "", each: h ? { e: h.e, people: h.people, thing: h.thing } : null,
     buddy: budSvg, budCss: BUD_CSS, peek: P.key && !P.on && hasWrapped() ? () => { bump("pm_pass_peek"); openWrapped(); } : null, buy: () => buy("pass" + (from ? "_" + from : "")), pick: () => P.opts?.pick?.(), wrapped: () => openWrapped(), bump,
   }, from);
 }
 /** a small strip at the very top of the home page that jumps to the showcase */
-export function topBarHtml() { return `<button class="pmx-top" id="pmx-top"><span class="pmx-top-b">⭐ חדש</span> בונוס פרימיום · המשחק חינם <span aria-hidden="true">←</span></button>`; }
+export function topBarHtml() {
+  if (SALE()) return `<button class="pmx-top bf" id="pmx-top"><span class="bf-tag">🖤 בלאק פריידיי</span><span class="bf-txt">פרימיום ב־<b>${PRICE} ₪</b> <s>${PRICE_WAS}</s></span><span class="bf-left">⏳ ${saleLeft()}</span></button>`;
+  return `<button class="pmx-top" id="pmx-top"><span class="pmx-top-b">⭐ חדש</span> בונוס פרימיום · המשחק חינם <span aria-hidden="true">←</span></button>`; }
 /** the home page's one premium card: short, calm, opens the premium pass */
 export function homeCardHtml() {
   return `<button class="pmx-hcard pmx-gold" id="pmx-card" type="button">
     <span class="pmx-hc-ic" aria-hidden="true"><i>🎁</i><i>🎬</i><i>📁</i></span>
-    <span class="pmx-hc-t"><small>⭐ בונוס לקבוצה, לא חובה</small><b>סיכום השנה, סבב מדיה ותיקים סודיים</b><span>${PRICE} ₪ פעם אחת לכל הקבוצה. המשחק עצמו חינם.</span></span>
+    <span class="pmx-hc-t"><small>⭐ בונוס לקבוצה, לא חובה</small><b>סיכום השנה, סבב מדיה ותיקים סודיים</b>${SALE() ? `<span class="bf-line">🖤 בלאק פריידיי: <b>${PRICE} ₪</b> במקום <s>${PRICE_WAS} ₪</s> · עד יום שני</span>` : `<span>${PRICE} ₪ פעם אחת לכל הקבוצה. המשחק עצמו חינם.</span>`}</span>
     <span class="pmx-hc-go" aria-hidden="true">←</span></button>`;
 }
 /** the setup screen's slim strip: the game is free, and here is the bonus. Opens the premium pass */
 export function stripHtml() {
   if (P.on || !P.key) return "";
   const n = secretRows().length + (P.items.length ? 1 : 0) + 6;
-  return `<button class="pmx-strip pmx-gold" id="pmx-strip" type="button"><span class="pmx-st-l"><small>✓ המשחק חינמי. ויש גם בונוס:</small><b>בובי מצא <em>${fmt(n)}</em> סודות בצ'אט שלכם 👀</b></span><span class="pmx-st-go">להציץ <i>←</i></span></button>`;
+  return `<button class="pmx-strip pmx-gold" id="pmx-strip" type="button"><span class="pmx-st-l"><small>✓ המשחק חינמי. ויש גם בונוס:${SALE() ? ` <span class="bf-pill">🖤 ${PRICE} במקום ${PRICE_WAS}</span>` : ""}</small><b>בובי מצא <em>${fmt(n)}</em> סודות בצ'אט שלכם 👀</b></span><span class="pmx-st-go">להציץ <i>←</i></span></button>`;
 }
 // "only 1.35 ₪ each": the price split by the people in the group, with a jab
 function perHead() {
@@ -1507,6 +1515,7 @@ function perHead() {
 export const perHeadHtml = (cls = "pmx-each") => { const h = perHead(); return h ? `<div class="${cls}"><b>רק ${h.e} ₪ לכל אחד</b><span>${h.people} אנשים בקבוצה. ${esc(h.jab)}</span><small>אחד משלם, וכל השאר מחזירים לו בביט 😉</small></div>` : ""; };
 /** the launch price, with the real end date and the real price after it */
 export function launchHtml(cls = "pmx-launch") {
+  if (SALE()) return `<div class="${cls} bf"><span>🖤 בלאק פריידיי: ${PRICE} ₪ במקום ${PRICE_WAS} ₪</span><span>נגמר בעוד ${saleLeft()}</span></div>`;
   if (!LAUNCH()) return "";
   const left = Math.max(1, Math.ceil((LAUNCH_END - Date.now()) / DAY));
   return `<div class="${cls}"><span>🚀 מחיר השקה עד 31.12</span><span>אחר כך ${PRICE_AFTER} ₪${left <= 20 ? `, נשארו ${left} ימים` : ""}</span></div>`;
@@ -2151,6 +2160,18 @@ function css() {
 @keyframes pmbDot{50%{transform:translateY(-4px)}}
 @media (prefers-reduced-motion:reduce){.pmb-sheet,.pmb-lock,.pmb-o-p b,.pmb-digits i,.pmb-field.note,.pmb-field.note em,.pmb-bit::after,.pmb-bit-arr,.pmb-paid.ready,.pmb-paid.ready::after,.pmb-radar i,.pmb-tl .pm-dots b{animation:none}.pmb-step,.pmb-prog i,.pmb-box{transition:none}}
 /* the setup strip and the "free" lines */
+.pmx-top.bf{position:relative;overflow:hidden;background:#0b0b0f!important;color:#fff;border-color:#ffd23f!important;gap:10px;flex-wrap:wrap;padding:9px 14px}
+.pmx-top.bf::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,#ffd23f55 48%,transparent 60%);background-size:250% 100%;animation:bfSheen 3s ease-in-out infinite;pointer-events:none}
+.pmx-top.bf .bf-tag{background:#ffd23f;color:#0b0b0f;border-radius:99px;padding:2px 10px;font-weight:700}
+.pmx-top.bf .bf-txt b{color:#ffd23f;font-size:1.05em}.pmx-top.bf s{opacity:.6;text-decoration-color:#ff3d7f;text-decoration-thickness:2px}
+.pmx-top.bf .bf-left{font-size:.85em;color:#ffd23f}
+.bf-line{display:block;margin-top:2px;font-size:.82rem;color:#fff!important}.bf-line b{color:#ffd23f;font-size:1.05em}.bf-line s{opacity:.7;text-decoration-color:#ff3d7f;text-decoration-thickness:2px}
+.pmx-hcard{position:relative}
+.bf-pill{display:inline-block;background:#0b0b0f;color:#ffd23f;border:1.5px solid #ffd23f;border-radius:99px;padding:0 8px;margin-inline-start:4px;font-size:.92em}
+@keyframes bfSheen{0%,30%{background-position:120% 0}75%,100%{background-position:-60% 0}}
+@media (prefers-reduced-motion:reduce){.pmx-top.bf::after{animation:none}}
+.pmx-launch.bf{background:#111!important;color:#fff!important;border-color:#ffd23f!important}
+.pmb-o-p em.bf{color:#ffd23f;background:#000;border-radius:99px;padding:2px 8px}
 .pmx-hcard{display:flex;align-items:center;gap:12px;width:100%;font-family:inherit;color:#fff;text-align:right;border-radius:20px;padding:14px;cursor:pointer;box-shadow:0 5px 0 #1d1636;transition:transform .12s ease-out}
 .pmx-hcard:active{transform:translateY(3px)}
 .pmx-hc-ic{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:3px;width:56px}.pmx-hc-ic i{font-style:normal;font-size:1.2rem;width:26px;height:26px;display:grid;place-items:center;background:#ffffff1a;border-radius:8px}.pmx-hc-ic i:first-child{grid-column:1/3;justify-self:center}

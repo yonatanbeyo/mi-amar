@@ -3,7 +3,7 @@
 // Everything it shows comes from numbers already computed on the phone; nothing leaves the phone.
 
 export type PassCtx = {
-  on: boolean; hasChat: boolean; price: string; priceAfter: string; launch: boolean; daysLeft: number;
+  on: boolean; hasChat: boolean; price: string; priceAfter: string; launch: boolean; daysLeft: number; sale?: { was: string; left: string } | null;
   secrets: number; slides: number; people: number; media: number; group: string;
   each: null | { e: string; people: number; thing: string };
   buddy: (mood: string, size: number) => string; budCss: string;
@@ -81,8 +81,8 @@ export function openPass(c: PassCtx, from = "") {
       </section>
 
       ${c.on ? "" : `<section class="price">
-        ${c.launch ? `<span class="launch">🚀 מחיר השקה${c.daysLeft <= 20 ? `, נשארו ${fmt(c.daysLeft)} ימים` : " עד 31.12"}</span>` : ""}
-        <div class="pr"><b>${c.price}<small>₪</small></b></div>${c.launch ? `<p class="after">אחרי 31.12 המחיר יעלה ל־${c.priceAfter} ₪</p>` : ""}
+        ${c.sale ? `<span class="launch bf">🖤 בלאק פריידיי · נגמר בעוד ${esc(c.sale.left)}</span>` : c.launch ? `<span class="launch">🚀 מחיר השקה${c.daysLeft <= 20 ? `, נשארו ${fmt(c.daysLeft)} ימים` : " עד 31.12"}</span>` : ""}
+        <div class="pr"><b>${c.price}<small>₪</small></b>${c.sale ? `<s>${c.sale.was} ₪</s>` : ""}</div>${c.sale ? `<p class="after">המבצע נגמר ביום שני 30.11 ב־23:59, ואז המחיר חוזר ל־${c.sale.was} ₪</p>` : c.launch ? `<p class="after">אחרי 31.12 המחיר יעלה ל־${c.priceAfter} ₪</p>` : ""}
         <p class="once">תשלום אחד. כל הקבוצה. לתמיד.</p>
         ${c.each ? `<div class="each"><b>רק ${c.each.e} ₪ לכל אחד</b><span>${fmt(c.each.people)} אנשים בקבוצה. ${esc(c.each.thing)} 🍬</span></div>` : `<div class="each"><b>בקבוצה של 6, זה 2.49 ₪ לכל אחד</b><span>פחות מבמבה 🍬</span></div>`}
         <ul class="trust"><li>✓ אחד משלם, וכולם מקבלים הכל, גם בטלפונים של החברים</li><li>✓ הצ'אט לא יוצא מהטלפון. אף אחד לא רואה אותו</li><li>✓ לא נפתח תוך 48 שעות? הכסף חוזר</li></ul>
@@ -222,6 +222,8 @@ h2.in{opacity:1;transform:none}
 .note{margin:10px 6px 0;text-align:center;font-size:.8rem;color:#bdb4e8}
 .price{margin:18px 16px 0;padding:20px 16px;border-radius:24px;text-align:center;position:relative;background:linear-gradient(#1d1340,#160f33) padding-box,conic-gradient(from var(--a,0deg),#ffd23f,#ff3d7f,#7b5cff,#3fe0b0,#ffd23f) border-box;border:2.5px solid transparent;opacity:0;transform:scale(.97);transition:opacity .45s ease-out,transform .45s cubic-bezier(.23,1,.32,1)}
 .price.in{opacity:1;transform:none}
+.launch.bf{background:#000;color:#ffd23f;border:1.5px solid #ffd23f}
+.pr s{font-size:1.1rem;color:#ffffff80;text-decoration-color:#ff3d7f;text-decoration-thickness:3px}
 .launch{display:inline-block;font-size:.8rem;font-weight:700;color:#1d1636;background:#3fe0b0;border-radius:99px;padding:3px 12px}
 .pr{display:flex;justify-content:center;align-items:baseline;gap:12px;margin-top:8px}
 .pr b{font-family:Karantina,sans-serif;font-size:4.6rem;line-height:.85;color:#ffd23f;text-shadow:0 5px 0 #1d1636}.pr b small{font-size:2rem;margin-inline-start:3px}

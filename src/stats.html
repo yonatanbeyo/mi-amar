@@ -226,7 +226,7 @@ details.sec[open] > summary .chev { transform: rotate(180deg); }
 <script>
 (() => {
   const net = window.Chat.createNet(window.MIAMAR_FIREBASE);
-  const PRICE = 14.9;
+  const PRICE = 14.9; // revenue below is estimated per day: 9.90 on Black Friday days (26–30.11)
   const $ = (id) => document.getElementById(id);
   const n = (x) => Number(x || 0).toLocaleString("he-IL");
   const pad = (h) => String(h).padStart(2, "0");
@@ -294,6 +294,8 @@ details.sec[open] > summary .chev { transform: rotate(180deg); }
     $("note").textContent = (from === to ? `${fmtD(from)}` : `${fmtD(from)} עד ${fmtD(to)}`) + (allH ? "" : ` · ${pad(hf)}:00–${pad(ht)}:59`) + (hasCmp ? ` · השינוי מחושב ${cmpLabel}` : "");
 
     // KPI tiles
+    const priceOn = (d) => (d >= "2026-11-26" && d <= "2026-11-30" ? 9.9 : d >= "2027-01-01" ? 19.9 : PRICE);
+    let REV = 0; for (const [d, o] of Object.entries(S.days || {})) if (d >= from && d <= to) REV += (o.pm_unlocked || 0) * priceOn(d);
     const sales = g("pm_unlocked"), fin = g("finished"), cs = cmp.pm_unlocked || 0, cf = cmp.finished || 0;
     const delta = (a, b, isPct) => {
       if (!hasCmp || b == null) return "";
@@ -308,7 +310,7 @@ details.sec[open] > summary .chev { transform: rotate(180deg); }
       ["משחקים שהתחילו", n(started(t)), delta(started(t), started(cmp)), "var(--c-games)", `${n(fin)} הגיעו עד הסוף`],
       ["שחקנים מטלפונים", n(g("players")), delta(g("players"), cmp.players || 0), "var(--c-players)", g("games") ? `בממוצע ${(g("players") / g("games")).toFixed(1)} בכל לובי` : ""],
       ["💰 קניות", n(sales), delta(sales, cs), "var(--c-money)", `הפרימיום נפתח ל־${n(sales)} קבוצות`],
-      ["💰 הכנסה משוערת", `${n(Math.round(sales * PRICE))} ₪`, delta(sales, cs), "var(--c-money)", `לפי ${PRICE} ₪ לקנייה`],
+      ["💰 הכנסה משוערת", `${n(Math.round(REV))} ₪`, delta(sales, cs), "var(--c-money)", "14.90 ₪ לקנייה, 9.90 בבלאק פריידיי"],
       ["אחוז קנייה", buyRate == null ? "–" : buyRate.toFixed(1) + "%", buyRate == null || cBuy == null ? "" : delta(buyRate, cBuy, true), "var(--c-money)", "מתוך משחקים שהגיעו לסוף"],
     ];
     $("kpis").innerHTML = K.map(([l, v, d, c, s]) => `<div class="kpi" style="--k:${c}"><span class="lab">${l}</span><span class="val">${v}</span>${d}<span class="sub">${s}</span></div>`).join("");
@@ -323,7 +325,7 @@ details.sec[open] > summary .chev { transform: rotate(180deg); }
     const seen = g("pm_seen") + g("pm_scan");
     const fPm = [["ראו פרימיום", seen], ["פתחו את חלון התשלום", g("pm_open")], ["עברו לביט או שלחו לחבר", g("pm_bit") + g("pm_ask")], ["לחצו \"שילמתי\"", g("pm_paid")], ["💰 הפרימיום נפתח", sales]];
     const worstPm = funnel("fPm", fPm, "var(--c-money)");
-    $("pkPm").textContent = `${n(sales)} קניות · ${n(Math.round(sales * PRICE))} ₪`;
+    $("pkPm").textContent = `${n(sales)} קניות · ${n(Math.round(REV))} ₪`;
 
     const why = [["🏦 אין לי ביט", g("pm_why_nobit")], ["💸 יקר לי", g("pm_why_price")], ["🤔 לא בטוח שזה שווה", g("pm_why_worth")], ["⏰ אחר כך", g("pm_why_later")], ["👀 רק הצצתי", g("pm_why_look")]];
     const whyAll = why.reduce((a, x) => a + x[1], 0);
@@ -354,7 +356,7 @@ details.sec[open] > summary .chev { transform: rotate(180deg); }
     // insights: a few plain sentences about the period
     const ins = [];
     if (started(t)) ins.push(["🎮", `${n(started(t))} משחקים התחילו, ו־${pct(fin, started(t))} מהם הגיעו עד הסוף.`]);
-    if (seen) ins.push(["💰", sales ? `${n(sales)} קבוצות קנו: ${buyRate.toFixed(1)}% מהמשחקים שהסתיימו, בערך ${n(Math.round(sales * PRICE))} ₪.` : "עוד אין קניות בטווח הזה."]);
+    if (seen) ins.push(["💰", sales ? `${n(sales)} קבוצות קנו: ${buyRate.toFixed(1)}% מהמשחקים שהסתיימו, בערך ${n(Math.round(REV))} ₪.` : "עוד אין קניות בטווח הזה."]);
     if (worstPm) ins.push(["⚠️", `בפרימיום, הכי הרבה נושרים בשלב "${worstPm.to}": רק ${worstPm.p} ממי ש${worstPm.fromVerb}.`]);
     if (whyAll >= 3) { const top = why.slice().sort((a, b) => b[1] - a[1])[0]; ins.push(["🚪", `הסיבה הנפוצה לעזוב את התשלום: ${top[0].slice(2).trim()} (${pct(top[1], whyAll)} מהתשובות).`]); }
     const src = byPrefix("src_").filter(([k]) => k !== "src_qr" && k !== "src_direct");
