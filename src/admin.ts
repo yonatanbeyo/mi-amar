@@ -2,7 +2,7 @@
 // Only one Google account can read or change anything here; the database rules enforce it, not this page.
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from "firebase/auth";
-import { getDatabase, ref, onValue, update, serverTimestamp } from "firebase/database";
+import { getDatabase, ref, onValue, update, serverTimestamp, get, runTransaction } from "firebase/database";
 
 const PRICE = 14.9; // launch price until the end of 2026, 19.90 after
 // Black Friday (26.11 16:00 – 30.11 23:59 Israel time) was 9.90. Same window as premium.ts
@@ -52,8 +52,22 @@ function confirmIn(b: HTMLButtonElement, label: string) { if (b.dataset.armed) r
 async function approve(code: string, b: HTMLButtonElement) {
   const v = rows.find(([c]) => c === code)?.[1]; if (!v) return;
   b.disabled = true; b.textContent = "פותח…";
-  try { await update(ref(db), { [`unlocks/${v.c}`]: { code, t: serverTimestamp() }, [`pay/${code}/s`]: "ok", [`pay/${code}/a`]: serverTimestamp() }); toast(`נפתח לקבוצה של הקוד ${code} 🎉 לא לשכוח קבלה במורנינג`); }
+  try { const was = v.s; await update(ref(db), { [`unlocks/${v.c}`]: { code, t: serverTimestamp() }, [`pay/${code}/s`]: "ok", [`pay/${code}/a`]: serverTimestamp() }); if (was !== "ok") countSale(Date.now()); toast(`נפתח לקבוצה של הקוד ${code} 🎉 לא לשכוח קבלה במורנינג`); }
   catch (e) { fail(e); b.disabled = false; b.textContent = "אשר ✓"; }
+}
+// count an approved sale in the public stats (day and hour in Israel time), so the stats page sees it
+// even when the buyer closed the site before the approval came
+const IL = (t: number) => { const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date(t)).map((x) => [x.type, x.value])); return { d: `${p.year}-${p.month}-${p.day}`, h: p.hour }; };
+async function countSale(t: number) {
+  const { d, h } = IL(t || Date.now());
+  for (const p of ["stats/total/pm_approved", `stats/days/${d}/pm_approved`, `stats/days/${d}/h${h}_pm_approved`]) await runTransaction(ref(db, p), (v) => (typeof v === "number" ? v : 0) + 1).catch(() => {});
+}
+// once ever: sales approved before this counter existed are counted by the day they were approved
+let backfilled = false;
+async function backfill() {
+  if (backfilled) return; backfilled = true;
+  try { if ((await get(ref(db, "stats/total/pm_approved"))).exists()) return; } catch { return; }
+  for (const [, v] of rows.filter(([, v]) => v.s === "ok")) await countSale(v.a || v.t);
 }
 function fail(e: any) { toast("משהו נכשל: " + (e && e.code ? e.code : "בודקים את החוקים בפיירבייס")); }
 function toast(t: string) { const d = $("#toast"); d.textContent = t; d.classList.add("show"); setTimeout(() => d.classList.remove("show"), 3500); }
@@ -76,7 +90,7 @@ onAuthStateChanged(auth, (u) => {
     const waitNow = rows.filter(([, v]) => v.s === "wait").map(([c]) => c);
     const fresh = waitNow.filter((c) => !seenWait.has(c));
     if (!first && fresh.length) { ding(); try { if ("Notification" in window && Notification.permission === "granted") new Notification("תשלום חדש מחכה לאישור", { body: `קוד ${fresh[0]}` }); } catch {} }
-    seenWait = new Set(waitNow); first = false; draw();
+    seenWait = new Set(waitNow); first = false; draw(); backfill();
   }, () => { $("#gate").hidden = false; $("#panel").hidden = true; $("#who").textContent = `מחובר כ־${me}. ללוח הזה נכנסים רק עם החשבון של בעל האתר.`; });
 });
 setInterval(() => { if (rows.length) draw(); }, 60000);

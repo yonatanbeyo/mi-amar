@@ -258,6 +258,9 @@ details.sec[open] > summary .chev { transform: rotate(180deg); }
     $("upd").textContent = "טוען…";
     S = await net.readStats();
     if (!S) { $("upd").innerHTML = '<span class="err">לא הצלחתי לקרוא את הנתונים.</span>'; return; }
+    // a sale is counted twice over: by the buyer's phone when it opens (pm_unlocked, missed if they left before approval)
+    // and by the owner's panel when he approves (pm_approved). The larger of the two is the real number
+    for (const o of Object.values(S.days || {})) for (const k of Object.keys(o)) if (k.endsWith("pm_approved")) { const u = k.replace("pm_approved", "pm_unlocked"); o[u] = Math.max(o[u] || 0, o[k]); }
     if (!$("dFrom").value) setQuick("today"); else render();
     $("upd").textContent = "עודכן " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
   }
