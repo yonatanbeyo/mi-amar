@@ -481,7 +481,7 @@ export function buy(from = "") {
 export function askText(kind: "friend" | "group" = "friend") {
   const code = codeFor(P.key), h = perHead(), D = hasWrapped() ? P.wrapped : null, k = D ? D.kinds : {};
   const media = D ? [[k.audio, "הקלטות"], [k.image, "תמונות"], [(k.video || 0) + (k.gif || 0), "סרטונים"]].filter((x) => x[0]).map((x) => `${fmt(x[0])} ${x[1]}`).join(", ") : "";
-  const pay = `1. מעבירים בביט ${PRICE} ₪ למספר ${BIT_NUM}\n2. בהערה כותבים את הקוד: ${code}\n\nקישור ישיר לתשלום: ${BIT_URL}`;
+  const pay = `1. מעבירים בביט ${PRICE} ₪ למספר ${BIT_NUM}\n2. בשדה "סיבה" כותבים את הקוד: ${code}\n\nקישור ישיר לתשלום: ${BIT_URL}`;
   if (kind === "group") return `🎁 הסיכום של הקבוצה שלנו ל־${D ? D.year : new Date().getFullYear()} מוכן באתר "מי אמר את זה?"${media ? `, כולל ${media} שלנו` : ""} 😳\n\nמי שיש לו ביט פותח לכולם${h ? ` (זה ${h.e} ₪ לאחד אם מתחלקים)` : ""}:\n${pay}\n\nאחרי זה תגידו לי, ואני פותח לכולנו את כל הסיכום, התיקים הסודיים וסבב המדיה 🔓`;
   return `היי 🙏 אפשר לשלם במקומי ${PRICE} ₪ בביט? זה על הפרימיום של "מי אמר את זה?" לקבוצה שלנו.\n\n${pay}\n\nתגיד לי כשזה עבר 🙌`;
 }
@@ -491,6 +491,18 @@ export async function shareAsk(from = "", kind: "friend" | "group" = "friend") {
   const txt = askText(kind);
   try { if (navigator.share) { await navigator.share({ text: txt }); return; } } catch (e: any) { if (e && e.name === "AbortError") return; }
   window.open("https://wa.me/?text=" + encodeURIComponent(txt), "_blank", "noopener");
+}
+/** a looping how-to: copy the code here, then long-press "סיבה" in Bit and paste */
+function demoHtml(code: string) {
+  return `<div class="pmb-demo" aria-hidden="true">
+    <div class="dm-here"><span class="dm-lab">כאן</span><span class="dm-chip" dir="ltr">📋 ${code}</span><span class="dm-copied">הועתק ✓</span></div>
+    <div class="dm-arrow">⬇</div>
+    <div class="dm-bit">
+      <div class="dm-top"><span class="pmb-bit-ic sm">${BIT_IC}</span><b>העברה בביט</b><span>${PRICE} ₪</span></div>
+      <div class="dm-field"><small>סיבה</small><span class="dm-caret"></span><span class="dm-val" dir="ltr">${code}</span><span class="dm-paste">הדבקה</span><span class="dm-ok">✓</span></div>
+    </div>
+    <span class="dm-finger">👆</span>
+  </div>`;
 }
 // the group's name without the "WhatsApp chat with" part that the export adds to the file name
 function groupLabel() { return String(P.name || "").replace(/whats\s*app/gi, "").replace(/^\s*(צ'?אט|chat)\s*(עם|with|-|–)?\s*/i, "").replace(/\.(txt|zip)$/i, "").trim(); }
@@ -515,13 +527,10 @@ function drawBuy() {
       <p class="pmb-hint">ככה אני יודע לאיזה צ'אט לפתוח.</p>
     </section>
     <section class="pmb-step" data-s="2">
-      <h4><span class="pmb-n">2</span>משלמים בביט ומדביקים את הקוד בהערה</h4>
-      <div class="pmb-phone" aria-hidden="true">
-        <div class="pmb-ph-top"><span class="pmb-bit-ic sm">${BIT_IC}</span><b>העברה</b><span>אל: יונתן</span></div>
-        <div class="pmb-field"><small>סכום</small><b dir="ltr">${PRICE} ₪</b></div>
-        <div class="pmb-field note"><small>הערה</small><b dir="ltr">${code}</b><em>← כאן מדביקים</em></div>
-      </div>
-      <a class="pmb-bit" href="${BIT_URL}" target="_blank" rel="noopener" id="pm-bit"><span class="pmb-bit-ic">${BIT_IC}</span><span class="pmb-bit-t"><b>לתשלום בביט</b><small>הקוד יועתק לבד</small></span><span class="pmb-bit-arr" aria-hidden="true">←</span></a>
+      <h4><span class="pmb-n">2</span>משלמים בביט, ומדביקים את הקוד בשדה <u>סיבה</u></h4>
+      ${demoHtml(code)}
+      <p class="pmb-howto">בביט: <b>לחיצה ארוכה</b> על השדה <b>"סיבה"</b> ← <b>"הדבקה"</b>. בלי הקוד אני לא יודע שזה אתם.</p>
+      <a class="pmb-bit" href="${BIT_URL}" target="_blank" rel="noopener" id="pm-bit" role="button"><span class="pmb-bit-ic">${BIT_IC}</span><span class="pmb-bit-t"><b>לתשלום בביט</b><small>הקוד יועתק לבד</small></span><span class="pmb-bit-arr" aria-hidden="true">←</span></a>
       <button class="pmb-ask" id="pm-ask" type="button"><span class="pmb-ask-ic" aria-hidden="true">💬</span><span class="pmb-ask-t"><b>אין לכם ביט?</b><small>שולחים לחבר או להורה שישלם במקומכם</small></span><span aria-hidden="true">←</span></button>
       <details class="pmb-more" ${matchMedia("(hover: hover) and (pointer: fine)").matches ? "open" : ""}><summary>${matchMedia("(hover: hover) and (pointer: fine)").matches ? "📱 על מחשב? סורקים עם הטלפון ומשלמים בביט" : "משלמים מטלפון אחר? סורקים את הקוד"}</summary><div class="pm-qr">${P.opts?.qr(BIT_URL) || ""}</div><p class="pm-dim">או מעבירים בביט למספר <b dir="ltr">${BIT_NUM}</b></p></details>
     </section>
@@ -543,7 +552,7 @@ function drawBuy() {
       <p><b>זה בטוח?</b> כן. משלמים בביט הרגיל שלכם, והאתר לא רואה שום פרט תשלום.</p>
       <p><b>למי זה נפתח?</b> לצ'אט הזה, לכל מי שמשחק איתו, גם בטלפונים של החברים.</p>
       <p><b>אין לי ביט.</b> מספיק שלאחד בקבוצה, או להורה של מישהו, יש. לוחצים "אין לכם ביט?" ושולחים לו את ההודעה המוכנה עם הקוד.</p>
-      <p><b>שכחתי לכתוב את הקוד בהערה.</b> לא נורא, שלחו את הקוד בהודעה לאותו מספר של ביט.</p>
+      <p><b>שכחתי לכתוב את הקוד בסיבה.</b> לא נורא, שלחו את הקוד בהודעה לאותו מספר של ביט.</p>
       <p><b>ומה אם זה לא נפתח?</b> אם זה לא נפתח תוך 48 שעות, מחזירים לכם את הכסף.</p></details></details></div>`;
   // the steps light up as you go: copied the code, went to Bit, ticked the terms
   const prog = [...root.querySelectorAll("#pmb-prog li")], steps = [...root.querySelectorAll<HTMLElement>(".pmb-step")];
@@ -571,7 +580,21 @@ function drawBuy() {
   const copy = async () => { try { await navigator.clipboard.writeText(code); return true; } catch { return false; } };
   root.querySelector<HTMLButtonElement>("#pm-already")!.onclick = () => { bump("pm_already"); askedOrPaid(); };
   if (matchMedia("(hover: hover) and (pointer: fine)").matches) askedOrPaid(); // on a computer the payment happens on a phone (QR)
-  root.querySelector<HTMLAnchorElement>("#pm-bit")!.onclick = () => { bitTapped = true; askedOrPaid(); copy().then((ok) => { if (ok) toast(`הקוד ${code} הועתק. מדביקים אותו בהערה בביט 👍`); }); try { P.opts?.net?.bump("pm_bit"); } catch {} goStep(3); try { navigator.vibrate && navigator.vibrate(15); } catch {} };
+  root.querySelector<HTMLAnchorElement>("#pm-bit")!.onclick = async (e) => {
+    e.preventDefault(); bump("pm_bit_intro"); const ok = await copy();
+    try { navigator.vibrate && navigator.vibrate(15); } catch {}
+    const box = document.createElement("div"); box.className = "pmb-go"; box.setAttribute("role", "dialog"); box.setAttribute("aria-label", "הקוד הועתק");
+    box.innerHTML = `<div class="pmb-go-c">
+      <span class="pmb-go-ok">${ok ? "✓ הקוד הועתק" : "📋 תעתיקו את הקוד"}</span>
+      <div class="pmb-go-code" dir="ltr">${[...code].map((d) => `<i>${d}</i>`).join("")}</div>
+      <b class="pmb-go-t">עכשיו בביט, מדביקים אותו בשדה <u>"סיבה"</u></b>
+      <div class="pmb-go-field"><small>סיבה</small><span dir="ltr" class="pmb-go-v">${code}</span><em>👆 לחיצה ארוכה ← הדבקה</em></div>
+      <a class="pmb-bit" href="${BIT_URL}" target="_blank" rel="noopener" id="pm-bit-go"><span class="pmb-bit-ic">${BIT_IC}</span><span class="pmb-bit-t"><b>הבנתי, פותחים את ביט</b><small>${PRICE} ₪ · הקוד בשדה סיבה</small></span><span class="pmb-bit-arr" aria-hidden="true">←</span></a>
+      <button class="pmb-link" type="button" id="pm-bit-back">חזרה</button></div>`;
+    root.append(box);
+    box.querySelector<HTMLAnchorElement>("#pm-bit-go")!.onclick = () => { copy(); bitTapped = true; askedOrPaid(); bump("pm_bit"); goStep(3); setTimeout(() => box.remove(), 400); };
+    box.querySelector<HTMLButtonElement>("#pm-bit-back")!.onclick = () => box.remove();
+  };
   // no Bit? send a ready message (with the code) to someone who has it, and they pay instead
   root.querySelector<HTMLButtonElement>("#pm-ask")!.onclick = () => { askedOrPaid(); shareAsk("sheet"); };
   root.querySelector<HTMLButtonElement>("#pm-copy")!.onclick = async (e) => { bump("pm_copy"); const b = e.currentTarget as HTMLButtonElement, ok = await copy(); b.classList.toggle("ok", ok); b.querySelector("span")!.textContent = ok ? "הועתק ✓" : code; if (ok) { goStep(2); try { navigator.vibrate && navigator.vibrate(12); } catch {} } };
@@ -609,7 +632,7 @@ function drawWait() {
       <div class="pmb-wait-hero"><div class="pmb-radar" aria-hidden="true"><i></i><i></i><i></i>${budSvg("think", 84)}</div><h3>בודק את התשלום שלכם</h3><p>הקוד שלכם: <b dir="ltr">${code}</b></p></div></div>
     <ol class="pmb-tl"><li class="done"><i>✓</i><span>שלחתם את הבקשה עם הקוד</span></li><li class="now"><i><span class="pm-dots"><b></b><b></b><b></b></span></i><span>אני בודק בביט שהתשלום הגיע</span></li><li><i>🔓</i><span>הפרימיום נפתח לבד, גם באמצע משחק, עם חגיגה קטנה</span></li></ol>
     <p class="pmb-hint c">בדרך כלל זה לוקח כמה דקות, ובלילה עד כמה שעות. אפשר לסגור את החלון ולהמשיך לשחק בחינם, לא צריך לחכות פה.</p>
-    <p class="pmb-hint c">שכחתם לכתוב את הקוד בהערה? שלחו אותו בהודעה לאותו מספר של ביט.</p>
+    <p class="pmb-hint c">שכחתם לכתוב את הקוד בשדה "סיבה"? שלחו אותו בהודעה לאותו מספר של ביט.</p>
     <button class="pmb-paid ready" id="pm-play"><span>סגור, ממשיכים לשחק</span></button>
     <button class="pmb-link" id="pm-again">עוד לא שילמתי, חזרה לפרטי התשלום</button></div>`;
   root.querySelector<HTMLButtonElement>("#pm-close")!.onclick = () => closeBuy();
@@ -2051,6 +2074,41 @@ function css() {
 .pmx-gp{margin:8px 0 0;font-size:.86rem;line-height:1.45;text-align:center;color:inherit;opacity:.95}.pmx-gp b{color:#3fe0b0}
 .pmb-wait3{display:grid;gap:4px;justify-items:center;text-align:center;font-size:.88rem;font-weight:700;color:#6a5a99;background:#f6f3ff;border:2px dashed #c9bff0;border-radius:14px;padding:10px}
 .pmb-s3{display:grid;gap:10px}.pmb-s3[hidden]{display:none}
+.pmb-demo{position:relative;display:grid;gap:6px;justify-items:center;background:linear-gradient(180deg,#f6f3ff,#e9f9fb);border:2.5px solid #1d1636;border-radius:18px;padding:12px 12px 14px;overflow:hidden}
+.dm-here{display:flex;align-items:center;gap:8px}.dm-lab{font-size:.75rem;font-weight:700;color:#6a5a99}
+.dm-chip{font-weight:700;font-size:1.05rem;letter-spacing:2px;background:#1d1636;color:#ffd23f;border-radius:10px;padding:4px 10px;animation:dmChip 6s infinite}
+.dm-copied{font-size:.75rem;font-weight:700;color:#0f8a63;opacity:0;animation:dmCopied 6s infinite}
+.dm-arrow{font-size:1.1rem;color:#7b5cff;animation:dmArrow 6s infinite}
+.dm-bit{width:100%;max-width:300px;background:#fff;border:2px solid #c6e3e8;border-radius:14px;padding:8px;display:grid;gap:6px}
+.dm-top{display:flex;align-items:center;gap:7px;font-size:.8rem}.dm-top b{flex:1}.dm-top>span:last-child{font-weight:700}
+.dm-field{position:relative;display:flex;align-items:center;gap:8px;border:2px solid #00b4c8;border-radius:10px;padding:8px 10px;min-height:42px;animation:dmField 6s infinite}
+.dm-field small{font-size:.78rem;font-weight:700;color:#00849a}
+.dm-caret{width:2px;height:18px;background:#1d1636;animation:dmCaret 6s infinite}
+.dm-val{font-weight:700;font-size:1.05rem;letter-spacing:1px;color:#1d1636;opacity:0;animation:dmVal 6s infinite}
+.dm-paste{position:absolute;top:-30px;inset-inline-start:40px;background:#1d1636;color:#fff;font-size:.78rem;font-weight:700;border-radius:8px;padding:4px 10px;opacity:0;animation:dmPaste 6s infinite}
+.dm-paste::after{content:"";position:absolute;bottom:-5px;inset-inline-start:14px;border:5px solid transparent;border-top-color:#1d1636;border-bottom:0}
+.dm-ok{margin-inline-start:auto;width:22px;height:22px;border-radius:50%;background:#3fe0b0;border:2px solid #1d1636;display:grid;place-items:center;font-size:.75rem;font-weight:700;opacity:0;transform:scale(.5);animation:dmOk 6s infinite}
+.dm-finger{position:absolute;font-size:1.6rem;filter:drop-shadow(0 2px 0 #0003);top:10px;left:50%;animation:dmFinger 6s cubic-bezier(.45,0,.55,1) infinite;pointer-events:none}
+@keyframes dmFinger{0%{transform:translate(10px,40px);opacity:0}8%{opacity:1;transform:translate(0,14px)}14%{transform:translate(0,6px) scale(.9)}18%{transform:translate(0,14px)}40%{transform:translate(-30px,128px)}46%{transform:translate(-30px,122px) scale(.9)}58%{transform:translate(-30px,128px)}64%{transform:translate(-50px,100px) scale(.9)}70%{transform:translate(-50px,104px);opacity:1}80%,100%{transform:translate(-50px,140px);opacity:0}}
+@keyframes dmChip{0%,12%{box-shadow:none}15%,30%{box-shadow:0 0 0 4px #3fe0b0}35%,100%{box-shadow:none}}
+@keyframes dmCopied{0%,14%{opacity:0}16%,34%{opacity:1}38%,100%{opacity:0}}
+@keyframes dmArrow{0%,20%{transform:none}28%{transform:translateY(4px)}36%,100%{transform:none}}
+@keyframes dmField{0%,40%{box-shadow:none}44%,90%{box-shadow:0 0 0 4px #00b4c833}100%{box-shadow:none}}
+@keyframes dmCaret{0%,40%{opacity:0}42%,48%{opacity:1}50%,54%{opacity:0}56%,64%{opacity:1}66%,100%{opacity:0}}
+@keyframes dmPaste{0%,48%{opacity:0;transform:translateY(4px)}52%,64%{opacity:1;transform:none}67%,100%{opacity:0}}
+@keyframes dmVal{0%,65%{opacity:0}68%,94%{opacity:1}100%{opacity:0}}
+@keyframes dmOk{0%,72%{opacity:0;transform:scale(.5)}76%,94%{opacity:1;transform:none}100%{opacity:0}}
+.pmb-howto{margin:0;font-size:.88rem;line-height:1.5;text-align:center;background:#fff8dd;border:2px dashed #e5b800;border-radius:12px;padding:8px 10px}
+.pmb-step h4 u{text-decoration-color:#00b4c8;text-decoration-thickness:3px;text-underline-offset:3px}
+.pmb-go{position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:18px;background:#1d1636cc;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);animation:pmbUp .25s cubic-bezier(.23,1,.32,1) both}
+.pmb-go-c{width:min(360px,100%);display:grid;gap:10px;justify-items:center;text-align:center;background:#fff;border:3.5px solid #1d1636;border-radius:22px;padding:16px;box-shadow:0 6px 0 #1d1636}
+.pmb-go-ok{font-weight:700;color:#0f8a63;background:#e5fbf3;border-radius:99px;padding:4px 12px}
+.pmb-go-code{display:flex;gap:5px}.pmb-go-code i{font-style:normal;font-family:Karantina,sans-serif;font-size:2.2rem;line-height:1;width:34px;padding:4px 0 6px;background:#1d1636;color:#ffd23f;border-radius:9px}
+.pmb-go-t{font-size:1.08rem}.pmb-go-t u{text-decoration-color:#00b4c8;text-decoration-thickness:3px;text-underline-offset:3px}
+.pmb-go-field{width:100%;display:flex;align-items:center;gap:8px;border:2.5px solid #00b4c8;border-radius:12px;padding:9px 11px;box-shadow:0 0 0 4px #00b4c833;animation:pmbGlow 1.8s ease-in-out infinite}
+.pmb-go-field small{font-weight:700;color:#00849a}.pmb-go-v{font-weight:700;letter-spacing:1px}.pmb-go-field em{margin-inline-start:auto;font-style:normal;font-size:.75rem;font-weight:700;color:#00849a}
+.pmb-go-c .pmb-bit{width:100%}
+@media (prefers-reduced-motion:reduce){.dm-chip,.dm-copied,.dm-arrow,.dm-field,.dm-caret,.dm-paste,.dm-finger,.pmb-go-field{animation:none}.dm-val,.dm-ok{animation:none;opacity:1;transform:none}.dm-finger{display:none}}
 .pmb-ask{display:flex;align-items:center;gap:10px;width:100%;font-family:inherit;text-align:right;color:#1d1636;background:#f3efff;border:2.5px dashed #7b5cff;border-radius:16px;padding:10px 12px;cursor:pointer;transition:transform .12s ease-out,background-color .2s}
 .pmb-ask:active{transform:scale(.98)}
 .pmb-ask-ic{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#25d366;font-size:1.05rem;border:2px solid #1d1636}
