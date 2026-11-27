@@ -5,7 +5,7 @@ import { openPass } from "./pass";
 import { openScan } from "./scan";
 import JSZip from "jszip";
 import { getApp } from "firebase/app";
-import { getDatabase, ref, set, onValue, serverTimestamp } from "firebase/database";
+import { getDatabase, ref, set, onValue, serverTimestamp, get } from "firebase/database";
 import type { Message } from "./lib/parser";
 
 // launch price until the end of 2026, then the regular price (shown honestly, with the real date)
@@ -142,6 +142,7 @@ function watchUnlock() {
       if (!s.exists() || P.key !== k) return;
       const list = store.get("pm_on", []) as string[]; if (!list.includes(k)) { list.push(k); store.set("pm_on", list.slice(-30)); }
       if (!P.on) { P.on = true; const mine = !!buyRoot || (store.get("pm_sent", []) as string[]).includes(k); if (mine) bump("pm_unlocked");
+        if (mine) notifyOpen();
         if (buyRoot) closeBuy(true); else ceremony(inGame(), mine ? "paid" : "group"); emit("unlock"); }
     }, () => {});
   } catch {}
@@ -547,7 +548,7 @@ function drawBuy() {
       <label class="pmb-terms"><input type="checkbox" id="pm-ok"><span class="pmb-box" aria-hidden="true"></span><span>קראתי ואני מסכים/ה ל<a href="terms.html" target="_blank" rel="noopener">תקנון הרכישה</a></span></label>
       <button class="pmb-paid" id="pm-paid" disabled><span>שלחתי בביט ✓ תבדקו את הקוד</span></button>
       <p class="pm-err" id="pm-err" hidden></p>
-      <p class="pmb-hint c">אני בודק בביט שהכסף הגיע עם הקוד שלכם, ופותח לכם. בדרך כלל תוך שעה, ובלילה עד הבוקר. בלי תשלום אמיתי זה לא ייפתח.</p>
+      ${shabbat() ? `<p class="pmb-hint c">🕯️ שבת: אני פחות ליד הטלפון, אז האישור יכול לקחת יותר זמן, לפעמים עד מוצאי שבת. התשלום שמור על הקוד שלכם, ואם הפרימיום לא ייפתח תקבלו את הכסף בחזרה.</p>` : `<p class="pmb-hint c">אני בודק בביט שהכסף הגיע עם הקוד שלכם, ופותח לכם. בדרך כלל תוך שעה, ובלילה עד הבוקר. בלי תשלום אמיתי זה לא ייפתח.</p>`}
       </div>
     </section>
     ${P.items.length || !P.msgs.length ? "" : `<p class="pmb-hint c">💡 בשביל סבב המדיה מעלים את הצ'אט ״כולל מדיה״. הפרימיום יישאר פתוח גם אז.</p>`}
@@ -630,6 +631,27 @@ function notifyOwner(code: string) {
     body: JSON.stringify({ access_key: MAIL_KEY, subject: `💰 תשלום חדש מחכה לאישור: ${code}`, from_name: "מי אמר את זה?",
       message: `מישהו לחץ "שילמתי" בשעה ${hhmm}.\n\nהקוד: ${code}\nהסכום: ${PRICE} ₪\n\nמה עושים: פותחים את ביט, מחפשים העברה של ${PRICE} ₪ עם הקוד ${code} בהערה, ואז מאשרים בלוח הניהול:\nhttps://mi-amar.co.il/admin.html` }) }).catch(() => {});
 }
+/** Shabbat (Friday 15:00 to Saturday 19:00, Israel time): approvals can take longer */
+export function shabbat(t = Date.now()) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Jerusalem", weekday: "short", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date(t)).map((x) => [x.type, x.value]));
+  const h = +p.hour; return (p.weekday === "Fri" && h >= 15) || (p.weekday === "Sat" && h < 19);
+}
+/** a system notice when the premium opens while the site is in the background (only if the buyer allowed it) */
+function notifyOpen() {
+  try { if (document.visibilityState === "visible" || !("Notification" in window) || Notification.permission !== "granted") return; new Notification("🎉 הפרימיום נפתח!", { body: "חוזרים למשחק, הכל כבר פתוח לכם", icon: "icon-192.png" }); } catch {}
+}
+/** groups this phone paid for that were approved while the site was closed. Opens them and returns their keys */
+export async function newlyOpened(): Promise<string[]> {
+  const d = db(); if (!d) return [];
+  const sent = store.get("pm_sent", []) as string[], on = store.get("pm_on", []) as string[];
+  const out: string[] = [];
+  for (const k of [...new Set(sent)].filter((k) => k && !on.includes(k)).slice(-5)) {
+    try { if ((await get(ref(d, `unlocks/${k}`))).exists()) out.push(k); } catch {}
+  }
+  if (out.length) { store.set("pm_on", [...on, ...out].slice(-30)); out.forEach(() => bump("pm_unlocked")); bump("pm_return_open"); }
+  return out;
+}
+
 function drawWait() {
   const root = buyRoot!; const code = codeFor(P.key);
   root.classList.add("pmb");
@@ -637,13 +659,17 @@ function drawWait() {
     <div class="pmb-top"><div class="pmb-bar"><span class="pmb-lock" aria-hidden="true">⏳</span><b>קיבלתי! 🙌</b><button class="pm-x" id="pm-close" aria-label="סגירה">✕</button></div>
       <div class="pmb-wait-hero"><div class="pmb-radar" aria-hidden="true"><i></i><i></i><i></i>${budSvg("think", 84)}</div><h3>בודק את התשלום שלכם</h3><p>הקוד שלכם: <b dir="ltr">${code}</b></p></div></div>
     <ol class="pmb-tl"><li class="done"><i>✓</i><span>שלחתם את הבקשה עם הקוד</span></li><li class="now"><i><span class="pm-dots"><b></b><b></b><b></b></span></i><span>אני בודק בביט שהתשלום הגיע</span></li><li><i>🔓</i><span>הפרימיום נפתח לבד, גם באמצע משחק, עם חגיגה קטנה</span></li></ol>
-    <p class="pmb-hint c">בדרך כלל זה לוקח כמה דקות, ובלילה עד כמה שעות. אפשר לסגור את החלון ולהמשיך לשחק בחינם, לא צריך לחכות פה.</p>
+    ${shabbat() ? `<div class="pmb-shab"><b>🕯️ שבת שלום!</b><span>בשבת אני פחות ליד הטלפון, אז האישור יכול לקחת יותר זמן, לפעמים עד מוצאי שבת. אל תדאגו: התשלום שלכם שמור על הקוד, והפרימיום ייפתח ברגע שאאשר. ואם מסיבה כלשהי הוא לא ייפתח, תקבלו את הכסף בחזרה.</span></div>` : `<p class="pmb-hint c">בדרך כלל זה לוקח כמה דקות, ובלילה עד כמה שעות. אפשר לסגור את החלון ולהמשיך לשחק בחינם, לא צריך לחכות פה.</p>`}
+    <p class="pmb-hint c">🔔 לא צריך לבדוק כל הזמן: כשתחזרו לאתר מהטלפון הזה, נגיד לכם שהפרימיום נפתח, והקבוצה תחכה לכם ב״הקבוצות שלי״.</p>
+    ${"Notification" in window && Notification.permission === "default" ? `<button class="pmb-link" id="pm-notify">🔔 להודיע לי גם כשהאתר ברקע</button>` : ""}
     <p class="pmb-hint c">שכחתם לכתוב את הקוד בשדה "סיבה"? שלחו אותו בהודעה לאותו מספר של ביט.</p>
     <button class="pmb-paid ready" id="pm-play"><span>סגור, ממשיכים לשחק</span></button>
     <button class="pmb-link" id="pm-again">עוד לא שילמתי, חזרה לפרטי התשלום</button></div>`;
   root.querySelector<HTMLButtonElement>("#pm-close")!.onclick = () => closeBuy();
   root.querySelector<HTMLButtonElement>("#pm-play")!.onclick = () => closeBuy();
   root.querySelector<HTMLButtonElement>("#pm-again")!.onclick = () => drawBuy();
+  const nb = root.querySelector<HTMLButtonElement>("#pm-notify");
+  if (nb) nb.onclick = async () => { bump("pm_notify_ask"); try { const r = await Notification.requestPermission(); nb.textContent = r === "granted" ? "✓ נודיע לכם" : "בסדר, נגיד לכם כשתחזרו לאתר"; nb.disabled = true; if (r === "granted") bump("pm_notify_ok"); } catch {} };
 }
 
 // ---------------------------------------------------------------- the year summary: numbers
@@ -2160,6 +2186,8 @@ function css() {
 @keyframes pmbDot{50%{transform:translateY(-4px)}}
 @media (prefers-reduced-motion:reduce){.pmb-sheet,.pmb-lock,.pmb-o-p b,.pmb-digits i,.pmb-field.note,.pmb-field.note em,.pmb-bit::after,.pmb-bit-arr,.pmb-paid.ready,.pmb-paid.ready::after,.pmb-radar i,.pmb-tl .pm-dots b{animation:none}.pmb-step,.pmb-prog i,.pmb-box{transition:none}}
 /* the setup strip and the "free" lines */
+.pmb-shab{display:grid;gap:4px;text-align:center;background:linear-gradient(160deg,#2a1f55,#1a1433);border:2px solid #ffd23f66;border-radius:16px;padding:12px 14px;margin:4px 0;line-height:1.55}
+.pmb-shab b{color:#ffd23f;font-size:1.05rem}.pmb-shab span{font-size:.92rem;color:#fff}
 .pmx-top.bf{position:relative;overflow:hidden;background:#0b0b0f!important;color:#fff;border-color:#ffd23f!important;gap:10px;flex-wrap:wrap;padding:9px 14px}
 .pmx-top.bf::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,#ffd23f55 48%,transparent 60%);background-size:250% 100%;animation:bfSheen 3s ease-in-out infinite;pointer-events:none}
 .pmx-top.bf .bf-tag{background:#ffd23f;color:#0b0b0f;border-radius:99px;padding:2px 10px;font-weight:700}

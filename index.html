@@ -22,6 +22,11 @@
 @font-face { font-family: "Karantina"; font-weight: 700; font-display: swap; src: url(fonts/karantina-latin-700-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 @font-face { font-family: "Varela Round"; font-weight: 400; font-display: swap; src: url(fonts/varela-round-hebrew-400-normal.woff2) format("woff2"); unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
 @font-face { font-family: "Varela Round"; font-weight: 400; font-display: swap; src: url(fonts/varela-round-latin-400-normal.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+.paid-back{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center;background:linear-gradient(160deg,#ffd23f,#ffb200);color:#1a1433;border-radius:20px;padding:14px 16px;box-shadow:0 8px 24px #ffd23f40;animation:pbIn .45s cubic-bezier(.23,1,.32,1)}
+.paid-back .pb-ic{font-size:2rem}.paid-back b{display:block;font-size:1.15rem}.paid-back span{font-size:.92rem}
+.paid-back .btn{grid-column:1/-1;background:#1a1433;color:#fff}
+@keyframes pbIn{from{opacity:0;transform:translateY(-8px) scale(.97)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.paid-back{animation:none}}
 </style>
 <style>
 /* Layout: a late-night party game show; one giant chat bubble is the stage, names are the buzzers below it */
@@ -931,8 +936,8 @@ body.yt-mini #ytmin { display: none; }
 <main class="wrap" id="app"></main>
 <div class="overlay" id="overlay" hidden></div>
 
-<script src="config.js?v=1795706498"></script>
-<script src="app.js?v=1795706498"></script>
+<script src="config.js?v=1795788851"></script>
+<script src="app.js?v=1795788851"></script>
 <script>
 (() => {
   const C = window.Chat;
@@ -2478,6 +2483,16 @@ ${samples}
     bindMute();
     fillJoin();
     bindMyChats();
+    // premium approved while the site was closed: tell them right away on the home screen
+    if (PREM.newlyOpened && !window.__paidBack) { window.__paidBack = 1; PREM.newlyOpened().then((keys) => {
+      if (!keys.length || S.screen !== "home") return;
+      const m = MY.list().find((x) => x.pk && keys.includes(x.pk));
+      home(); const box = document.createElement("section"); box.className = "paid-back"; box.setAttribute("role", "status");
+      box.innerHTML = `<span class="pb-ic" aria-hidden="true">🎉</span><div><b>הפרימיום נפתח!</b><span>${m ? `של ${esc(m.name)}. הכל מחכה לכם בפנים.` : "מעלים שוב את אותו הצ'אט, והכל ייפתח לבד."}</span></div>${m ? `<button class="btn" type="button">לפתוח את הקבוצה</button>` : ""}`;
+      const slot = app.querySelector(".hero"); if (slot) slot.before(box); box.scrollIntoView({ block: "center" });
+      try { SFX.win ? SFX.win() : SFX.tap(); } catch {}
+      const b = box.querySelector("button"); if (b && m) b.onclick = () => { const li = app.querySelector(`.mine-i[data-id="${m.id}"] .mine-go`); if (li) li.click(); };
+    }); }
     // the title drops in word by word, the question mark lands last with a wobble
     const t1 = app.querySelector("#title .t1"), tq = app.querySelector("#title .q");
     anim(t1, [{ opacity: 0, transform: "translateY(-40px) scale(1.2)" }, { opacity: 1, transform: "none" }], { duration: 520, easing: EASE.out, fill: "backwards", delay: 80 });
